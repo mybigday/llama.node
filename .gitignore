@@ -1,0 +1,8 @@
+*.js
+.DS_Store
+*.log
+node_modules/
+/bin/*
+build/
+*.bin
+*.gguf

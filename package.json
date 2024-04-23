@@ -1,0 +1,50 @@
+{
+  "name": "llama.node",
+  "version": "0.0.1",
+  "description": "Llama.cpp for Node.js",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "prepack": "yarn build",
+    "build-native": "cmake-js compile"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mybigday/llama.node.git"
+  },
+  "keywords": [
+    "llama",
+    "llm",
+    "ai",
+    "genai"
+  ],
+  "author": "Hans <hans.chen@bricks.tools>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mybigday/llama.node/issues"
+  },
+  "homepage": "https://github.com/mybigday/llama.node#readme",
+  "binary": {
+    "napi_versions": [
+      5
+    ]
+  },
+  "files": [
+    "bin/**/*",
+    "scripts/*.js",
+    "scripts/*.ts",
+    "src/**/*",
+    "lib/*.js",
+    "lib/*.ts",
+    "CMakeLists.txt"
+  ],
+  "devDependencies": {
+    "cmake-js": "^7.3.0",
+    "jest": "^29.7.0",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "node-addon-api": "^8.0.0"
+  }
+}
