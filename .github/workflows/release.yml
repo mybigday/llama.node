@@ -38,16 +38,16 @@ jobs:
       - name: Prepare OpenCL SDK (Windows)
         if: runner.os == 'Windows'
         run: |
-          wget https://github.com/KhronosGroup/OpenCL-SDK/releases/download/v2023.12.14/OpenCL-SDK-v2023.12.14-Win-x64.zip -O externals/OpenCL-SDK-v2023.12.14-Win-x64.zip
+          curl -L https://github.com/KhronosGroup/OpenCL-SDK/releases/download/v2023.12.14/OpenCL-SDK-v2023.12.14-Win-x64.zip -o externals/OpenCL-SDK-v2023.12.14-Win-x64.zip
           7z x externals/OpenCL-SDK-v2023.12.14-Win-x64.zip -oexternals\OpenCL-SDK
-          wget https://github.com/CNugteren/CLBlast/releases/download/1.6.2/CLBlast-1.6.2-windows-x64.zip -O externals/CLBlast.zip
+          curl -L https://github.com/CNugteren/CLBlast/releases/download/1.6.2/CLBlast-1.6.2-windows-x64.zip -o externals/CLBlast.zip
           7z x externals/CLBlast.zip -oexternals
           7z x externals/CLBlast*.7z -oexternals
       - name: Prepare OpenCL SDK (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get install -qy opencl-headers ocl-icd-dev ocl-icd-opencl-dev
-          wget https://github.com/CNugteren/CLBlast/releases/download/1.6.2/CLBlast-1.6.2-linux-x86_64.zip -O /tmp/CLBlast.zip
+          curl -L https://github.com/CNugteren/CLBlast/releases/download/1.6.2/CLBlast-1.6.2-linux-x86_64.zip -o /tmp/CLBlast.zip
           unzip /tmp/CLBlast.zip -d /tmp
           tar -xf /tmp/CLBlast*.tar.gz -C /tmp
       - name: Install dependencies
