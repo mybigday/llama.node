@@ -38,11 +38,13 @@ jobs:
       - name: Prepare OpenCL SDK (Windows)
         if: runner.os == 'Windows'
         run: |
-          curl -L https://github.com/KhronosGroup/OpenCL-SDK/releases/download/v2023.12.14/OpenCL-SDK-v2023.12.14-Win-x64.zip -o externals/OpenCL-SDK-v2023.12.14-Win-x64.zip
-          7z x externals/OpenCL-SDK-v2023.12.14-Win-x64.zip -oexternals\OpenCL-SDK
-          curl -L https://github.com/CNugteren/CLBlast/releases/download/1.6.2/CLBlast-1.6.2-windows-x64.zip -o externals/CLBlast.zip
-          7z x externals/CLBlast.zip -oexternals
-          7z x externals/CLBlast*.7z -oexternals
+          mkdir externals
+          cd externals
+          curl -L https://github.com/KhronosGroup/OpenCL-SDK/releases/download/v2023.12.14/OpenCL-SDK-v2023.12.14-Win-x64.zip -o OpenCL-SDK-v2023.12.14-Win-x64.zip
+          7z x OpenCL-SDK-v2023.12.14-Win-x64.zip -oOpenCL-SDK
+          curl -L https://github.com/CNugteren/CLBlast/releases/download/1.6.2/CLBlast-1.6.2-windows-x64.zip -o CLBlast.zip
+          7z x CLBlast.zip
+          7z x CLBlast*.7z
       - name: Prepare OpenCL SDK (Linux)
         if: runner.os == 'Linux'
         run: |
