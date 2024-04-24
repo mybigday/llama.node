@@ -4,7 +4,11 @@ cmake_policy(SET CMP0042 NEW)
 
 project (llama-node)
 
-add_definitions(-DNAPI_VERSION=6)
+if(NOT DEFINED napi_build_version)
+  set(napi_build_version 6)
+endif()
+add_definitions(-DNAPI_VERSION=${napi_build_version})
+message(STATUS "NAPI_VERSION: ${napi_build_version}")
 
 include_directories(${CMAKE_JS_INC})
 
