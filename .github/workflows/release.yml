@@ -45,20 +45,13 @@ jobs:
           curl -L https://github.com/CNugteren/CLBlast/releases/download/1.6.2/CLBlast-1.6.2-windows-x64.zip -o CLBlast.zip
           7z x CLBlast.zip
           7z x CLBlast*.7z
-      - name: Prepare OpenCL SDK (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get install -qy opencl-headers ocl-icd-dev ocl-icd-opencl-dev
-          curl -L https://github.com/CNugteren/CLBlast/releases/download/1.6.2/CLBlast-1.6.2-linux-x86_64.zip -o /tmp/CLBlast.zip
-          unzip /tmp/CLBlast.zip -d /tmp
-          tar -xf /tmp/CLBlast*.tar.gz -C /tmp
       - name: Install dependencies
         run: yarn install
       - name: Build (Linux)
         if: runner.os == 'Linux'
         run: |
           yarn clean && yarn build-native -a x86_64 --CDLLAMA_VULKAN=1
-          yarn clean && yarn build-native -a aarch64 --cc aarch64-linux-gnu-gcc --cxx aarch64-linux-gnu-g++ --CDLLAMA_CLBLAST=1 --CDCLBlast_DIR=/tmp/CLBlast-1.6.2-linux-x86_64
+          yarn clean && yarn build-native -a aarch64 --cc aarch64-linux-gnu-gcc --cxx aarch64-linux-gnu-g++ --CDLLAMA_VULKAN=1
       - name: Build (Windows)
         if: runner.os == 'Windows'
         run: |
