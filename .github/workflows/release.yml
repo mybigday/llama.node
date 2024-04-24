@@ -1,0 +1,77 @@
+name: Release
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+      - uses: actions/setup-node@v4.0.2
+        with:
+          node-version: 20
+          cache: 'yarn'
+      - name: node_modules cache
+        uses: actions/cache@v4.0.2
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
+      - run: yarn install
+      - name: Build CPU (x86_64)
+        run: yarn clean && yarn build-native
+      - name: Build CPU (arm64)
+        run: yarn clean && yarn build-native -A arm64
+      - name: Prepare Vulkan SDK
+        if: runner.os == 'ubuntu-latest'
+        uses: humbletim/setup-vulkan-sdk@v1.2.0
+        with:
+          vulkan-query-version: 1.3.204.0
+          vulkan-components: Vulkan-Headers, Vulkan-Loader
+          vulkan-use-cache: true
+      - name: Build with Vulkan
+        if: runner.os == 'ubuntu-latest'
+        run: yarn clean && yarn build-native --CDVARIANT=vulkan --CDLLAMA_VULKAN=1
+      - name: Build with OpenCL
+        if: runner.os == 'windows-latest'
+        run: yarn clean && yarn build-native --CDVARIANT=opencl --CDLLAMA_OPENCL=1
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin
+          path: bin
+          retention-days: 3
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+      - uses: actions/setup-node@v4.0.2
+        with:
+          node-version: 20
+          cache: 'yarn'
+      - name: node_modules cache
+        uses: actions/cache@v4.0.2
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
+      - name: Download bundled files
+        uses: actions/download-artifact@v4
+        with:
+          name: bin
+          path: bin
+      - run: yarn install
+      - run: yarn build
+      - name: Publish to NPM
+        run: yarn publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}

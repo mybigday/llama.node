@@ -15,6 +15,10 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release")
 endif()
 
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "To Platform: ${CMAKE_SYSTEM_NAME}")
+message(STATUS "To Architecture: ${CMAKE_SYSTEM_PROCESSOR}")
+
 include_directories(${CMAKE_JS_INC})
 
 # flags: -fPIC
