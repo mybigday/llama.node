@@ -10,6 +10,8 @@ it('work fine', async () => {
     max_length: 100,
     n_predict: 10,
     seed: 0,
-  }, () => {})
+  }, (data) => {
+    expect(data).toMatchSnapshot('partial')
+  })
   expect(result).toMatchSnapshot()
 })

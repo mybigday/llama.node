@@ -30,10 +30,14 @@ export type LlamaCompletionResult = {
   truncated: boolean
 }
 
+export type LlamaCompletionToken = {
+  token: string
+}
+
 export interface LlamaContext {
   new (options: LlamaModelOptions): LlamaContext
   getSystemInfo(): string
-  completion(options: LlamaCompletionOptions, onToken?: (token: string) => void): Promise<LlamaCompletionResult>
+  completion(options: LlamaCompletionOptions, callback?: (token: LlamaCompletionToken) => void): Promise<LlamaCompletionResult>
   stopCompletion(): void
   saveSession(path: string): Promise<void>
   loadSession(path: string): Promise<void>

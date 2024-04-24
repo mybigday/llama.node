@@ -274,7 +274,9 @@ protected:
         const char *c_token = strdup(token.c_str());
         _tsfn.BlockingCall(c_token, [](Napi::Env env, Napi::Function jsCallback,
                                        const char *value) {
-          jsCallback.Call({Napi::String::New(env, value)});
+          auto obj = Napi::Object::New(env);
+          obj.Set("token", Napi::String::New(env, value));
+          jsCallback.Call({obj});
         });
       }
       // is it an end of generation?
