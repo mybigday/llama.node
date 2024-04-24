@@ -68,6 +68,7 @@ jobs:
           name: bin
           path: bin
           retention-days: 3
+          merge-multiple: true
   publish:
     needs: build
     runs-on: ubuntu-latest
