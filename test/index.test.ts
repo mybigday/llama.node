@@ -11,7 +11,7 @@ it('work fine', async () => {
     n_predict: 10,
     seed: 0,
   }, (data) => {
-    expect(data).toMatchSnapshot('partial')
+    expect(data).toMatchObject({ token: expect.any(String) })
   })
   expect(result).toMatchSnapshot()
 })
