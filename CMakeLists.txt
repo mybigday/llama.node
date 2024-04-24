@@ -10,14 +10,24 @@ endif()
 add_definitions(-DNAPI_VERSION=${napi_build_version})
 message(STATUS "NAPI_VERSION: ${napi_build_version}")
 
-# default build Release
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Release")
-endif()
+set(CMAKE_SYSTEM_PROCESSOR ${NODE_ARCH})
+string(TOLOWER ${CMAKE_SYSTEM_NAME} PLATFORM)
+string(TOLOWER ${CMAKE_SYSTEM_PROCESSOR} ARCH)
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-message(STATUS "To Platform: ${CMAKE_SYSTEM_NAME}")
-message(STATUS "To Architecture: ${CMAKE_SYSTEM_PROCESSOR}")
+message(STATUS "Platform: ${PLATFORM}")
+message(STATUS "Architecture: ${CMAKE_SYSTEM_PROCESSOR}")
+
+# set strip flags
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+  if(UNIX OR MINGW)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s")
+  elseif(MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /s")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /s")
+  endif()
+endif()
 
 include_directories(${CMAKE_JS_INC})
 
@@ -36,8 +46,6 @@ target_link_libraries(${PROJECT_NAME} ${CMAKE_JS_LIB})
 # static link llama and ggml
 target_link_libraries(${PROJECT_NAME} PUBLIC llama ggml common)
 
-string(TOLOWER ${CMAKE_SYSTEM_NAME} PLATFORM)
-string(TOLOWER ${CMAKE_SYSTEM_PROCESSOR} ARCH)
 string(REPLACE "amd64" "x64" ARCH ${ARCH})
 string(REPLACE "x86_64" "x64" ARCH ${ARCH})
 string(REPLACE "i686" "x86" ARCH ${ARCH})
@@ -46,10 +54,12 @@ string(REPLACE "arm" "arm" ARCH ${ARCH})
 string(REPLACE "aarch64" "arm64" ARCH ${ARCH})
 
 if(DEFINED VARIANT)
-  string(APPEND PLATFORM "-${VARIANT}")
+  set(VARIANT -${VARIANT})
+else()
+  set(VARIANT "")
 endif()
 
-set(PLATFORM_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin/${PLATFORM}/${ARCH})
+set(PLATFORM_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin/${PLATFORM}${VARIANT}/${ARCH})
 message(STATUS "PLATFORM_BINARY_DIR: ${PLATFORM_BINARY_DIR}")
 
 if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)
