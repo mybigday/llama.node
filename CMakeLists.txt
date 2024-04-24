@@ -4,6 +4,8 @@ cmake_policy(SET CMP0042 NEW)
 
 project (llama-node)
 
+set(CMAKE_CXX_STANDARD 17)
+
 if(NOT DEFINED napi_build_version)
   set(napi_build_version 6)
 endif()
