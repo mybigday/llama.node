@@ -9,7 +9,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-13, macos-14]
+        os: [ubuntu-latest-m, windows-latest, macos-13, macos-14]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -35,29 +35,33 @@ jobs:
           vulkan-query-version: 1.3.204.0
           vulkan-components: Vulkan-Headers, Vulkan-Loader
           vulkan-use-cache: true
-      - name: Prepare CUDA Toolkit
-        if: runner.os != 'macOS'
-        uses: Jimver/cuda-toolkit@v0.2.15
-        id: cuda-toolkit
-        with:
-          cuda: '11.8.0'
-      - name: Prepare OpenCL SDK
+      - name: Prepare OpenCL SDK (Windows)
         if: runner.os == 'Windows'
         run: |
-          wget https://github.com/KhronosGroup/OpenCL-SDK/releases/download/v2023.12.14/OpenCL-SDK-v2023.12.14-Win-x64.zip
-          unzip OpenCL-SDK-v2023.12.14-Win-x64.zip -d OpenCL-SDK
+          wget https://github.com/KhronosGroup/OpenCL-SDK/releases/download/v2023.12.14/OpenCL-SDK-v2023.12.14-Win-x64.zip -O externals/OpenCL-SDK-v2023.12.14-Win-x64.zip
+          7z x externals/OpenCL-SDK-v2023.12.14-Win-x64.zip -oexternals\OpenCL-SDK
+          wget https://github.com/CNugteren/CLBlast/releases/download/1.6.2/CLBlast-1.6.2-windows-x64.zip -O externals/CLBlast.zip
+          7z x externals/CLBlast.zip -oexternals
+          7z x externals/CLBlast*.7z -oexternals
+      - name: Prepare OpenCL SDK (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install -qy opencl-headers ocl-icd-dev ocl-icd-opencl-dev
+          wget https://github.com/CNugteren/CLBlast/releases/download/1.6.2/CLBlast-1.6.2-linux-x86_64.zip -O /tmp/CLBlast.zip
+          unzip /tmp/CLBlast.zip -d /tmp
+          tar -xf /tmp/CLBlast*.tar.gz -C /tmp
       - name: Install dependencies
         run: yarn install
       - name: Build (Linux)
         if: runner.os == 'Linux'
         run: |
-          yarn clean && yarn build-native -a x86_64 --CDLLAMA_CUDA=1
-          yarn clean && yarn build-native -a aarch64 --cc aarch64-linux-gnu-gcc --cxx aarch64-linux-gnu-g++ --CDLLAMA_CLBLAST=1 --CDCLBlast_DIR=OpenCL-SDK
+          yarn clean && yarn build-native -a x86_64 --CDLLAMA_VULKAN=1
+          yarn clean && yarn build-native -a aarch64 --cc aarch64-linux-gnu-gcc --cxx aarch64-linux-gnu-g++ --CDLLAMA_CLBLAST=1 --CDCLBlast_DIR=/tmp/CLBlast-1.6.2-linux-x86_64
       - name: Build (Windows)
         if: runner.os == 'Windows'
         run: |
-          yarn clean && yarn build-native -a x86_64 --CDLLAMA_CUDA=1
-          yarn clean && yarn build-native -a x86_64 --CDLLAMA_CLBLAST=1 --CDCLBlast_DIR=OpenCL-SDK
+          yarn clean && yarn build-native -a x86_64 --CDLLAMA_CLBLAST=1 --DCMAKE_PREFIX_PATH=externals/OpenCL-SDK -G "Visual Studio 17 2022"
+          yarn clean && yarn build-native -a x86_64 --CDLLAMA_CLBLAST=1 --DCMAKE_PREFIX_PATH=externals/OpenCL-SDK -G "Visual Studio 17 2022"
       - name: Build (macOS)
         if: runner.os == 'macOS'
         run: |
