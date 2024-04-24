@@ -24,7 +24,10 @@ export type LlamaCompletionOptions = {
 }
 
 export type LlamaCompletionResult = {
+  text: string
+  tokens_predicted: number
   tokens_evaluated: number
+  truncated: boolean
 }
 
 export interface LlamaContext {
