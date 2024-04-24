@@ -1,0 +1,10 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`work fine 1`] = `
+{
+  "text": " swochadoorter scientific WindowsCa occupiedrå alta",
+  "tokens_evaluated": 18,
+  "tokens_predicted": 10,
+  "truncated": false,
+}
+`;
