@@ -36,6 +36,10 @@ string(REPLACE "i386" "x86" ARCH ${ARCH})
 string(REPLACE "arm" "arm" ARCH ${ARCH})
 string(REPLACE "aarch64" "arm64" ARCH ${ARCH})
 
+if(DEFINED VARIANT)
+  string(APPEND PLATFORM "-${VARIANT}")
+endif()
+
 set(PLATFORM_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin/${PLATFORM}/${ARCH})
 message(STATUS "PLATFORM_BINARY_DIR: ${PLATFORM_BINARY_DIR}")
 

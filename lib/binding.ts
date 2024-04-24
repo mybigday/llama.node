@@ -50,7 +50,7 @@ export interface Module {
 export const loadModule = (variant?: string): Module => {
   try {
     if (variant) {
-      return require(`../bin/${process.platform}/${process.arch}-${variant}/llama-node.node`) as Module
+      return require(`../bin/${process.platform}-${variant}/${process.arch}/llama-node.node`) as Module
     }
   } catch {} // ignore errors and try the common path
   return require(`../bin/${process.platform}/${process.arch}/llama-node.node`) as Module
