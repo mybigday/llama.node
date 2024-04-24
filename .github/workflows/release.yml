@@ -24,42 +24,42 @@ jobs:
           path: node_modules
           key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
       - name: Prepare Toolchain (Linux)
-        if: runner.os == 'linux-latest'
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -qy binutils-aarch64-linux-gnu gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
       - name: Prepare Vulkan SDK
-        if: runner.os == 'ubuntu-latest'
+        if: runner.os == 'Linux'
         uses: humbletim/setup-vulkan-sdk@v1.2.0
         with:
           vulkan-query-version: 1.3.204.0
           vulkan-components: Vulkan-Headers, Vulkan-Loader
           vulkan-use-cache: true
       - name: Prepare CUDA Toolkit
-        if: runner.os == 'ubuntu-latest' || runner.os == 'windows-latest'
+        if: runner.os != 'macOS'
         uses: Jimver/cuda-toolkit@v0.2.15
         id: cuda-toolkit
         with:
           cuda: '11.8.0'
       - name: Prepare OpenCL SDK
-        if: runner.os == 'windows-latest'
+        if: runner.os == 'Windows'
         run: |
           wget https://github.com/KhronosGroup/OpenCL-SDK/releases/download/v2023.12.14/OpenCL-SDK-v2023.12.14-Win-x64.zip
           unzip OpenCL-SDK-v2023.12.14-Win-x64.zip -d OpenCL-SDK
       - name: Install dependencies
         run: yarn install
       - name: Build (Linux)
-        if: runner.os == 'linux-latest'
+        if: runner.os == 'Linux'
         run: |
           yarn clean && yarn build-native -a x86_64 --CDLLAMA_CUDA=1
           yarn clean && yarn build-native -a aarch64 --cc aarch64-linux-gnu-gcc --cxx aarch64-linux-gnu-g++ --CDLLAMA_CLBLAST=1 --CDCLBlast_DIR=OpenCL-SDK
       - name: Build (Windows)
-        if: runner.os == 'windows-latest'
+        if: runner.os == 'Windows'
         run: |
           yarn clean && yarn build-native -a x86_64 --CDLLAMA_CUDA=1
           yarn clean && yarn build-native -a x86_64 --CDLLAMA_CLBLAST=1 --CDCLBlast_DIR=OpenCL-SDK
       - name: Build (macOS)
-        if: runner.os == 'macos-latest'
+        if: runner.os == 'macOS'
         run: |
           yarn clean && yarn build-native -a x86_64
           yarn clean && yarn build-native -a aarch64
