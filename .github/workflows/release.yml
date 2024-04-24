@@ -35,9 +35,10 @@ jobs:
           vulkan-query-version: 1.3.204.0
           vulkan-components: Vulkan-Headers, Vulkan-Loader
           vulkan-use-cache: true
-      - uses: Jimver/cuda-toolkit@v0.2.15
+      - name: Prepare CUDA Toolkit
+        if: runner.os == 'ubuntu-latest' || runner.os == 'windows-latest'
+        uses: Jimver/cuda-toolkit@v0.2.15
         id: cuda-toolkit
-        if: runner.os != 'macos-latest'
         with:
           cuda: '11.8.0'
       - name: Prepare OpenCL SDK
