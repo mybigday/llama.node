@@ -65,10 +65,9 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: bin
+          name: bin-${{ matrix.runs-on }}
           path: bin
           retention-days: 3
-          merge-multiple: true
   publish:
     needs: build
     runs-on: ubuntu-latest
@@ -89,8 +88,9 @@ jobs:
       - name: Download bundled files
         uses: actions/download-artifact@v4
         with:
-          name: bin
           path: bin
+          pattern: bin-*
+          merge-multiple: true
       - run: yarn install
       - run: yarn build
       - name: Publish to NPM
