@@ -43,10 +43,7 @@ file(GLOB SOURCE_FILES "src/addons.cpp")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES} ${CMAKE_JS_SRC})
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
-target_link_libraries(${PROJECT_NAME} ${CMAKE_JS_LIB})
-
-# static link llama and ggml
-target_link_libraries(${PROJECT_NAME} PUBLIC llama ggml common)
+target_link_libraries(${PROJECT_NAME} ${CMAKE_JS_LIB} llama ggml common)
 
 string(REPLACE "amd64" "x64" ARCH ${ARCH})
 string(REPLACE "x86_64" "x64" ARCH ${ARCH})
