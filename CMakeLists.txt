@@ -10,6 +10,11 @@ endif()
 add_definitions(-DNAPI_VERSION=${napi_build_version})
 message(STATUS "NAPI_VERSION: ${napi_build_version}")
 
+# default build Release
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release")
+endif()
+
 include_directories(${CMAKE_JS_INC})
 
 # flags: -fPIC
