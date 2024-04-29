@@ -1,7 +1,7 @@
 {
   "name": "@fugood/llama.node",
   "access": "public",
-  "version": "0.0.1-alpha.1",
+  "version": "0.0.1-alpha.2",
   "description": "Llama.cpp for Node.js",
   "main": "lib/index.js",
   "scripts": {
@@ -30,7 +30,7 @@
   },
   "homepage": "https://github.com/mybigday/llama.node#readme",
   "publishConfig": {
-    "registry": "https://registry.npmjs.org"        
+    "registry": "https://registry.npmjs.org"
   },
   "binary": {
     "napi_versions": [
