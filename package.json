@@ -1,6 +1,6 @@
 {
   "name": "llama.node",
-  "version": "0.0.1",
+  "version": "0.0.1-alpha.1",
   "description": "Llama.cpp for Node.js",
   "main": "lib/index.js",
   "scripts": {
