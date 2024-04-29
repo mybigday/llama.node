@@ -69,6 +69,9 @@ jobs:
           path: bin
           retention-days: 3
   publish:
+    permissions:
+      contents: write
+      pull-requests: read
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
