@@ -282,7 +282,6 @@ protected:
       tokens_predicted += 1;
       n_input = 1;
       if (_has_callback) {
-        // _cb.Call({ Napi::String::New(AsyncWorker::Env(), token) });
         const char *c_token = strdup(token.c_str());
         _tsfn.BlockingCall(c_token, [](Napi::Env env, Napi::Function jsCallback,
                                        const char *value) {
