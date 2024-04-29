@@ -23,6 +23,34 @@ size_t common_part(const std::vector<llama_token> &a,
   return i;
 }
 
+template <typename T>
+constexpr T get_option(const Napi::Object &options, const std::string &name,
+                       const T default_value) {
+  if (options.Has(name) && !options.Get(name).IsUndefined() &&
+      !options.Get(name).IsNull()) {
+    if constexpr (std::is_same<T, std::string>::value) {
+      return options.Get(name).ToString().operator T();
+    } else if constexpr (std::is_same<T, int32_t>::value ||
+                         std::is_same<T, uint32_t>::value ||
+                         std::is_same<T, float>::value ||
+                         std::is_same<T, double>::value) {
+      return options.Get(name).ToNumber().operator T();
+    } else if constexpr (std::is_same<T, bool>::value) {
+      return options.Get(name).ToBoolean().operator T();
+    } else {
+      static_assert(std::is_same<T, std::string>::value ||
+                        std::is_same<T, int32_t>::value ||
+                        std::is_same<T, uint32_t>::value ||
+                        std::is_same<T, float>::value ||
+                        std::is_same<T, double>::value ||
+                        std::is_same<T, bool>::value,
+                    "Unsupported type");
+    }
+  } else {
+    return default_value;
+  }
+}
+
 class LlamaCompletionWorker;
 
 class LlamaContext : public Napi::ObjectWrap<LlamaContext> {
@@ -37,37 +65,21 @@ public:
     }
     auto options = info[0].As<Napi::Object>();
 
-    if (options.Has("model")) {
-      params.model = options.Get("model").ToString();
+    params.model = get_option<std::string>(options, "model", "");
+    if (params.model.empty()) {
+      Napi::TypeError::New(env, "Model is required")
+          .ThrowAsJavaScriptException();
     }
-    if (options.Has("embedding")) {
-      params.embedding = options.Get("embedding").ToBoolean();
-    }
-    if (options.Has("n_ctx")) {
-      params.n_ctx = options.Get("n_ctx").ToNumber();
-    }
-    if (options.Has("n_batch")) {
-      params.n_batch = options.Get("n_batch").ToNumber();
-    }
-    if (options.Has("n_threads")) {
-      params.n_threads = options.Get("n_threads").ToNumber();
-    }
-    if (options.Has("n_gpu_layers")) {
-      params.n_gpu_layers = options.Get("n_gpu_layers").ToNumber();
-    }
-    if (options.Has("use_mlock")) {
-      params.use_mlock = options.Get("use_mlock").ToBoolean();
-    }
-    if (options.Has("use_mmap")) {
-      params.use_mmap = options.Get("use_mmap").ToBoolean();
-    }
-    if (options.Has("numa")) {
-      int numa = options.Get("numa").ToNumber();
-      params.numa = static_cast<ggml_numa_strategy>(numa);
-    }
-    if (options.Has("seed")) {
-      params.seed = options.Get("seed").ToNumber();
-    }
+    params.embedding = get_option<bool>(options, "embedding", false);
+    params.n_ctx = get_option<int32_t>(options, "n_ctx", 512);
+    params.n_batch = get_option<int32_t>(options, "n_batch", 2048);
+    params.n_threads =
+        get_option<int32_t>(options, "n_threads", get_math_cpu_count() / 2);
+    params.n_gpu_layers = get_option<int32_t>(options, "n_gpu_layers", -1);
+    params.use_mlock = get_option<bool>(options, "use_mlock", false);
+    params.use_mmap = get_option<bool>(options, "use_mmap", true);
+    params.numa = static_cast<ggml_numa_strategy>(
+        get_option<uint32_t>(options, "numa", 0));
 
     llama_backend_init();
     llama_numa_init(params.numa);
@@ -396,63 +408,41 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   auto options = info[0].As<Napi::Object>();
 
   gpt_params params;
-  if (options.Has("prompt")) {
-    params.prompt = options.Get("prompt").ToString();
-  } else {
+  params.prompt = get_option<std::string>(options, "prompt", "");
+  if (params.prompt.empty()) {
     Napi::TypeError::New(env, "Prompt is required")
         .ThrowAsJavaScriptException();
   }
-  params.n_predict =
-      options.Has("n_predict") ? options.Get("n_predict").ToNumber() : -1;
-  params.sparams.temp = options.Has("temperature")
-                            ? options.Get("temperature").ToNumber()
-                            : 0.80f;
-  params.sparams.top_k =
-      options.Has("top_k") ? options.Get("top_k").ToNumber() : 40;
-  params.sparams.top_p =
-      options.Has("top_p") ? options.Get("top_p").ToNumber() : 0.95f;
-  params.sparams.min_p =
-      options.Has("min_p") ? options.Get("min_p").ToNumber() : 0.05f;
-  params.sparams.tfs_z =
-      options.Has("tfs_z") ? options.Get("tfs_z").ToNumber() : 1.00f;
-  params.sparams.mirostat =
-      options.Has("mirostat") ? options.Get("mirostat").ToNumber() : 0;
-  params.sparams.mirostat_tau = options.Has("mirostat_tau")
-                                    ? options.Get("mirostat_tau").ToNumber()
-                                    : 5.00f;
-  params.sparams.mirostat_eta = options.Has("mirostat_eta")
-                                    ? options.Get("mirostat_eta").ToNumber()
-                                    : 0.10f;
-  params.sparams.penalty_last_n = options.Has("penalty_last_n")
-                                      ? options.Get("penalty_last_n").ToNumber()
-                                      : 64;
-  params.sparams.penalty_repeat = options.Has("penalty_repeat")
-                                      ? options.Get("penalty_repeat").ToNumber()
-                                      : 1.00f;
-  params.sparams.penalty_freq = options.Has("penalty_freq")
-                                    ? options.Get("penalty_freq").ToNumber()
-                                    : 0.00f;
+  params.n_predict = get_option<int32_t>(options, "n_predict", -1);
+  params.sparams.temp = get_option<float>(options, "temperature", 0.80f);
+  params.sparams.top_k = get_option<int32_t>(options, "top_k", 40);
+  params.sparams.top_p = get_option<float>(options, "top_p", 0.95f);
+  params.sparams.min_p = get_option<float>(options, "min_p", 0.05f);
+  params.sparams.tfs_z = get_option<float>(options, "tfs_z", 1.00f);
+  params.sparams.mirostat = get_option<int32_t>(options, "mirostat", 0.00f);
+  params.sparams.mirostat_tau =
+      get_option<float>(options, "mirostat_tau", 5.00f);
+  params.sparams.mirostat_eta =
+      get_option<float>(options, "mirostat_eta", 0.10f);
+  params.sparams.penalty_last_n =
+      get_option<int32_t>(options, "penalty_last_n", 64);
+  params.sparams.penalty_repeat =
+      get_option<float>(options, "penalty_repeat", 1.00f);
+  params.sparams.penalty_freq =
+      get_option<float>(options, "penalty_freq", 0.00f);
   params.sparams.penalty_present =
-      options.Has("penalty_present") ? options.Get("penalty_present").ToNumber()
-                                     : 0.00f;
-  params.sparams.penalize_nl = options.Has("penalize_nl")
-                                   ? options.Get("penalize_nl").ToBoolean()
-                                   : false;
-  params.sparams.typical_p =
-      options.Has("typical_p") ? options.Get("typical_p").ToNumber() : 1.00f;
-  params.ignore_eos =
-      options.Has("ignore_eos") ? options.Get("ignore_eos").ToBoolean() : false;
-  params.sparams.grammar = options.Has("grammar")
-                               ? options.Get("grammar").ToString().Utf8Value()
-                               : "";
-  params.n_keep = options.Has("n_keep") ? options.Get("n_keep").ToNumber() : 0;
-  params.seed =
-      options.Has("seed") ? options.Get("seed").ToNumber() : LLAMA_DEFAULT_SEED;
+      get_option<float>(options, "penalty_present", 0.00f);
+  params.sparams.penalize_nl = get_option<bool>(options, "penalize_nl", false);
+  params.sparams.typical_p = get_option<float>(options, "typical_p", 1.00f);
+  params.ignore_eos = get_option<float>(options, "ignore_eos", false);
+  params.sparams.grammar = get_option<std::string>(options, "grammar", "");
+  params.n_keep = get_option<int32_t>(options, "n_keep", 0);
+  params.seed = get_option<int32_t>(options, "seed", LLAMA_DEFAULT_SEED);
   std::vector<std::string> stop_words;
-  if (options.Has("stop")) {
+  if (options.Has("stop") && options.Get("stop").IsArray()) {
     auto stop_words_array = options.Get("stop").As<Napi::Array>();
     for (size_t i = 0; i < stop_words_array.Length(); i++) {
-      stop_words.push_back(stop_words_array.Get(i).ToString());
+      stop_words.push_back(stop_words_array.Get(i).ToString().Utf8Value());
     }
   }
 
