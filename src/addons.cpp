@@ -111,6 +111,9 @@ public:
              static_cast<napi_property_attributes>(napi_enumerable)),
          InstanceMethod<&LlamaContext::LoadSession>(
              "loadSession",
+             static_cast<napi_property_attributes>(napi_enumerable)),
+         InstanceMethod<&LlamaContext::Release>(
+             "release",
              static_cast<napi_property_attributes>(napi_enumerable))});
     Napi::FunctionReference *constructor = new Napi::FunctionReference();
     *constructor = Napi::Persistent(func);
@@ -139,12 +142,21 @@ public:
 
   std::mutex &getMutex() { return mutex; }
 
+  void Dispose() {
+    std::lock_guard<std::mutex> lock(mutex);
+    compl_worker = nullptr;
+    ctx.reset();
+    tokens.reset();
+    model.reset();
+  }
+
 private:
   Napi::Value GetSystemInfo(const Napi::CallbackInfo &info);
   Napi::Value Completion(const Napi::CallbackInfo &info);
   void StopCompletion(const Napi::CallbackInfo &info);
   Napi::Value SaveSession(const Napi::CallbackInfo &info);
   Napi::Value LoadSession(const Napi::CallbackInfo &info);
+  Napi::Value Release(const Napi::CallbackInfo &info);
 
   gpt_params params;
   LlamaCppModel model{nullptr, llama_free_model};
@@ -389,6 +401,26 @@ protected:
   void OnError(const Napi::Error &err) { Reject(err.Value()); }
 };
 
+class DisposeWorker : public Napi::AsyncWorker, public Napi::Promise::Deferred {
+public:
+  DisposeWorker(Napi::Env env, LlamaContext *ctx)
+      : AsyncWorker(env), Deferred(env), ctx_(ctx) {
+    ctx_->Ref();
+  }
+
+  ~DisposeWorker() { ctx_->Unref(); }
+
+protected:
+  void Execute() override { ctx_->Dispose(); }
+
+  void OnOK() override { Resolve(AsyncWorker::Env().Undefined()); }
+
+  void OnError(const Napi::Error &err) override { Reject(err.Value()); }
+
+private:
+  LlamaContext *ctx_;
+};
+
 // getSystemInfo(): string
 Napi::Value LlamaContext::GetSystemInfo(const Napi::CallbackInfo &info) {
   return Napi::String::New(info.Env(), get_system_info(params).c_str());
@@ -483,6 +515,16 @@ Napi::Value LlamaContext::LoadSession(const Napi::CallbackInfo &info) {
     Napi::TypeError::New(env, "String expected").ThrowAsJavaScriptException();
   }
   auto *worker = new LoadSessionWorker(info, this);
+  worker->Queue();
+  return worker->Promise();
+}
+
+// release(): Promise<void>
+Napi::Value LlamaContext::Release(const Napi::CallbackInfo &info) {
+  if (compl_worker != nullptr) {
+    compl_worker->Stop();
+  }
+  auto *worker = new DisposeWorker(info.Env(), this);
   worker->Queue();
   return worker->Promise();
 }

@@ -41,6 +41,7 @@ export interface LlamaContext {
   stopCompletion(): void
   saveSession(path: string): Promise<void>
   loadSession(path: string): Promise<void>
+  release(): Promise<void>
 }
 
 export interface Module {

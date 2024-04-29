@@ -14,4 +14,5 @@ it('work fine', async () => {
     expect(data).toMatchObject({ token: expect.any(String) })
   })
   expect(result).toMatchSnapshot()
+  await model.release()
 })
