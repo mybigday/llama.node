@@ -97,6 +97,7 @@ jobs:
         run: yarn publish --access public
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+          YARN_REGISTRY: https://registry.npmjs.org
       - name: Draft release
         uses: actions/create-release@v1
         env:
