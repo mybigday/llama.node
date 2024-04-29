@@ -94,10 +94,9 @@ jobs:
       - run: yarn install
       - run: yarn build
       - name: Publish to NPM
-        run: npm publish
-        env:
-          NPM_TOKEN: ${{secrets.NPM_TOKEN}}
-          NPM_REGISTRY: https://registry.npmjs.org
+        uses: JS-DevTools/npm-publish@v3
+        with:
+          token: ${{secrets.NPM_TOKEN}}
       - name: Draft release
         uses: actions/create-release@v1
         env:
