@@ -16,7 +16,7 @@ npm install @fugood/llama.node
 import { loadModel } from '@fugood/llama.node'
 
 // Initial a Llama context with the model (may take a while)
-const context = loadModel({
+const context = await loadModel({
   model: 'path/to/gguf/model',
   use_mlock: true,
   n_ctx: 2048,

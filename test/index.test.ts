@@ -2,7 +2,7 @@ import path from 'path'
 import { loadModel } from '../lib'
 
 it('work fine', async () => {
-  const model = loadModel({ model: path.resolve(__dirname, './tiny-random-llama.gguf') })
+  const model = await loadModel({ model: path.resolve(__dirname, './tiny-random-llama.gguf') })
   const result = await model.completion({
     prompt: 'My name is Merve and my favorite',
     n_samples: 1,

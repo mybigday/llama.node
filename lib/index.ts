@@ -1,5 +1,5 @@
 import { loadModule, LlamaModelOptions } from './binding'
-import type { LlamaContext } from './binding'
+import type { Module, LlamaContext } from './binding'
 
 export * from './binding'
 
@@ -7,7 +7,9 @@ export interface LlamaModelOptionsExtended extends LlamaModelOptions {
   lib_variant?: string
 }
 
-export const loadModel = (options: LlamaModelOptionsExtended): LlamaContext => {
-    const { LlamaContext } = loadModule(options.lib_variant)
-    return new LlamaContext(options)
+let module: Module | null = null
+
+export const loadModel = async (options: LlamaModelOptionsExtended): Promise<LlamaContext> => {
+    module ??= await loadModule(options.lib_variant)
+    return new module.LlamaContext(options)
 }
