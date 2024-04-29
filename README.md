@@ -7,13 +7,13 @@ Node binding of [llama.cpp](https://github.com/ggerganov/llama.cpp).
 ## Installation
 
 ```sh
-npm install llama.node
+npm install @fugood/llama.node
 ```
 
 ## Usage
 
 ```js
-import { loadModel } from 'llama.node'
+import { loadModel } from '@fugood/llama.node'
 
 // Initial a Llama context with the model (may take a while)
 const context = loadModel({
