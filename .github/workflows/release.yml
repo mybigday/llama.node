@@ -96,7 +96,7 @@ jobs:
       - name: Publish to NPM
         run: npm publish
         env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+          NODE_TOKEN: ${{secrets.NPM_TOKEN}}
           NPM_REGISTRY: https://registry.npmjs.org
       - name: Draft release
         uses: actions/create-release@v1
