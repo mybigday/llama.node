@@ -2802,20 +2802,15 @@ static void ggml_qnn_add(const ggml_tensor * src0, const ggml_tensor * src1, ggm
                 tensor_2
         };
 
-
-        Qnn_OpConfig_t opconfig = {
-                (Qnn_OpConfigVersion_t) 1, .v1 = {
-                        "ggml_op_add",
-                        QNN_OP_PACKAGE_NAME_QTI_AISW,
-                        QNN_OP_ELEMENT_WISE_ADD,
-                        0,
-                        qnn_params,
-                        2,
-                        tensor_inputs,
-                        1,
-                        tensor_outputs
-                }
-        };
+        Qnn_OpConfig_t opconfig = QNN_OPCONFIG_INIT;
+        opconfig.v1.name = "ggml_op_add";
+        opconfig.v1.packageName = QNN_OP_PACKAGE_NAME_QTI_AISW;
+        opconfig.v1.typeName = QNN_OP_ELEMENT_WISE_ADD;
+        opconfig.v1.numOfParams = 0;
+        opconfig.v1.numOfInputs = 2;
+        opconfig.v1.inputTensors = tensor_inputs;
+        opconfig.v1.numOfOutputs = 1;
+        opconfig.v1.outputTensors = tensor_outputs;
         error = qnn_raw_interface.graphAddNode(graph_handle, opconfig);
         if (QNN_SUCCESS != error) {
             QNN_LOG_INFO("error = %d\n", error);
@@ -3005,19 +3000,15 @@ static void ggml_qnn_add(const ggml_tensor * src0, const ggml_tensor * src1, ggm
         Qnn_Tensor_t tensor_outputs[] = {
                 *tensor_2
         };
-        Qnn_OpConfig_t opconfig = {
-                (Qnn_OpConfigVersion_t) 1, .v1 = {
-                        "ggml_op_add",
-                        QNN_OP_PACKAGE_NAME_QTI_AISW,
-                        QNN_OP_ELEMENT_WISE_ADD,
-                        0,
-                        nullptr,
-                        2,
-                        tensor_inputs,
-                        1,
-                        tensor_outputs
-                }
-        };
+        Qnn_OpConfig_t opconfig = QNN_OPCONFIG_INIT;
+        opconfig.v1.name = "ggml_op_add";
+        opconfig.v1.packageName = QNN_OP_PACKAGE_NAME_QTI_AISW;
+        opconfig.v1.typeName = QNN_OP_ELEMENT_WISE_ADD;
+        opconfig.v1.numOfParams = 0;
+        opconfig.v1.numOfInputs = 2;
+        opconfig.v1.inputTensors = tensor_inputs;
+        opconfig.v1.numOfOutputs = 1;
+        opconfig.v1.outputTensors = tensor_outputs;
         error = qnn_raw_interface.graphAddNode(graph_handle, opconfig);
         if (QNN_SUCCESS != error) {
             QNN_LOG_INFO("error = %d\n", error);
@@ -3214,19 +3205,15 @@ static void ggml_qnn_mul_mat(const ggml_tensor * src0, const ggml_tensor * src1,
         Qnn_Tensor_t tensor_outputs[] = {
                 *tensor_2
         };
-        Qnn_OpConfig_t opconfig = {
-                (Qnn_OpConfigVersion_t) 1, .v1 = {
-                        "ggml_op_mul_mat",
-                        QNN_OP_PACKAGE_NAME_QTI_AISW,
-                        QNN_OP_MAT_MUL,
-                        0,
-                        nullptr,
-                        2,
-                        tensor_inputs,
-                        1,
-                        tensor_outputs
-                }
-        };
+        Qnn_OpConfig_t opconfig = QNN_OPCONFIG_INIT;
+        opconfig.v1.name = "ggml_op_mul_mat";
+        opconfig.v1.packageName = QNN_OP_PACKAGE_NAME_QTI_AISW;
+        opconfig.v1.typeName = QNN_OP_MAT_MUL;
+        opconfig.v1.numOfParams = 0;
+        opconfig.v1.numOfInputs = 2;
+        opconfig.v1.inputTensors = tensor_inputs;
+        opconfig.v1.numOfOutputs = 1;
+        opconfig.v1.outputTensors = tensor_outputs;
         error = qnn_raw_interface.graphAddNode(graph_handle, opconfig);
         if (QNN_SUCCESS != error) {
             QNN_LOG_INFO("error = %d\n", error);
@@ -3420,19 +3407,15 @@ static void ggml_qnn_hanlde_op(const enum ggml_op ggmlop, const ggml_tensor * sr
         Qnn_Tensor_t tensor_outputs[] = {
                 *tensor_2
         };
-        Qnn_OpConfig_t opconfig = {
-                (Qnn_OpConfigVersion_t) 1, .v1 = {
-                        qnn_opconfig_name.c_str(),
-                        QNN_OP_PACKAGE_NAME_QTI_AISW,
-                        qnn_op_name,
-                        0,
-                        nullptr,
-                        2,
-                        tensor_inputs,
-                        1,
-                        tensor_outputs
-                }
-        };
+        Qnn_OpConfig_t opconfig = QNN_OPCONFIG_INIT;
+        opconfig.v1.name = qnn_opconfig_name.c_str();
+        opconfig.v1.packageName = QNN_OP_PACKAGE_NAME_QTI_AISW;
+        opconfig.v1.typeName = qnn_op_name;
+        opconfig.v1.numOfParams = 0;
+        opconfig.v1.numOfInputs = 2;
+        opconfig.v1.inputTensors = tensor_inputs;
+        opconfig.v1.numOfOutputs = 1;
+        opconfig.v1.outputTensors = tensor_outputs;
         error = qnn_raw_interface.graphAddNode(graph_handle, opconfig);
         if (QNN_SUCCESS != error) {
             QNN_LOG_INFO("error = %d\n", error);
@@ -4031,24 +4014,16 @@ static void ggml_backend_qnn_buffer_init_tensor(ggml_backend_buffer_t buffer, gg
         QNN_LOG_DEBUG("output tensor");
         qnn_tensor_type = QNN_TENSOR_TYPE_APP_READ;
     }
-    Qnn_Tensor_t  qnn_tensor = {
-            .version= QNN_TENSOR_VERSION_1,
-            {.v1= {
-                    .id=0,
-                    .name= tensor->name,
-                    .type= qnn_tensor_type,
-                    .dataFormat= QNN_TENSOR_DATA_FORMAT_FLAT_BUFFER,
-                    .dataType= qnn_data_type,
-                    .quantizeParams= {QNN_DEFINITION_UNDEFINED,
-                                      QNN_QUANTIZATION_ENCODING_UNDEFINED,
-                                      {.scaleOffsetEncoding= {.scale= 0.0000000000000000f, .offset= 0}}},
-                    .rank= ggml_get_tensor_rank(tensor),
-                    .dimensions=dimensions,
-                    .memType= QNN_TENSORMEMTYPE_RAW,
-                    {.clientBuf= {.data=nullptr,
-                            .dataSize=0}}}}
-    };
-    Qnn_Tensor_t  * p_qnn_tensor = (Qnn_Tensor_t *)malloc(sizeof(Qnn_Tensor_t));
+    Qnn_Tensor_t  qnn_tensor = QNN_TENSOR_INIT;
+    qnn_tensor.v1.name = tensor->name;
+    qnn_tensor.v1.type = qnn_tensor_type;
+    qnn_tensor.v1.dataType = qnn_data_type;
+    qnn_tensor.v1.rank = ggml_get_tensor_rank(tensor);
+    qnn_tensor.v1.dimensions = dimensions;
+    qnn_tensor.v1.memType = QNN_TENSORMEMTYPE_RAW;
+    qnn_tensor.v1.clientBuf.data = tensor->data;
+    qnn_tensor.v1.clientBuf.dataSize = ggml_get_tensor_data_size(tensor);
+    Qnn_Tensor_t * p_qnn_tensor = (Qnn_Tensor_t *)malloc(sizeof(Qnn_Tensor_t));
     if (nullptr == p_qnn_tensor) {
         QNN_LOG_WARN("init tensor failed");
         return;
