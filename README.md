@@ -20,7 +20,7 @@ const context = await loadModel({
   model: 'path/to/gguf/model',
   use_mlock: true,
   n_ctx: 2048,
-  n_gpu_layers: 1, // > 0: enable Metal on iOS
+  n_gpu_layers: 1, // > 0: enable GPU
   // embedding: true, // use embedding
 })
 
