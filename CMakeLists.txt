@@ -5,6 +5,9 @@ cmake_policy(SET CMP0042 NEW)
 project (llama-node)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED true)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED true)
 
 if(NOT DEFINED napi_build_version)
   set(napi_build_version 6)
@@ -76,6 +79,73 @@ file(
     "src/SaveSessionWorker.cpp"
     "src/SaveSessionWorker.h"
 )
+
+if (LLAMA_QNN)
+  if (PLATFORM STREQUAL "linux" AND ARCH STREQUAL "x64")
+    set(QNN_PLATFORM "x86_64-linux-clang")
+  elseif (PLATFORM STREQUAL "linux" AND ARCH STREQUAL "arm64")
+    set(QNN_PLATFORM "aarch64-ubuntu-gcc7.5")
+  elseif (PLATFORM STREQUAL "win32" AND ARCH STREQUAL "x64")
+    set(QNN_PLATFORM "x86_64-windows-msvc")
+  elseif (PLATFORM STREQUAL "win32" AND ARCH STREQUAL "arm64")
+    set(QNN_PLATFORM "aarch64-windows-msvc")
+  endif()
+
+  if (NOT QNN_PLATFORM)
+    message(FATAL_ERROR "QNN is not supported on this platform")
+  endif()
+  set(QNN_LIB_PATH ${QNN_ROOT}/lib/${QNN_PLATFORM})
+
+  file(
+    GLOB QNN_SO_FILES
+      "${QNN_LIB_PATH}/libc++*"
+      "${QNN_LIB_PATH}/libQnn*.so"
+      "${QNN_LIB_PATH}/Htp*.dll"
+      "${QNN_LIB_PATH}/Qnn*"
+  )
+
+  file(COPY ${QNN_SO_FILES} DESTINATION ${PLATFORM_BINARY_DIR})
+
+  file(
+    GLOB QNN_EXTRA_FILES
+      "${QNN_ROOT}/lib/hexagon-v*/unsigned/libQnn*Skel.so"
+      "${QNN_ROOT}/lib/hexagon-v*/unsigned/*.cat"
+  )
+
+  file(COPY ${QNN_EXTRA_FILES} DESTINATION ${PLATFORM_BINARY_DIR})
+
+  list(APPEND LINKS ${QNN_SO_FILES})
+
+  file(
+    GLOB QNN_HEADER_FILES
+      "src/ggml-qnn.h"
+  )
+
+  file(
+    GLOB QNN_SOURCE_FILES
+      "src/ggml-qnn.cpp"
+  )
+
+  target_compile_definitions(ggml PUBLIC GGML_USE_QNN)
+  target_include_directories(ggml PUBLIC ${QNN_ROOT}/include/QNN)
+  target_sources(ggml PRIVATE ${QNN_SOURCE_FILES} ${QNN_HEADER_FILES})
+  target_include_directories(llama PRIVATE "src")
+  set_target_properties(ggml PROPERTIES CXX_STANDARD 17)
+
+  # apply patches/qnn.patch to ggml
+  add_custom_command(
+    OUTPUT ${CMAKE_BUILD_DIR}/patch.log
+    COMMAND git apply ${CMAKE_SOURCE_DIR}/patches/qnn.patch
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/src/llama.cpp
+  )
+else()
+  # undo patches/qnn.patch to ggml
+  add_custom_command(
+    OUTPUT ${CMAKE_BUILD_DIR}/patch.log
+    COMMAND git apply -R ${CMAKE_SOURCE_DIR}/patches/qnn.patch
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/src/llama.cpp
+  )
+endif()
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES} ${CMAKE_JS_SRC})
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
