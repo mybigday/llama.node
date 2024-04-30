@@ -1,0 +1,34 @@
+#include "common.hpp"
+
+struct CompletionResult {
+  std::string text = "";
+  bool truncated = false;
+  size_t tokens_predicted = 0;
+  size_t tokens_evaluated = 0;
+};
+
+class LlamaCompletionWorker : public Napi::AsyncWorker,
+                              public Napi::Promise::Deferred {
+public:
+  LlamaCompletionWorker(const Napi::CallbackInfo &info, LlamaSessionPtr &sess,
+                        Napi::Function callback, gpt_params params,
+                        std::vector<std::string> stop_words = {});
+
+  ~LlamaCompletionWorker();
+
+  inline void Stop() { _stop = true; }
+
+protected:
+  void Execute();
+  void OnOK();
+  void OnError(const Napi::Error &err);
+
+private:
+  LlamaSessionPtr _sess;
+  gpt_params _params;
+  std::vector<std::string> _stop_words;
+  Napi::ThreadSafeFunction _tsfn;
+  bool _has_callback = false;
+  bool _stop = false;
+  CompletionResult _result;
+};

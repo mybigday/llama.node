@@ -61,7 +61,21 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(LLAMA_STATIC ON CACHE BOOL "Build llama as static library")
 add_subdirectory("src/llama.cpp")
 
-file(GLOB SOURCE_FILES "src/addons.cpp")
+file(
+  GLOB SOURCE_FILES
+    "src/addons.cc"
+    "src/common.hpp"
+    "src/DisposeWorker.cpp"
+    "src/DisposeWorker.h"
+    "src/LlamaCompletionWorker.cpp"
+    "src/LlamaCompletionWorker.h"
+    "src/LlamaContext.cpp"
+    "src/LlamaContext.h"
+    "src/LoadSessionWorker.cpp"
+    "src/LoadSessionWorker.h"
+    "src/SaveSessionWorker.cpp"
+    "src/SaveSessionWorker.h"
+)
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES} ${CMAKE_JS_SRC})
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
