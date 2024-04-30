@@ -20,5 +20,7 @@ it('work fine', async () => {
   await waitForExpect(() => {
     expect(tokens).toBe(result.text)
   })
+  await model.saveSession(path.resolve(__dirname, './tmp.sess'))
+  await model.loadSession(path.resolve(__dirname, './tmp.sess'))
   await model.release()
 })
