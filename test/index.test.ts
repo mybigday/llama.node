@@ -1,7 +1,9 @@
 import path from 'path'
+import waitForExpect from 'wait-for-expect'
 import { loadModel } from '../lib'
 
 it('work fine', async () => {
+  let tokens = ''
   const model = await loadModel({ model: path.resolve(__dirname, './tiny-random-llama.gguf') })
   const result = await model.completion({
     prompt: 'My name is Merve and my favorite',
@@ -12,7 +14,11 @@ it('work fine', async () => {
     seed: 0,
   }, (data) => {
     expect(data).toMatchObject({ token: expect.any(String) })
+    tokens += data.token
   })
   expect(result).toMatchSnapshot()
+  await waitForExpect(() => {
+    expect(tokens).toBe(result.text)
+  })
   await model.release()
 })
