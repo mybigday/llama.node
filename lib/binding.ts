@@ -1,3 +1,5 @@
+import * as path from 'path'
+
 export type LlamaModelOptions = {
   model: string
   embedding?: boolean
@@ -48,9 +50,18 @@ export interface Module {
   LlamaContext: LlamaContext
 }
 
+const setupEnv = (variant?: string) => {
+  const postfix = variant ? `-${variant}` : ''
+  const binPath = path.resolve(__dirname, `../bin/${process.platform}${postfix}/${process.arch}/`)
+  if (!process.env.PATH?.includes(binPath)) {
+    process.env.PATH = `${binPath}:${process.env.PATH}`
+  }
+}
+
 export const loadModule = async (variant?: string): Promise<Module> => {
   try {
     if (variant) {
+      setupEnv(variant)
       return await import(`../bin/${process.platform}-${variant}/${process.arch}/llama-node.node`) as Module
     }
   } catch {} // ignore errors and try the common path
