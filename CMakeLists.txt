@@ -121,7 +121,7 @@ if (LLAMA_QNN)
   file(
     GLOB QNN_EXTRA_FILES
       "${QNN_ROOT}/lib/hexagon-v*/unsigned/libQnn*Skel.so"
-      "${QNN_ROOT}/lib/hexagon-v*/unsigned/*.cat"
+      "${QNN_ROOT}/lib/hexagon-v73/unsigned/libqnnhtpv73.cat"
   )
 
   file(COPY ${QNN_EXTRA_FILES} DESTINATION ${PLATFORM_BINARY_DIR})
