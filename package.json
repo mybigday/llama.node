@@ -39,10 +39,8 @@
   },
   "files": [
     "bin/**/*",
-    "scripts/*.js",
-    "scripts/*.ts",
-    "src/*",
-    "externals/**/*.{c,cc,cpp,h,hh,hpp,txt,cmake}",
+    "patches/*",
+    "src/**/*.{c,cc,cpp,h,hh,hpp,txt,cmake}",
     "lib/*.js",
     "lib/*.ts",
     "CMakeLists.txt"

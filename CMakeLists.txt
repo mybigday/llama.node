@@ -64,6 +64,17 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(LLAMA_STATIC ON CACHE BOOL "Build llama as static library")
 add_subdirectory("src/llama.cpp")
 
+# apply patches
+set(PATCH_FILE ${CMAKE_SOURCE_DIR}/patches/llama.patch)
+add_custom_target(patch)
+add_custom_command(
+  TARGET patch
+  COMMAND patch -N -p1 < ${PATCH_FILE} || true
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/src/llama.cpp
+
+)
+add_dependencies(ggml patch)
+
 file(
   GLOB SOURCE_FILES
     "src/addons.cc"
@@ -95,6 +106,7 @@ if (LLAMA_QNN)
     message(FATAL_ERROR "QNN is not supported on this platform")
   endif()
   set(QNN_LIB_PATH ${QNN_ROOT}/lib/${QNN_PLATFORM})
+  message(STATUS "QNN_LIB_PATH: ${QNN_LIB_PATH}")
 
   file(
     GLOB QNN_SO_FILES
@@ -118,33 +130,22 @@ if (LLAMA_QNN)
 
   file(
     GLOB QNN_HEADER_FILES
-      "src/ggml-qnn.h"
+      "src/ggml-qnn/ggml-qnn.h"
   )
 
   file(
     GLOB QNN_SOURCE_FILES
-      "src/ggml-qnn.cpp"
+      "src/ggml-qnn/pthread-shim.h"
+      "src/ggml-qnn/ggml-qnn.cpp"
   )
 
   target_compile_definitions(ggml PUBLIC GGML_USE_QNN)
-  target_include_directories(ggml PUBLIC ${QNN_ROOT}/include/QNN)
+  target_include_directories(ggml PUBLIC ${QNN_ROOT}/include ${QNN_ROOT}/include/QNN)
   target_sources(ggml PRIVATE ${QNN_SOURCE_FILES} ${QNN_HEADER_FILES})
-  target_include_directories(llama PRIVATE "src")
+  target_include_directories(llama PRIVATE "src/ggml-qnn")
   set_target_properties(ggml PROPERTIES CXX_STANDARD 17)
-
-  # apply patches/qnn.patch to ggml
-  add_custom_command(
-    OUTPUT ${CMAKE_BUILD_DIR}/patch.log
-    COMMAND git apply ${CMAKE_SOURCE_DIR}/patches/qnn.patch
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/src/llama.cpp
-  )
-else()
-  # undo patches/qnn.patch to ggml
-  add_custom_command(
-    OUTPUT ${CMAKE_BUILD_DIR}/patch.log
-    COMMAND git apply -R ${CMAKE_SOURCE_DIR}/patches/qnn.patch
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/src/llama.cpp
-  )
+  set_target_properties(ggml PROPERTIES CXX_STANDARD_REQUIRED ON)
+  set_target_properties(ggml PROPERTIES C_STANDARD 11)
 endif()
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES} ${CMAKE_JS_SRC})

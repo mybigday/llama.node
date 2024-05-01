@@ -50,10 +50,21 @@
 #include <inttypes.h>
 #include <math.h>
 #include <time.h>
+#include <sys/stat.h>
+#ifdef WIN32
+#include <io.h>
+#include <windows.h>
+#include "pthread-shim.h"
+
+#define R_OK    4       /* Test for read permission.  */
+#define W_OK    2       /* Test for write permission.  */
+#define F_OK    0       /* Test for existence.  */
+#define access _access
+#else
 #include <unistd.h>
 #include <dlfcn.h>
 #include <fcntl.h>
-#include <sys/stat.h>
+#endif
 
 #include <string>
 #include <vector>
@@ -79,15 +90,20 @@
 #include <utility>
 
 #ifdef __cplusplus
-    #include <atomic>
-    using std::atomic_int;
-    using std::atomic_bool;
-    using std::atomic_load;
-    using std::atomic_fetch_sub;
-    using std::atomic_store;
+#include <atomic>
+using std::atomic_int;
+using std::atomic_bool;
+using std::atomic_load;
+using std::atomic_fetch_sub;
+using std::atomic_store;
 #else /* not __cplusplus */
-    #include <stdatomic.h>
+#include <stdatomic.h>
 #endif /* __cplusplus */
+
+// dummy fix https://github.com/skypjack/entt/issues/615#issuecomment-749511697 
+#ifdef WIN32
+#define interface interface_
+#endif
 
 #include "QnnTypes.h"
 #include "QnnCommon.h"
@@ -367,11 +383,31 @@ static void ggml_setup_op_has_task_pass(void) {
 //in GGML internal or FFmpeg
 
 //QNN cDSP and HTA backend would not be used currently, just focus on QNN CPU/GPU/HTP(aka DSP) backend currently
+#ifdef WIN32
+/*struct ggml_backend_qnn_context {
+    int device;
+    int threads;
+    char name[GGML_MAX_NAME];
+    char lib[GGML_MAX_NAME];
+    qnn_instance * instance;
+    qnn_buf_t * buffer_pool;
+    struct ggml_backend * backend;
+    QNN_INTERFACE_VER_TYPE raw_interface;
+    QNN_SYSTEM_INTERFACE_VER_TYPE raw_system_interface;
+} ;*/
+
+static struct ggml_backend_qnn_context g_qnn_mgr[GGML_QNN_MAX_DEVICES] = {
+    {0, 1, "qnn-cpu", "QnnCpu.dll", nullptr, nullptr, nullptr, nullptr, nullptr},
+    {1, 1, "qnn-gpu", "QnnGpu.dll", nullptr, nullptr, nullptr, nullptr, nullptr},
+    {2, 1, "qnn-htp(aka dsp)", "QnnHtp.dll", nullptr, nullptr, nullptr, nullptr, nullptr}
+};
+#else
 static struct ggml_backend_qnn_context g_qnn_mgr[GGML_QNN_MAX_DEVICES] = {
         [QNN_CPU]   = {.device = 0, .threads = 1, .name =   "qnn-cpu", .lib = "libQnnCpu.so", .instance = nullptr, .buffer_pool = nullptr, .backend = nullptr, .raw_interface = nullptr, .raw_system_interface = nullptr},
         [QNN_GPU]   = {.device = 1, .threads = 1, .name =   "qnn-gpu", .lib = "libQnnGpu.so", .instance = nullptr, .buffer_pool = nullptr, .backend = nullptr, .raw_interface = nullptr, .raw_system_interface = nullptr},
         [QNN_HTP]   = {.device = 2, .threads = 1, .name =   "qnn-htp(aka dsp)", .lib = "libQnnHtp.so", .instance = nullptr, .buffer_pool = nullptr, .backend = nullptr, .raw_interface = nullptr, .raw_system_interface = nullptr},
 };
+#endif
 
 
 
@@ -889,7 +925,17 @@ static size_t memscpy(void * dst, size_t dstSize, const void * src, size_t copyS
 
 
 static char * ggml_qnn_strndup(const char * source, size_t maxlen) {
-    return ::strndup(source, maxlen); 
+#ifdef WIN32
+    char * dest = (char *)malloc(maxlen + 1);
+    if (dest == nullptr) {
+        return nullptr;
+    }
+    strncpy_s(dest, maxlen + 1, source, maxlen);
+    dest[maxlen] = '\0';
+    return dest;
+#else
+    return ::strndup(source, maxlen);
+#endif
 }
 
 
@@ -1118,7 +1164,11 @@ static uint32_t ggml_get_tensor_data_size(const ggml_tensor * tensor) {
 
 template<typename Fn>
 Fn load_qnn_functionpointers(void * handle, const char * function_name) {
+#ifdef WIN32
+    return reinterpret_cast<Fn>(GetProcAddress(reinterpret_cast<HMODULE>(handle), function_name));
+#else
     return reinterpret_cast<Fn>(dlsym(handle, function_name));
+#endif
 }
 
 
@@ -2034,19 +2084,35 @@ int qnn_instance::load_backend(std::string & lib_path, const QnnSaver_Config_t *
     Qnn_ErrorHandle_t error = QNN_SUCCESS;
     QNN_LOG_DEBUG("lib_path:%s\n", lib_path.c_str());
 
+#ifdef WIN32
+    void *lib_handle = LoadLibrary(lib_path.c_str());
+    if (nullptr == lib_handle) {
+        QNN_LOG_WARN("can not open QNN library %s, with error: %d", lib_path.c_str(), GetLastError());
+        return 1;
+    }
+#else
     void *lib_handle = dlopen(lib_path.c_str(), RTLD_NOW | RTLD_GLOBAL);
     if (nullptr == lib_handle) {
         QNN_LOG_WARN("can not open QNN library %s, with error: %s", lib_path.c_str(), dlerror());
         return 1;
     }
+#endif
 
     // load get_provider function
+#ifdef WIN32
+    auto get_providers = (_pfn_QnnInterface_getProviders *)GetProcAddress((HMODULE)lib_handle, "QnnInterface_getProviders");
+    if (nullptr == get_providers) {
+        QNN_LOG_WARN("can not load symbol QnnInterface_getProviders : %d", GetLastError());
+        return 2;
+    }
+#else
     auto get_providers = load_qnn_functionpointers<_pfn_QnnInterface_getProviders *>(lib_handle,
                                                                                      "QnnInterface_getProviders");
     if (nullptr == get_providers) {
         QNN_LOG_WARN("can not load symbol QnnInterface_getProviders : %s", dlerror());
         return 2;
     }
+#endif
 
     // get QnnInterface Providers
     std::uint32_t num_providers = 0;
@@ -2094,10 +2160,14 @@ int qnn_instance::load_backend(std::string & lib_path, const QnnSaver_Config_t *
     _loaded_backend[backend_id] = provider_list[0];
     if (_loaded_lib_handle.count(backend_id) > 0) {
         QNN_LOG_WARN("closing %p\n", _loaded_lib_handle[backend_id]);
+#ifdef WIN32
+        FreeLibrary((HMODULE)_loaded_lib_handle[backend_id]);
+#else
         int dlclose_error = dlclose(_loaded_lib_handle[backend_id]);
         if (dlclose_error != 0) {
             QNN_LOG_WARN("fail to close %p with error %s\n", _loaded_lib_handle[backend_id], dlerror());
         }
+#endif
     }
     _loaded_lib_handle[backend_id] = lib_handle;
     _backend_id = backend_id;
@@ -2136,6 +2206,11 @@ int qnn_instance::load_backend(std::string & lib_path, const QnnSaver_Config_t *
 
 int qnn_instance::unload_backend() {
     ENTER_FUNC();
+#ifdef WIN32
+    for (auto &it : _loaded_lib_handle) {
+        FreeLibrary((HMODULE)it.second);
+    }
+#else
     int dlclose_error = 0;
     for (auto &it : _loaded_lib_handle) {
         dlclose_error = dlclose(it.second);
@@ -2143,6 +2218,7 @@ int qnn_instance::unload_backend() {
             QNN_LOG_WARN("failed to close QNN backend %d, error %s\n", it.first, dlerror());
         }
     }
+#endif
 
     _loaded_lib_handle.clear();
     _lib_path_to_backend_id.clear();
@@ -2161,6 +2237,20 @@ int qnn_instance::load_system() {
     std::string system_lib_path = _lib_path + "libQnnSystem.so";
     QNN_LOG_DEBUG("system_lib_path:%s\n", system_lib_path.c_str());
 
+#ifdef WIN32
+    _system_lib_handle = LoadLibrary(system_lib_path.c_str());
+    if (nullptr == _system_lib_handle) {
+        QNN_LOG_WARN("can not open QNN library %s, error: %d\n", system_lib_path.c_str(), GetLastError());
+        return 1;
+    }
+
+    auto * get_providers = reinterpret_cast<_pfn_QnnSystemInterface_getProviders *>(GetProcAddress(
+            (HMODULE)_system_lib_handle, "QnnSystemInterface_getProviders"));
+    if (nullptr == get_providers) {
+        QNN_LOG_WARN("can not load QNN symbol QnnSystemInterface_getProviders: %d\n", GetLastError());
+        return 2;
+    }
+#else
     _system_lib_handle = dlopen(system_lib_path.c_str(), RTLD_NOW | RTLD_LOCAL);
     if (nullptr == _system_lib_handle) {
         QNN_LOG_WARN("can not open QNN library %s, error: %s\n", system_lib_path.c_str(), dlerror());
@@ -2173,6 +2263,7 @@ int qnn_instance::load_system() {
         QNN_LOG_WARN("can not load QNN symbol QnnSystemInterface_getProviders: %s\n", dlerror());
         return 2;
     }
+#endif
 
     uint32_t num_providers = 0;
     const QnnSystemInterface_t ** provider_list = nullptr;
@@ -2243,11 +2334,15 @@ int qnn_instance::unload_system() {
         _qnn_system_handle = nullptr;
     }
 
+#ifdef WIN32
+    FreeLibrary((HMODULE)_system_lib_handle);
+#else
     int dlclose_error = dlclose(_system_lib_handle);
     if (dlclose_error != 0) {
         QNN_LOG_WARN("failed to close QnnSystem library, error %s\n", dlerror());
         return 2;
     }
+#endif
 
     _system_lib_handle = nullptr;
     LEAVE_FUNC();
@@ -2406,7 +2501,7 @@ int qnn_instance::qnn_init(const QnnSaver_Config_t ** saver_config) {
         }
     }
 
-#ifdef __ANDROID__
+#if 0 // Latest SDK seems no libcdsprpc
     _rpc_lib_handle = dlopen("libcdsprpc.so", RTLD_NOW | RTLD_LOCAL);
     if (nullptr == _rpc_lib_handle) {
         QNN_LOG_WARN("failed to load qualcomm's rpc lib, error:%s\n", dlerror());
@@ -2458,7 +2553,7 @@ int qnn_instance::qnn_finalize() {
     if (nullptr != _pfn_rpc_mem_deinit) // make Qualcomm's SoC based low-end phone happy
         _pfn_rpc_mem_deinit();
 
-#ifdef __ANDROID__
+#if 0
     if (dlclose(_rpc_lib_handle) != 0) {
         QNN_LOG_WARN("failed to unload qualcomm's rpc lib, error:%s\n", dlerror());
     } else {
@@ -4120,11 +4215,15 @@ static const char * ggml_backend_qnn_buffer_type_name(ggml_backend_buffer_type_t
 
 static void * ggml_qnn_host_malloc(size_t n) {
     void * data = nullptr;
+#ifdef WIN32
+    data = _aligned_malloc(n, 32);
+#else
     const int result = posix_memalign((void **) &data, sysconf(_SC_PAGESIZE), n);
     if (result != 0) {
         QNN_LOG_WARN("%s: error: posix_memalign failed\n", __func__);
         return nullptr;
     }
+#endif
 
     return data;
 }
@@ -4136,12 +4235,20 @@ static ggml_backend_buffer_t ggml_backend_qnn_buffer_type_alloc_buffer(ggml_back
 
     ggml_backend_qnn_buffer_context * ctx = new ggml_backend_qnn_buffer_context;
 
+#ifdef WIN32
+    const size_t size_page = 4096;
+    size_t size_aligned = size;
+    if ((size_aligned % size_page) != 0) {
+        size_aligned += (size_page - (size_aligned % size_page));
+    }
+#else
     const size_t size_page = sysconf(_SC_PAGESIZE);
 
     size_t size_aligned = size;
     if ((size_aligned % size_page) != 0) {
         size_aligned += (size_page - (size_aligned % size_page));
     }
+#endif
 
     //QNN_LOG_DEBUG("size %d, %d MB", size_aligned, size_aligned / (1 << 20));
 
@@ -4538,7 +4645,11 @@ static void ggml_graph_compute_thread_sync_node(int * node_n, struct ggml_comput
 
     while (true) {
         if (do_yield) {
+#ifdef WIN32
+            Sleep(0);
+#else
             sched_yield();
+#endif
         }
 
         * node_n = atomic_load(&state->shared->node_n);
@@ -4553,7 +4664,11 @@ static void ggml_graph_compute_thread_sync_task(int * task_phase, struct ggml_co
 
     while (true) {
         if (do_yield) {
+#ifdef WIN32
+            Sleep(0);
+#else
             sched_yield();
+#endif
         }
 
         * task_phase = atomic_load(&state->shared->node_task);
@@ -4982,12 +5097,7 @@ static ggml_status ggml_backend_qnn_graph_compute_multithread(ggml_backend_t bac
     // create thread pool
     if (n_threads > 1) {
         for (int j = 1; j < n_threads; ++j) {
-            workers[j] = (struct ggml_compute_state) {
-                    .thrd   = 0,
-                    .ith = j,
-                    .shared = &state_shared,
-                    .ec = GGML_STATUS_SUCCESS,
-            };
+            workers[j] = { 0, j, &state_shared, GGML_STATUS_SUCCESS };
 
             const int rc = pthread_create(&workers[j].thrd, NULL, ggml_graph_compute_thread, &workers[j]);
             GGML_ASSERT(rc == 0);
@@ -5154,7 +5264,7 @@ ggml_backend_buffer_type_t ggml_backend_qnn_buffer_type(size_t device_index) {
 }
 
 // if build for windows, PATH_DELIMITER is '\'
-#ifdef _WINDOWS_
+#ifdef WIN32
 
 #define PATH_DELIMITER '\\'
 #define QNN_SYS_LIB_NAME "QnnSystem.dll"
