@@ -40,9 +40,6 @@ endif()
 
 set(PLATFORM_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin/${PLATFORM}${VARIANT}/${ARCH})
 
-# set output directory
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PLATFORM_BINARY_DIR})
-
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Platform: ${PLATFORM}")
 message(STATUS "Architecture: ${ARCH}")
