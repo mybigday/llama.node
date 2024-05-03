@@ -7,9 +7,10 @@ export interface LlamaModelOptionsExtended extends LlamaModelOptions {
   lib_variant?: string
 }
 
-let module: Module | null = null
+const mods: { [key: string]: Module } = {}
 
 export const loadModel = async (options: LlamaModelOptionsExtended): Promise<LlamaContext> => {
-    module ??= await loadModule(options.lib_variant)
-    return new module.LlamaContext(options)
+  const variant = options.lib_variant ?? 'default'
+  mods[variant] ??= await loadModule(options.lib_variant)
+  return new mods[variant].LlamaContext(options)
 }
