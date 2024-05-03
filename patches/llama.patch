@@ -1,11 +1,12 @@
 diff --git a/ggml-backend.c b/ggml-backend.c
-index e91d97cd..be4989d3 100644
+index e91d97cd..39d4efec 100644
 --- a/ggml-backend.c
 +++ b/ggml-backend.c
-@@ -445,6 +445,10 @@ GGML_CALL static void ggml_backend_registry_init(void) {
+@@ -445,6 +445,11 @@ GGML_CALL static void ggml_backend_registry_init(void) {
      extern GGML_CALL void ggml_backend_kompute_reg_devices(void);
      ggml_backend_kompute_reg_devices();
  #endif
++
 +#ifdef GGML_USE_QNN
 +    extern GGML_CALL void ggml_backend_qnn_reg_devices(void);
 +    ggml_backend_qnn_reg_devices();
@@ -14,7 +15,7 @@ index e91d97cd..be4989d3 100644
  
  GGML_CALL void ggml_backend_register(const char * name, ggml_backend_init_fn init_fn, ggml_backend_buffer_type_t default_buffer_type, void * user_data) {
 diff --git a/llama.cpp b/llama.cpp
-index a25d115c..ff0d929f 100644
+index a25d115c..7dedb2a1 100644
 --- a/llama.cpp
 +++ b/llama.cpp
 @@ -17,6 +17,8 @@
@@ -44,9 +45,9 @@ index a25d115c..ff0d929f 100644
      // Defined when llama.cpp is compiled with support for offloading model layers to GPU.
      return true;
  #else
-@@ -15203,6 +15207,16 @@ struct llama_context * llama_new_context_with_model(
+@@ -15143,6 +15147,16 @@ struct llama_context * llama_new_context_with_model(
+                 ctx->backends.push_back(backend);
              }
-             ctx->backends.push_back(backend);
          }
 +#elif defined(GGML_USE_QNN)
 +        if (model->n_gpu_layers > 0) {
@@ -58,6 +59,6 @@ index a25d115c..ff0d929f 100644
 +            }
 +            ctx->backends.push_back(backend);
 +        }
- #endif
-         ctx->backend_cpu = ggml_backend_cpu_init();
-         if (ctx->backend_cpu == nullptr) {
+ #elif defined(GGML_USE_VULKAN)
+         if (model->split_mode == LLAMA_SPLIT_MODE_ROW) {
+             LLAMA_LOG_ERROR("%s: Row split not supported. Failed to initialize Vulkan backend\n", __func__);
