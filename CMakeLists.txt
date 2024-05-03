@@ -118,11 +118,11 @@ if (LLAMA_QNN)
 
   file(COPY ${QNN_SO_FILES} DESTINATION ${PLATFORM_BINARY_DIR})
 
-  file(
-    GLOB QNN_EXTRA_FILES
-      "${QNN_ROOT}/lib/hexagon-v*/unsigned/libQnn*Skel.so"
-      "${QNN_ROOT}/lib/hexagon-v73/unsigned/libqnnhtpv73.cat"
-  )
+  file(GLOB QNN_EXTRA_FILES "${QNN_ROOT}/lib/hexagon-v*/unsigned/libQnn*Skel.so")
+
+  if (PLATFORM STREQUAL "win32")
+    list(APPEND QNN_EXTRA_FILES "${QNN_ROOT}/lib/hexagon-v73/unsigned/libqnnhtpv73.cat")
+  endif()
 
   file(COPY ${QNN_EXTRA_FILES} DESTINATION ${PLATFORM_BINARY_DIR})
 
