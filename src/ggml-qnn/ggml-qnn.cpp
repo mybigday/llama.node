@@ -1701,9 +1701,8 @@ class qnn_instance {
 public:
     using BackendIdType = decltype(QnnInterface_t{}.backendId);
 
-    explicit qnn_instance(const std::string & lib_path, const std::string & backend_name,
+    explicit qnn_instance(const std::string & backend_name,
                                 const std::string & model_name) :
-            _lib_path(std::move(lib_path)),
             _backend_name(std::move(backend_name)),
             _model_name(std::move(model_name)) {};
 
@@ -1884,7 +1883,6 @@ private:
     static constexpr const int _required_num_providers = 1;
 
 private:
-    std::string _lib_path;
     std::string _backend_name;
     std::string _model_name;                         // prebuilt QNN model name, not used in currently
     BackendIdType _backend_id;
@@ -2233,14 +2231,10 @@ int qnn_instance::unload_backend() {
 int qnn_instance::load_system() {
     Qnn_ErrorHandle_t error = QNN_SUCCESS;
 
-    QNN_LOG_WARN("lib_path:%s\n", _lib_path.c_str());
-    std::string system_lib_path = _lib_path + "libQnnSystem.so";
-    QNN_LOG_DEBUG("system_lib_path:%s\n", system_lib_path.c_str());
-
 #ifdef WIN32
-    _system_lib_handle = LoadLibrary(system_lib_path.c_str());
+    _system_lib_handle = LoadLibrary("QnnSystem.dll");
     if (nullptr == _system_lib_handle) {
-        QNN_LOG_WARN("can not open QNN library %s, error: %d\n", system_lib_path.c_str(), GetLastError());
+        QNN_LOG_WARN("can not open QNN library QnnSystem.dll, error: %d\n", GetLastError());
         return 1;
     }
 
@@ -2251,9 +2245,9 @@ int qnn_instance::load_system() {
         return 2;
     }
 #else
-    _system_lib_handle = dlopen(system_lib_path.c_str(), RTLD_NOW | RTLD_LOCAL);
+    _system_lib_handle = dlopen("libQnnSystem.so", RTLD_NOW | RTLD_LOCAL);
     if (nullptr == _system_lib_handle) {
-        QNN_LOG_WARN("can not open QNN library %s, error: %s\n", system_lib_path.c_str(), dlerror());
+        QNN_LOG_WARN("can not open QNN library libQnnSystem.so, error: %s\n", dlerror());
         return 1;
     }
 
@@ -2407,20 +2401,19 @@ int qnn_instance::qnn_init(const QnnSaver_Config_t ** saver_config) {
         QNN_LOG_DEBUG("load QNN system lib successfully\n");
     }
 
-    std::string bakend_lib_path = _lib_path + _backend_name;
-    if (0 == _lib_path_to_backend_id.count(bakend_lib_path)) {
-        int is_load_ok = load_backend(bakend_lib_path, saver_config);
+    if (0 == _lib_path_to_backend_id.count(_backend_name)) {
+        int is_load_ok = load_backend(_backend_name, saver_config);
         if (0 != is_load_ok) {
             QNN_LOG_WARN("failed to load QNN backend\n");
             return 2;
         }
     }
 
-    backend_id = _lib_path_to_backend_id[bakend_lib_path];
+    backend_id = _lib_path_to_backend_id[_backend_name];
     if (0 == _loaded_backend.count(backend_id) ||
         0 == _loaded_lib_handle.count(backend_id)) {
         QNN_LOG_WARN("library %s is loaded but loaded backend count=%zu, loaded lib_handle count=%zu\n",
-              bakend_lib_path.c_str(),
+              _backend_name.c_str(),
               _loaded_backend.count(backend_id),
               _loaded_lib_handle.count(backend_id));
         return 3;
@@ -5311,51 +5304,8 @@ ggml_backend_t ggml_backend_qnn_init(size_t device) {
         is_first_call = false;
     }
 
-    std::string qnn_lib_name;
-    std::string qnn_lib_path;
-    // split PATH by ":"
-    std::vector<std::string> paths;
-    std::string path = getenv("PATH");
-    std::string::size_type start = 0;
-    std::string::size_type end = path.find(':');
-    while (end != std::string::npos) {
-        paths.push_back(path.substr(start, end - start));
-        start = end + 1;
-        end = path.find(':', start);
-    }
-    paths.push_back(path.substr(start, end));
-
-    for (auto & p : paths) {
-        if (access((p + PATH_DELIMITER + QNN_SYS_LIB_NAME).c_str(), F_OK) == 0) {
-            qnn_lib_path = p + PATH_DELIMITER;
-            break;
-        }
-    }
-
-    if (qnn_lib_path.empty()) {
-        QNN_LOG_ERROR("qnn lib not found in PATH\n");
-        return nullptr;
-    }
-
-#ifdef __linux__
-    QNN_LOG_INFO("qnn lib path: %s, qnn backend: %d\n", qnn_lib_path.c_str(), device);
-    // setup LD_LIBRARY_PATH
-    char* ld_library_path = getenv("LD_LIBRARY_PATH");
-    int ret;
-    if (ld_library_path == NULL) {
-        ret = setenv("LD_LIBRARY_PATH", qnn_lib_path.c_str(), 1);
-    } else {
-        ret = setenv("LD_LIBRARY_PATH", (qnn_lib_path + ":" + ld_library_path).c_str(), 1);
-    }
-    if (setenv("LD_LIBRARY_PATH", qnn_lib_path.c_str(), 1) != 0) {
-        QNN_LOG_ERROR("setenv failed\n");
-        return nullptr;
-    }
-#endif
-
-    QNN_LOG_INFO("qnn lib path: %s, qnn backend: %d\n", qnn_lib_path.c_str(), device);
     qnn_instance * instance = nullptr;
-    instance = new qnn_instance(qnn_lib_path, g_qnn_mgr[device].lib, "");
+    instance = new qnn_instance(g_qnn_mgr[device].lib, "");
     result = instance->qnn_init(nullptr);
     if (0 != result) {
         QNN_LOG_WARN("init qnn subsystem failed with qnn backend %s, pls check why\n", get_qnn_backend_name(device));
