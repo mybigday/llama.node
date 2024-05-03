@@ -97,3 +97,15 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> ${PLATFORM_BINARY_DIR}/$<TARGET_FILE_NAME:${PROJECT_NAME}>
   COMMENT "Copying to bin folder"
 )
+
+if (LLAMA_METAL)
+  # copy ${CMAKE_BINARY_DIR}/bin/default.metallib
+  add_custom_target(copy_metallib)
+  add_custom_command(
+    TARGET copy_metallib
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/bin/default.metallib ${PLATFORM_BINARY_DIR}/default.metallib
+    COMMENT "Copying default.metallib to bin folder"
+  )
+  add_dependencies(copy_metallib ggml-metal)
+  add_dependencies(${PROJECT_NAME} copy_metallib)
+endif()
