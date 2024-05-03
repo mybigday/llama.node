@@ -40,6 +40,9 @@ endif()
 
 set(PLATFORM_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin/${PLATFORM}${VARIANT}/${ARCH})
 
+# set output directory
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PLATFORM_BINARY_DIR})
+
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Platform: ${PLATFORM}")
 message(STATUS "Architecture: ${ARCH}")
@@ -158,21 +161,7 @@ if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)
   # copy target to bin folder
   get_filename_component(CMAKE_JS_NODELIB_TARGET_NAME ${CMAKE_JS_NODELIB_TARGET} NAME)
   add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_JS_NODELIB_TARGET} ${PLATFORM_BINARY_DIR}/${CMAKE_JS_NODELIB_TARGET_NAME}
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_JS_NODELIB_TARGET} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_JS_NODELIB_TARGET_NAME}
     COMMENT "Copying to bin folder"
-  )
-endif()
-
-# copy target to bin folder
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> ${PLATFORM_BINARY_DIR}/$<TARGET_FILE_NAME:${PROJECT_NAME}>
-  COMMENT "Copying to bin folder"
-)
-
-# copy ggml-metal.metal
-if (PLATFORM STREQUAL "darwin")
-  add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_INSTALL_BINDIR}/ggml-metal.metal ${PLATFORM_BINARY_DIR}/ggml-metal.metal
-    COMMENT "Copying ggml-metal.metal to bin folder"
   )
 endif()
