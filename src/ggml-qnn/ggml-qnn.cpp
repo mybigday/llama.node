@@ -4282,7 +4282,8 @@ static size_t ggml_backend_qnn_buffer_type_get_max_size(ggml_backend_buffer_type
     GGML_UNUSED(buft);
     //works fine with ggml-tiny.en-q8_0.bin for whisper.cpp
     //return (38 * 1024 * 1024);
-    return (96 * 1024 * 1024);
+    // return (96 * 1024 * 1024);
+    return (128 * 1024 * 1024);
 }
 
 
