@@ -1548,7 +1548,7 @@ static void ggml_qnn_log_internal(ggml_log_level level, const char * file, const
 #if (defined __ANDROID__) || (defined ANDROID)
             __android_log_print(level, "KANTV", "%s", s_ggml_qnn_log_internal_buf); //TODO:modify to llama.cpp before submit to upstream
 #else
-            printf("%s", s_ggml_qnn_log_internal_buf); //Qualcomm's QNN could running on Window over ARM
+            fputs(s_ggml_qnn_log_internal_buf, stderr);
 #endif
         }
         va_end(args);
