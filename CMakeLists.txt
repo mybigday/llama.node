@@ -168,3 +168,11 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> ${PLATFORM_BINARY_DIR}/$<TARGET_FILE_NAME:${PROJECT_NAME}>
   COMMENT "Copying to bin folder"
 )
+
+# copy ggml-metal.metal
+if (PLATFORM STREQUAL "darwin")
+  add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_INSTALL_BINDIR}/ggml-metal.metal ${PLATFORM_BINARY_DIR}/ggml-metal.metal
+    COMMENT "Copying ggml-metal.metal to bin folder"
+  )
+endif()
