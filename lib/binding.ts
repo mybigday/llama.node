@@ -53,8 +53,13 @@ export interface Module {
 const setupEnv = (variant?: string) => {
   const postfix = variant ? `-${variant}` : ''
   const binPath = path.resolve(__dirname, `../bin/${process.platform}${postfix}/${process.arch}/`)
-  if (!process.env.PATH?.includes(binPath)) {
-    process.env.PATH = `${binPath}:${process.env.PATH}`
+  const systemPathEnv = process.env.PATH ?? process.env.Path ?? ''
+  if (!systemPathEnv.includes(binPath)) {
+    if (process.platform === 'win32') {
+      process.env.Path = `${binPath};${systemPathEnv}`
+    } else {
+      process.env.PATH = `${binPath}:${systemPathEnv}`
+    }
   }
 }
 
