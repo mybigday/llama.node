@@ -152,31 +152,50 @@ add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES} ${CMAKE_JS_SRC})
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
 target_link_libraries(${PROJECT_NAME} ${CMAKE_JS_LIB} llama ggml common)
 
+add_custom_target(copy_assets ALL DEPENDS ${PROJECT_NAME})
+
+add_custom_command(
+  TARGET copy_assets
+  COMMAND ${CMAKE_COMMAND} -E remove_directory ${PLATFORM_BINARY_DIR}
+  COMMENT "Cleaning bin folder"
+)
+
 if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)
   # Generate node.lib
   execute_process(COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF} /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS})
   # copy target to bin folder
   get_filename_component(CMAKE_JS_NODELIB_TARGET_NAME ${CMAKE_JS_NODELIB_TARGET} NAME)
-  add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_JS_NODELIB_TARGET} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_JS_NODELIB_TARGET_NAME}
+  add_custom_command(TARGET copy_assets
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_JS_NODELIB_TARGET} ${PLATFORM_BINARY_DIR}/${CMAKE_JS_NODELIB_TARGET_NAME}
     COMMENT "Copying to bin folder"
   )
 endif()
 
 # copy target to bin folder
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+add_custom_command(TARGET copy_assets
   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> ${PLATFORM_BINARY_DIR}/$<TARGET_FILE_NAME:${PROJECT_NAME}>
   COMMENT "Copying to bin folder"
 )
 
 if (LLAMA_METAL)
   # copy ${CMAKE_BINARY_DIR}/bin/default.metallib
-  add_custom_target(copy_metallib)
   add_custom_command(
-    TARGET copy_metallib
+    TARGET copy_assets
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/bin/default.metallib ${PLATFORM_BINARY_DIR}/default.metallib
     COMMENT "Copying default.metallib to bin folder"
   )
-  add_dependencies(copy_metallib ggml-metal)
-  add_dependencies(${PROJECT_NAME} copy_metallib)
+  add_dependencies(copy_assets ggml-metal)
+endif()
+
+if (LLAMA_CLBLAST AND PLATFORM STREQUAL "win32")
+  find_package(CLBlast)
+  if (CLBlast_FOUND)
+    message(STATUS "CLBlast found: ${CLBlast_DIR}")
+    # copy CLBlast_DIR/../../../bin/clblast.dll
+    add_custom_command(
+      TARGET copy_assets
+      COMMAND ${CMAKE_COMMAND} -E copy ${CLBlast_DIR}/../../../bin/clblast.dll ${PLATFORM_BINARY_DIR}/clblast.dll
+      COMMENT "Copying clblast.dll to bin folder"
+    )
+  endif()
 endif()

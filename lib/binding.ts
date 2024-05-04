@@ -70,5 +70,6 @@ export const loadModule = async (variant?: string): Promise<Module> => {
       return await import(`../bin/${process.platform}-${variant}/${process.arch}/llama-node.node`) as Module
     }
   } catch {} // ignore errors and try the common path
+  setupEnv()
   return await import(`../bin/${process.platform}/${process.arch}/llama-node.node`) as Module
 }
