@@ -39,11 +39,7 @@ fi
 mkdir win32-arm64 || true
 cd win32-arm64
 
-if which cygpath; then
-  SDK_ROOT=$(cygpath -w SDK)
-else
-  SDK_ROOT=$(realpath SDK)
-fi
+SDK_ROOT=$(python -c "import os,sys; print(os.path.abspath(sys.argv[1]))" "SDK")
 
 if [ ! -d SDK ]; then
   # build from source
