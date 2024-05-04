@@ -24,6 +24,11 @@ jobs:
         with:
           path: node_modules
           key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
+      - name: externals cache
+        uses: actions/cache@v4.0.2
+        with:
+          path: externals
+          key: ${{ runner.os }}-externals
       - name: Prepare Toolchain (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -36,28 +41,24 @@ jobs:
           vulkan-query-version: 1.3.204.0
           vulkan-components: Vulkan-Headers, Vulkan-Loader
           vulkan-use-cache: true
-      - name: Prepare OpenCL SDK (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          mkdir externals
-          cd externals
-          curl -L https://github.com/KhronosGroup/OpenCL-SDK/releases/download/v2023.12.14/OpenCL-SDK-v2023.12.14-Win-x64.zip -o OpenCL-SDK-v2023.12.14-Win-x64.zip
-          7z x OpenCL-SDK-v2023.12.14-Win-x64.zip -oOpenCL-SDK
-          curl -L https://github.com/CNugteren/CLBlast/releases/download/1.6.2/CLBlast-1.6.2-windows-x64.zip -o CLBlast.zip
-          7z x CLBlast.zip
-          7z x CLBlast*.7z
       - name: Install dependencies
         run: yarn install
       - name: Build (Linux)
         if: runner.os == 'Linux'
         run: |
           yarn clean && yarn build-native -a x86_64 --CDLLAMA_VULKAN=1
-          yarn clean && yarn build-native -a aarch64 --cc aarch64-linux-gnu-gcc --cxx aarch64-linux-gnu-g++
+          yarn clean && yarn build-native -a aarch64 --cc aarch64-linux-gnu-gcc --cxx aarch64-linux-gnu-g++ --CDLLAMA_VULKAN=1
+      - name: Prepare SDK (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: bash ./scripts/prepare-windows.sh
       - name: Build (Windows)
         if: runner.os == 'Windows'
         run: |
-          yarn clean && yarn build-native -a x86_64 --CDLLAMA_CLBLAST=1 --DCMAKE_PREFIX_PATH=externals/CLBlast-1.6.2-windows-x64
-          yarn clean && yarn build-native -a arm64 --CDLLAMA_CLBLAST=1 --DCMAKE_PREFIX_PATH=externals/CLBlast-1.6.2-windows-x64
+          yarn clean && yarn build-native -a x86_64
+          yarn clean && yarn build-native -a arm64
+          yarn clean && yarn build-native -a x86_64 --CDVARIANT=opencl --CDLLAMA_CLBLAST=ON --CDCMAKE_PREFIX_PATH=%cd%/externals/win32-x64/SDK/lib/cmake/CLBlast
+          yarn clean && yarn build-native -a arm64 --CDVARIANT=opencl --CDLLAMA_CLBLAST=ON --CDCMAKE_PREFIX_PATH=%cd%/externals/win32-arm64/SDK/lib/cmake/CLBlast
       - name: Build (macOS)
         if: runner.os == 'macOS'
         run: |
