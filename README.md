@@ -26,6 +26,7 @@ const context = await loadModel({
   n_ctx: 2048,
   n_gpu_layers: 1, // > 0: enable GPU
   // embedding: true, // use embedding
+  // lib_variant: 'opencl', // Change backend
 })
 
 // Do completion
@@ -43,6 +44,11 @@ const { text, timings } = await context.completion(
 )
 console.log('Result:', text)
 ```
+
+## Lib Variants
+
+- [x] `default`: General usage, GPU: Metal (macOS) and Vulkan (Linux)
+- [x] `opencl`: OpenCL (build with clblast), support Windows
 
 ## License
 
