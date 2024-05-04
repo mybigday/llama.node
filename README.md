@@ -1,5 +1,9 @@
 # llama.node
 
+[![CI](https://github.com/mybigday/llama.node/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mybigday/llama.node/actions/workflows/ci.yml)
+![NPM Version](https://img.shields.io/npm/v/%40fugood%2Fllama.node)
+![NPM Downloads](https://img.shields.io/npm/dw/%40fugood%2Fllama.node)
+
 Node binding of [llama.cpp](https://github.com/ggerganov/llama.cpp).
 
 [llama.cpp](https://github.com/ggerganov/llama.cpp): Inference of [LLaMA](https://arxiv.org/abs/2302.13971) model in pure C/C++
