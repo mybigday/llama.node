@@ -6,16 +6,21 @@ cd externals
 mkdir win32-x64 || true
 cd win32-x64
 
+mkdir SDK || true
+
 if [ ! -f OpenCL-SDK.zip ]; then
   curl -L https://github.com/KhronosGroup/OpenCL-SDK/releases/download/v2023.12.14/OpenCL-SDK-v2023.12.14-Win-x64.zip -o OpenCL-SDK.zip
-  7z x OpenCL-SDK-v2023.12.14-Win-x64.zip -oSDK
+  7z x OpenCL-SDK.zip
+  cp -r OpenCL-SDK-*/* SDK
+  rm -rf OpenCL-SDK-*
 fi
 
 if [ ! -f CLBlast.zip ]; then
   curl -L https://github.com/CNugteren/CLBlast/releases/download/1.6.2/CLBlast-1.6.2-windows-x64.zip -o CLBlast.zip
   7z x CLBlast.zip
   7z x CLBlast*.7z
-  mv CLBlast-1.6.2-windows-x64/* SDK
+  cp -r CLBlast-*/* SDK
+  rm -rf CLBlast-*
 fi
 
 cd ..
