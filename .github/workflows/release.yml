@@ -54,11 +54,14 @@ jobs:
         run: bash ./scripts/prepare-windows.sh
       - name: Build (Windows)
         if: runner.os == 'Windows'
+        shell: bash
         run: |
           yarn clean && yarn build-native -a x86_64
           yarn clean && yarn build-native -a arm64
-          yarn clean && yarn build-native -a x86_64 --CDVARIANT=opencl --CDLLAMA_CLBLAST=ON --CDCMAKE_PREFIX_PATH=%cd%/externals/win32-x64/SDK/lib/cmake/CLBlast
-          yarn clean && yarn build-native -a arm64 --CDVARIANT=opencl --CDLLAMA_CLBLAST=ON --CDCMAKE_PREFIX_PATH=%cd%/externals/win32-arm64/SDK/lib/cmake/CLBlast
+          X64_SDK_ROOT=$(python -c "import os,sys; print(os.path.abspath(sys.argv[1]))" "externals/win32-x64/SDK")
+          ARM64_SDK_ROOT=$(python -c "import os,sys; print(os.path.abspath(sys.argv[1]))" "externals/win32-arm64/SDK")
+          yarn clean && yarn build-native -a x86_64 --CDVARIANT=opencl --CDLLAMA_CLBLAST=ON --CDCMAKE_PREFIX_PATH=$X64_SDK_ROOT/lib/cmake/CLBlast
+          yarn clean && yarn build-native -a arm64 --CDVARIANT=opencl --CDLLAMA_CLBLAST=ON --CDCMAKE_PREFIX_PATH=$ARM64_SDK_ROOT/lib/cmake/CLBlast
       - name: Build (macOS)
         if: runner.os == 'macOS'
         run: |
