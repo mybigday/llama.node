@@ -47,8 +47,8 @@ console.log('Result:', text)
 
 ## Lib Variants
 
-- [x] `default`: General usage, GPU: Metal (macOS) and Vulkan (Linux)
-- [x] `opencl`: OpenCL (build with clblast), support Windows
+- [x] `default`: General usage, Supported GPU: Metal (macOS) and Vulkan (Linux-x86_64)
+- [x] `opencl`: OpenCL (build with CLBlast), support Windows and Linux-aarch64
 
 ## License
 
