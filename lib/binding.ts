@@ -50,6 +50,8 @@ export interface Module {
   LlamaContext: LlamaContext
 }
 
+export type LibVariant = 'default' | 'opencl'
+
 const setupEnv = (variant?: string) => {
   const postfix = variant ? `-${variant}` : ''
   const binPath = path.resolve(__dirname, `../bin/${process.platform}${postfix}/${process.arch}/`)
@@ -63,9 +65,9 @@ const setupEnv = (variant?: string) => {
   }
 }
 
-export const loadModule = async (variant?: string): Promise<Module> => {
+export const loadModule = async (variant?: LibVariant): Promise<Module> => {
   try {
-    if (variant) {
+    if (variant && variant !== 'default') {
       setupEnv(variant)
       return await import(`../bin/${process.platform}-${variant}/${process.arch}/llama-node.node`) as Module
     }

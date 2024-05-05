@@ -187,15 +187,19 @@ if (LLAMA_METAL)
   add_dependencies(copy_assets ggml-metal)
 endif()
 
-if (LLAMA_CLBLAST AND PLATFORM STREQUAL "win32")
+if (LLAMA_CLBLAST)
   find_package(CLBlast)
   if (CLBlast_FOUND)
     message(STATUS "CLBlast found: ${CLBlast_DIR}")
-    # copy CLBlast_DIR/../../../bin/clblast.dll
+    file(
+      GLOB CLBlast_SO_FILES
+      ${CLBlast_DIR}/../../../bin/clblast.dll
+      ${CLBlast_DIR}/../../../lib/libclblast.so
+    )
     add_custom_command(
       TARGET copy_assets
-      COMMAND ${CMAKE_COMMAND} -E copy ${CLBlast_DIR}/../../../bin/clblast.dll ${PLATFORM_BINARY_DIR}/clblast.dll
-      COMMENT "Copying clblast.dll to bin folder"
+      COMMAND ${CMAKE_COMMAND} -E copy ${CLBlast_SO_FILES} ${PLATFORM_BINARY_DIR}
+      COMMENT "Copying CLBlast SO files to bin folder"
     )
   endif()
 endif()

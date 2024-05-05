@@ -26,43 +26,33 @@ jobs:
           key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
       - name: externals cache
         uses: actions/cache@v4.0.2
+        if: runner.os != 'Windows'
         with:
           path: externals
-          key: ${{ runner.os }}-externals
-      - name: Prepare Toolchain (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -qy binutils-aarch64-linux-gnu gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-      - name: Prepare Vulkan SDK
-        if: runner.os == 'Linux'
-        uses: humbletim/setup-vulkan-sdk@v1.2.0
+          key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
+      - name: externals cache (Windows)
+        uses: actions/cache@v4.0.2
+        if: runner.os == 'Windows'
         with:
-          vulkan-query-version: 1.3.204.0
-          vulkan-components: Vulkan-Headers, Vulkan-Loader
-          vulkan-use-cache: true
+          path: externals
+          key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.ps1') }}
       - name: Install dependencies
         run: yarn install
-      - name: Build (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          yarn clean && yarn build-native -a x86_64 --CDLLAMA_VULKAN=1
-          yarn clean && yarn build-native -a aarch64 --cc aarch64-linux-gnu-gcc --cxx aarch64-linux-gnu-g++ --CDLLAMA_VULKAN=1
-      - name: Prepare SDK (Windows)
+      - name: Prepare (Windows)
         if: runner.os == 'Windows'
-        shell: bash
-        run: bash ./scripts/prepare-windows.sh
+        run: powershell ./scripts/prepare-windows.ps1
       - name: Build (Windows)
         if: runner.os == 'Windows'
-        run: |
-          yarn clean && yarn build-native -a x86_64
-          yarn clean && yarn build-native -a arm64
-          yarn clean && yarn build-native -a x86_64 --CDVARIANT=opencl --CDLLAMA_CLBLAST=ON --CDCMAKE_PREFIX_PATH=%cd%/externals/win32-x64/SDK/lib/cmake/CLBlast
-          yarn clean && yarn build-native -a arm64 --CDVARIANT=opencl --CDLLAMA_CLBLAST=ON --CDCMAKE_PREFIX_PATH=%cd%/externals/win32-arm64/SDK/lib/cmake/CLBlast
+        run: powershell ./scripts/build-windows.ps1
+      - name: Prepare (Linux)
+        if: runner.os == 'Linux'
+        run: bash ./scripts/prepare-linux.sh
+      - name: Build (Linux)
+        if: runner.os == 'Linux'
+        run: bash ./scripts/build-linux.sh
       - name: Build (macOS)
         if: runner.os == 'macOS'
-        run: |
-          yarn clean && yarn build-native
+        run: bash ./scripts/build-macos.sh
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:

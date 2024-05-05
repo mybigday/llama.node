@@ -1,4 +1,4 @@
-lib/*.js
+*.js
 .DS_Store
 *.log
 node_modules/
@@ -8,3 +8,4 @@ build/
 *.gguf
 coverage/
 tmp.sess
+/externals/

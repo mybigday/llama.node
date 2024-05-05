@@ -1,7 +1,7 @@
 # llama.node
 
 [![CI](https://github.com/mybigday/llama.node/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mybigday/llama.node/actions/workflows/ci.yml)
-![NPM Version](https://img.shields.io/npm/v/%40fugood%2Fllama.node)
+[![NPM Version](https://img.shields.io/npm/v/%40fugood%2Fllama.node)](https://www.npmjs.com/package/@fugood/llama.node)
 ![NPM Downloads](https://img.shields.io/npm/dw/%40fugood%2Fllama.node)
 
 Node binding of [llama.cpp](https://github.com/ggerganov/llama.cpp).
@@ -26,6 +26,7 @@ const context = await loadModel({
   n_ctx: 2048,
   n_gpu_layers: 1, // > 0: enable GPU
   // embedding: true, // use embedding
+  // lib_variant: 'opencl', // Change backend
 })
 
 // Do completion
@@ -43,6 +44,11 @@ const { text, timings } = await context.completion(
 )
 console.log('Result:', text)
 ```
+
+## Lib Variants
+
+- [x] `default`: General usage, Supported GPU: Metal (macOS) and Vulkan (Linux-x86_64)
+- [x] `opencl`: OpenCL (build with CLBlast), support Windows and Linux-aarch64
 
 ## License
 

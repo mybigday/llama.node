@@ -61,5 +61,19 @@
   },
   "dependencies": {
     "node-addon-api": "^8.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "json",
+      "node"
+    ],
+    "testMatch": [
+      "**/*.test.ts"
+    ]
   }
 }
