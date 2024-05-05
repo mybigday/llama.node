@@ -1,5 +1,12 @@
 $ErrorActionPreference='Stop'
 
+function DelIfExist {
+  param([string]$path)
+  if (Test-Path $path) {
+    Remove-Item $path -Recurse -Force
+  }
+}
+
 New-Item -ItemType Directory -Force -Path "externals" | Out-Null
 
 cd "externals"
@@ -25,12 +32,12 @@ if (-not (Test-Path "win32-x64/SDK")) {
   $SDK_ROOT = (Resolve-Path "win32-x64/SDK").Path
   # build from source
   cd "OpenCL-SDK-source"
-  rm build -r -fo
+  DelIfExist "build"
   cmake -B build -DBUILD_DOCS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF -DOPENCL_SDK_BUILD_SAMPLES=OFF -DOPENCL_SDK_TEST_SAMPLES=OFF -G "Visual Studio 17 2022"
   cmake --build build --config Release
   cmake --install build --prefix $SDK_ROOT
-  cd "../CLBlast-source"
-  rm build -r -fo
+  DelIfExist "build"
+  rm build -Recurse -Force
   cmake -B build -DBUILD_SHARED_LIBS=ON -DOVERRIDE_MSVC_FLAGS_TO_MT=OFF -DTUNERS=OFF -DOPENCL_ROOT="$SDK_ROOT" -G "Visual Studio 17 2022"
   cmake --build build --config Release
   cmake --install build --prefix $SDK_ROOT
@@ -44,12 +51,12 @@ if (-not (Test-Path "win32-arm64/SDK")) {
   $SDK_ROOT = (Resolve-Path "win32-arm64/SDK").Path
   # build from source
   cd "OpenCL-SDK-source"
-  rm build -r -fo
+  DelIfExist "build"
   cmake -B build -DBUILD_DOCS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF -DOPENCL_SDK_BUILD_SAMPLES=OFF -DOPENCL_SDK_TEST_SAMPLES=OFF -G "Visual Studio 17 2022" -A arm64
   cmake --build build --config Release
   cmake --install build --prefix $SDK_ROOT
   cd "../CLBlast-source"
-  rm build -r -fo
+  DelIfExist "build"
   cmake -B build -DBUILD_SHARED_LIBS=ON -DOVERRIDE_MSVC_FLAGS_TO_MT=OFF -DTUNERS=OFF -DOPENCL_ROOT="$SDK_ROOT" -G "Visual Studio 17 2022" -A arm64
   cmake --build build --config Release
   cmake --install build --prefix $SDK_ROOT
