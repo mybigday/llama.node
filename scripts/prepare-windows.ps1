@@ -37,7 +37,6 @@ if (-not (Test-Path "win32-x64/SDK")) {
   cmake --build build --config Release
   cmake --install build --prefix $SDK_ROOT
   DelIfExist "build"
-  rm build -Recurse -Force
   cmake -B build -DBUILD_SHARED_LIBS=ON -DOVERRIDE_MSVC_FLAGS_TO_MT=OFF -DTUNERS=OFF -DOPENCL_ROOT="$SDK_ROOT" -G "Visual Studio 17 2022"
   cmake --build build --config Release
   cmake --install build --prefix $SDK_ROOT
