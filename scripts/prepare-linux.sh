@@ -2,15 +2,15 @@
 
 set -e
 
-# wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.asc
-# sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.3.280-jammy.list https://packages.lunarg.com/vulkan/1.3.280/lunarg-vulkan-1.3.280-jammy.list
+wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.asc
+sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.3.280-jammy.list https://packages.lunarg.com/vulkan/1.3.280/lunarg-vulkan-1.3.280-jammy.list
 
-# sudo apt-get update
-# sudo apt-get install -qy \
-#   binutils-aarch64-linux-gnu \
-#   gcc-aarch64-linux-gnu \
-#   g++-aarch64-linux-gnu \
-#   vulkan-sdk
+sudo apt-get update
+sudo apt-get install -qy \
+  binutils-aarch64-linux-gnu \
+  gcc-aarch64-linux-gnu \
+  g++-aarch64-linux-gnu \
+  vulkan-sdk
 
 # Install SDK for arm64 by building from source
 
