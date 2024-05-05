@@ -28,7 +28,7 @@ jobs:
         uses: actions/cache@v4.0.2
         with:
           path: externals
-          key: ${{ runner.os }}-externals
+          key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
       - name: Install dependencies
         run: yarn install
       - name: Prepare (Windows)
