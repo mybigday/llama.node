@@ -39,8 +39,6 @@
   },
   "files": [
     "bin/**/*",
-    "scripts/*.js",
-    "scripts/*.ts",
     "src/**/*.{c,cc,cpp,h,hh,hpp,txt,cmake}",
     "lib/*.js",
     "lib/*.ts",
@@ -62,5 +60,19 @@
   },
   "dependencies": {
     "node-addon-api": "^8.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "json",
+      "node"
+    ],
+    "testMatch": [
+      "**/*.test.ts"
+    ]
   }
 }

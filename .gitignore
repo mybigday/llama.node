@@ -1,4 +1,4 @@
-lib/*.js
+*.js
 .DS_Store
 *.log
 node_modules/
