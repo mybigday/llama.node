@@ -33,20 +33,36 @@ if [ ! -d CLBlast-source ]; then
   cd ..
 fi
 
-SDK_ROOT=$(realpath ./SDK)
+# build Vulkan SDK from source for arm64
 
-if [ ! -d SDK ]; then
-  # build from source
-  export CC=aarch64-linux-gnu-gcc
-  export CXX=aarch64-linux-gnu-g++
-  cd OpenCL-SDK-source
-  rm -rf build
-  cmake -B build -DBUILD_DOCS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF -DOPENCL_SDK_BUILD_SAMPLES=OFF -DOPENCL_SDK_TEST_SAMPLES=OFF -DCMAKE_INSTALL_PREFIX=$SDK_ROOT
-  cmake --build build --config Release
-  cmake --install build
-  cd ../CLBlast-source
-  rm -rf build
-  cmake -B build -DBUILD_SHARED_LIBS=ON -DOVERRIDE_MSVC_FLAGS_TO_MT=OFF -DTUNERS=OFF -DOPENCL_ROOT="$SDK_ROOT" -DCMAKE_INSTALL_PREFIX=$SDK_ROOT
-  cmake --build build --config Release
-  cmake --install build
+if [ ! -d arm64-Vulkan-SDK ]; then
+  VULKAN_ROOT=$(realpath ./arm64-Vulkan-SDK)
+  if [ ! -d Vulkan-Headers-source ]; then
+    git clone "https://github.com/KhronosGroup/Vulkan-Headers.git" "Vulkan-Headers-source"
+    cd "Vulkan-Headers-source"
+    git checkout "sdk-1.3.261"
+    CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ cmake -B build
+    cmake --build build --config Release
+    cmake --install build --prefix $VULKAN_ROOT
+    cd ..
+  fi
+  if [ ! -d Vulkan-Loader-source ]; then
+    git clone "https://github.com/KhronosGroup/Vulkan-Loader.git" "Vulkan-Loader-source"
+    cd "Vulkan-Loader-source"
+    git checkout "sdk-1.3.261"
+    CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ cmake -B build -DVULKAN_HEADERS_INSTALL_DIR="$VULKAN_ROOT" -DUSE_MASM=OFF
+    cmake --build build --config Release
+    cmake --install build --prefix $VULKAN_ROOT
+    cd ".."
+  fi
+  if [ ! -d Vulkan-Hpp-source ]; then
+    git clone "https://github.com/KhronosGroup/Vulkan-Hpp.git" "Vulkan-Hpp-source"
+    cd "Vulkan-Hpp-source"
+    git checkout "v1.3.261"
+    git submodule update --init --recursive
+    cmake -B build -DVULKAN_HPP_INSTALL=ON -DVULKAN_HPP_RUN_GENERATOR=ON
+    cmake --build build --config Release
+    cmake --install build --prefix $VULKAN_ROOT
+    cd ".."
+  fi
 fi
