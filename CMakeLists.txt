@@ -71,24 +71,13 @@ find_program(PATCH patch REQUIRED)
 
 add_custom_target(
   patch ALL
-  COMMAND ${PATCH} -p1 -n -i ${CMAKE_SOURCE_DIR}/patches/llama.patch
+  COMMAND ${PATCH} -p1 -N -i ${CMAKE_SOURCE_DIR}/patches/llama.patch
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/src/llama.cpp
   COMMENT "Applying patches"
 )
 
 set(LLAMA_STATIC ON CACHE BOOL "Build llama as static library")
 add_subdirectory("src/llama.cpp")
-
-# apply patches
-set(PATCH_FILE ${CMAKE_SOURCE_DIR}/patches/llama.patch)
-add_custom_target(patch)
-add_custom_command(
-  TARGET patch
-  COMMAND patch -N -p1 < ${PATCH_FILE} || true
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/src/llama.cpp
-
-)
-add_dependencies(ggml patch)
 
 file(
   GLOB SOURCE_FILES
