@@ -29,7 +29,7 @@ string(REPLACE "i686" "ia32" ARCH ${ARCH})
 string(REPLACE "i386" "ia32" ARCH ${ARCH})
 string(REPLACE "armv7l" "arm" ARCH ${ARCH})
 string(REPLACE "arm" "arm" ARCH ${ARCH})
-string(REPLACE "arm64ex" "arm64" ARCH ${ARCH})
+string(REPLACE "arm64x" "arm64" ARCH ${ARCH})
 string(REPLACE "aarch64" "arm64" ARCH ${ARCH})
 
 if(DEFINED VARIANT)
@@ -60,6 +60,21 @@ include_directories(${CMAKE_JS_INC})
 
 # flags: -fPIC
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# VULKAN_SDK
+if (VULKAN_SDK)
+  set(ENV{VULKAN_SDK} ${VULKAN_SDK})
+  find_package(Vulkan REQUIRED)
+endif()
+
+find_program(PATCH patch REQUIRED)
+
+add_custom_target(
+  patch ALL
+  COMMAND ${PATCH} -p1 -n -i ${CMAKE_SOURCE_DIR}/patches/llama.patch
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/src/llama.cpp
+  COMMENT "Applying patches"
+)
 
 set(LLAMA_STATIC ON CACHE BOOL "Build llama as static library")
 add_subdirectory("src/llama.cpp")
