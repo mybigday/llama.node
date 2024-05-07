@@ -2,15 +2,23 @@
 
 set -e
 
+DISTRO=$(lsb_release -c -s)
+
 wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.asc
-sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.3.280-jammy.list https://packages.lunarg.com/vulkan/1.3.280/lunarg-vulkan-1.3.280-jammy.list
+sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.3.280-$DISTRO.list https://packages.lunarg.com/vulkan/1.3.280/lunarg-vulkan-1.3.280-$DISTRO.list
+
+cat <<EOL | sudo tee /etc/apt/sources.list.d/arm64.list
+deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports $DISTRO main
+deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports $DISTRO-updates main
+EOL
 
 sudo apt-get update
 sudo apt-get install -qy \
   binutils-aarch64-linux-gnu \
   gcc-aarch64-linux-gnu \
   g++-aarch64-linux-gnu \
-  vulkan-sdk
+  vulkan-sdk \
+  libx11-dev:arm64
 
 # Install SDK for arm64 by building from source
 
