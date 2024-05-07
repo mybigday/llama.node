@@ -20,7 +20,7 @@ if [ $(uname -m) == "x86_64" ]; then
   run_as_root apt-get install -qy vulkan-sdk
 else
   run_as_root apt-get update
-  run_as_root apt-get install -qy curl gnupg2
+  run_as_root apt-get install -qy curl gnupg2 make cmake
 
   if ! command -v node &> /dev/null; then
     curl -fsSL https://deb.nodesource.com/setup_20.x | run_as_root bash -
