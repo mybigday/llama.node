@@ -35,7 +35,7 @@ if (-not (Test-Path "win32-x64/Vulkan-SDK") -or -not (Test-Path "win32-arm64/Vul
 
 # x64
 
-if (-not (Test-Path "win32-x64/Vulkan-SDK") {
+if (-not (Test-Path "win32-x64/Vulkan-SDK")) {
   New-Item -ItemType Directory -Force -Path "win32-x64/Vulkan-SDK" | Out-Null
   $VULKAN_ROOT = (Resolve-Path "win32-x64/Vulkan-SDK").Path
   # build from source
