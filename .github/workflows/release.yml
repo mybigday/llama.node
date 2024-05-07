@@ -51,7 +51,7 @@ jobs:
       - name: Prepare & build (Linux arm64)
         if: runner.os == 'Linux'
         run: |
-          docker run --rm --volume $(pwd):/app --workdir /app -t arm64v8/ubuntu bash -c "./scripts/prepare-linux.sh && ./scripts/build-linux.sh"
+          docker run --rm --volume $(pwd):/app --workdir /app -t arm64v8/ubuntu /bin/bash -c "./scripts/prepare-linux.sh && ./scripts/build-linux.sh"
       - name: Build (macOS)
         if: runner.os == 'macOS'
         run: bash ./scripts/build-macos.sh
