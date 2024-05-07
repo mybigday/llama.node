@@ -38,18 +38,20 @@ jobs:
           key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.ps1') }}
       - name: Install dependencies
         run: yarn install
-      - name: Prepare (Windows)
+      - name: Prepare & build (Windows)
         if: runner.os == 'Windows'
-        run: powershell ./scripts/prepare-windows.ps1
-      - name: Build (Windows)
-        if: runner.os == 'Windows'
-        run: powershell ./scripts/build-windows.ps1
-      - name: Prepare (Linux)
+        run: |
+          powershell ./scripts/prepare-windows.ps1
+          powershell ./scripts/build-windows.ps1
+      - name: Prepare & build (Linux x86_64)
         if: runner.os == 'Linux'
-        run: bash ./scripts/prepare-linux.sh
-      - name: Build (Linux)
+        run: |
+          bash ./scripts/prepare-linux.sh
+          bash ./scripts/build-linux.sh
+      - name: Prepare & build (Linux arm64)
         if: runner.os == 'Linux'
-        run: bash ./scripts/build-linux.sh
+        run: |
+          docker run --rm --volume $(pwd):/app --workdir /app -t arm64v8/ubuntu bash -c "./scripts/prepare-linux.sh && ./scripts/build-linux.sh"
       - name: Build (macOS)
         if: runner.os == 'macOS'
         run: bash ./scripts/build-macos.sh

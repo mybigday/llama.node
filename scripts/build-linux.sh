@@ -4,6 +4,8 @@ set -e
 
 # General
 
-yarn clean && yarn build-native -a x86_64 --CDLLAMA_VULKAN=1
-yarn clean && yarn build-native -a aarch64 --cc aarch64-linux-gnu-gcc --cxx aarch64-linux-gnu-g++ \
-  --CDLLAMA_VULKAN=1 --CDVULKAN_SDK="$(realpath 'externals/arm64-Vulkan-SDK')"
+if [ $(uname -m) == "x86_64" ]; then
+  yarn clean && yarn build-native --CDLLAMA_VULKAN=1
+else
+  yarn clean && yarn build-native --CDLLAMA_VULKAN=1 --CDVULKAN_SDK="$(realpath 'externals/arm64-Vulkan-SDK')"
+fi

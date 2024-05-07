@@ -2,75 +2,82 @@
 
 set -e
 
-DISTRO=$(lsb_release -c -s)
+function run_as_root() {
+  if [ $UID -ne 0 ]; then
+    sudo -E $@
+  else
+    $@
+  fi
+}
 
-wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.asc
-sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.3.280-$DISTRO.list https://packages.lunarg.com/vulkan/1.3.280/lunarg-vulkan-1.3.280-$DISTRO.list
+if [ $(uname -m) == "x86_64" ]; then
+  DISTRO=$(lsb_release -c -s)
+  wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | run_as_root tee /etc/apt/trusted.gpg.d/lunarg.asc
+  run_as_root wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.3.280-$DISTRO.list https://packages.lunarg.com/vulkan/1.3.280/lunarg-vulkan-1.3.280-$DISTRO.list
+  run_as_root apt-get update
+  run_as_root apt-get install -qy vulkan-sdk
+else
+  run_as_root apt-get update
+  run_as_root apt-get install -qy curl gnupg2
 
-cat <<EOL | sudo tee /etc/apt/sources.list.d/arm64.list
-deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports $DISTRO main
-deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports $DISTRO-updates main
-EOL
+  if ! command -v node &> /dev/null; then
+    curl -fsSL https://deb.nodesource.com/setup_20.x | run_as_root bash -
+    run_as_root apt-get install -qy nodejs
+    npm install -g yarn
+  fi
 
-sudo apt-get update
-sudo apt-get install -qy \
-  binutils-aarch64-linux-gnu \
-  gcc-aarch64-linux-gnu \
-  g++-aarch64-linux-gnu \
-  vulkan-sdk \
-  libx11-dev:arm64
+  run_as_root apt-get install -qy git build-essential libx11-xcb-dev libxkbcommon-dev libwayland-dev libxrandr-dev
 
-# Install SDK for arm64 by building from source
+  mkdir externals || true
+  cd externals
 
-mkdir externals || true
-cd externals
-
-if [ ! -d OpenCL-SDK-source ]; then
-  # clone KhronosGroup/OpenCL-SDK tag v2023.12.14
-  git clone https://github.com/KhronosGroup/OpenCL-SDK.git OpenCL-SDK-source --recursive
-  cd OpenCL-SDK-source
-  git checkout v2023.12.14
-  cd ..
-fi
-
-if [ ! -d CLBlast-source ]; then
-  # clone CNugteren/CLBlast tag 1.6.2
-  git clone https://github.com/CNugteren/CLBlast.git CLBlast-source --recursive
-  cd CLBlast-source
-  git checkout 1.6.2
-  cd ..
-fi
-
-# build Vulkan SDK from source for arm64
-
-if [ ! -d arm64-Vulkan-SDK ]; then
-  VULKAN_ROOT=$(realpath ./arm64-Vulkan-SDK)
-  if [ ! -d Vulkan-Headers-source ]; then
-    git clone "https://github.com/KhronosGroup/Vulkan-Headers.git" "Vulkan-Headers-source"
-    cd "Vulkan-Headers-source"
-    git checkout "sdk-1.3.261"
-    CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ cmake -B build
-    cmake --build build --config Release
-    cmake --install build --prefix $VULKAN_ROOT
+  if [ ! -d OpenCL-SDK-source ]; then
+    git clone https://github.com/KhronosGroup/OpenCL-SDK.git OpenCL-SDK-source --recursive
+    cd OpenCL-SDK-source
+    git checkout v2023.12.14
     cd ..
   fi
-  if [ ! -d Vulkan-Loader-source ]; then
-    git clone "https://github.com/KhronosGroup/Vulkan-Loader.git" "Vulkan-Loader-source"
-    cd "Vulkan-Loader-source"
-    git checkout "sdk-1.3.261"
-    CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ cmake -B build -DVULKAN_HEADERS_INSTALL_DIR="$VULKAN_ROOT" -DUSE_MASM=OFF
-    cmake --build build --config Release
-    cmake --install build --prefix $VULKAN_ROOT
-    cd ".."
+
+  if [ ! -d CLBlast-source ]; then
+    # clone CNugteren/CLBlast tag 1.6.2
+    git clone https://github.com/CNugteren/CLBlast.git CLBlast-source --recursive
+    cd CLBlast-source
+    git checkout 1.6.2
+    cd ..
   fi
-  if [ ! -d Vulkan-Hpp-source ]; then
-    git clone "https://github.com/KhronosGroup/Vulkan-Hpp.git" "Vulkan-Hpp-source"
-    cd "Vulkan-Hpp-source"
-    git checkout "v1.3.261"
-    git submodule update --init --recursive
-    cmake -B build -DVULKAN_HPP_INSTALL=ON -DVULKAN_HPP_RUN_GENERATOR=ON
-    cmake --build build --config Release
-    cmake --install build --prefix $VULKAN_ROOT
-    cd ".."
+
+  # build Vulkan SDK from source for arm64
+
+  if [ ! -d arm64-Vulkan-SDK ]; then
+    VULKAN_ROOT=$(realpath ./arm64-Vulkan-SDK)
+    if [ ! -d Vulkan-Headers-source ]; then
+      git clone "https://github.com/KhronosGroup/Vulkan-Headers.git" "Vulkan-Headers-source"
+      cd "Vulkan-Headers-source"
+      git checkout "sdk-1.3.261"
+      cmake -B build
+      cmake --build build --config Release
+      cmake --install build --prefix $VULKAN_ROOT
+      cd ..
+    fi
+    if [ ! -d Vulkan-Loader-source ]; then
+      git clone "https://github.com/KhronosGroup/Vulkan-Loader.git" "Vulkan-Loader-source"
+      cd "Vulkan-Loader-source"
+      git checkout "sdk-1.3.261"
+      cmake -B build -DVULKAN_HEADERS_INSTALL_DIR="$VULKAN_ROOT" -DUSE_MASM=OFF
+      cmake --build build --config Release
+      cmake --install build --prefix $VULKAN_ROOT
+      cd ".."
+    fi
+    if [ ! -d Vulkan-Hpp-source ]; then
+      git clone "https://github.com/KhronosGroup/Vulkan-Hpp.git" "Vulkan-Hpp-source"
+      cd "Vulkan-Hpp-source"
+      git checkout "v1.3.261"
+      git submodule update --init --recursive
+      cmake -B build -DVULKAN_HPP_INSTALL=ON -DVULKAN_HPP_RUN_GENERATOR=ON
+      cmake --build build --config Release
+      cmake --install build --prefix $VULKAN_ROOT
+      cd ".."
+    fi
   fi
+
 fi
