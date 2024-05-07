@@ -68,7 +68,7 @@ find_program(PATCH patch REQUIRED)
 
 add_custom_target(
   patch ALL
-  COMMAND ${PATCH} -p1 -n -i ${CMAKE_SOURCE_DIR}/patches/llama.patch
+  COMMAND ${PATCH} -p1 -N < ${CMAKE_SOURCE_DIR}/patches/llama.patch || true
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/src/llama.cpp
   COMMENT "Applying patches"
 )
