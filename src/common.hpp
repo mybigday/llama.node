@@ -46,32 +46,36 @@ constexpr T get_option(const Napi::Object &options, const std::string &name,
 
 class LlamaSession {
 public:
-  LlamaSession(llama_context *ctx, gpt_params params)
-      : ctx_(LlamaCppContext(ctx, llama_free)), params_(params) {
+  LlamaSession(llama_model *model, llama_context *ctx, gpt_params params)
+      : model_(LlamaCppModel(model, llama_free_model)), ctx_(LlamaCppContext(ctx, llama_free)), params_(params) {
     tokens_.reserve(params.n_ctx);
   }
 
   ~LlamaSession() { dispose(); }
 
-  llama_context *context() { return ctx_.get(); }
+  inline llama_context *context() { return ctx_.get(); }
 
-  std::vector<llama_token>* tokens_ptr() { return &tokens_; }
+  inline llama_model *model() { return model_.get(); }
 
-  void set_tokens(std::vector<llama_token> tokens) {
+  inline std::vector<llama_token>* tokens_ptr() { return &tokens_; }
+
+  inline void set_tokens(std::vector<llama_token> tokens) {
     tokens_ = std::move(tokens);
   }
 
-  const gpt_params &params() const { return params_; }
+  inline const gpt_params &params() const { return params_; }
 
-  std::mutex &get_mutex() { return mutex; }
+  inline std::mutex &get_mutex() { return mutex; }
 
   void dispose() {
     std::lock_guard<std::mutex> lock(mutex);
     tokens_.clear();
     ctx_.reset();
+    model_.reset();
   }
 
 private:
+  LlamaCppModel model_;
   LlamaCppContext ctx_;
   const gpt_params params_;
   std::vector<llama_token> tokens_{};

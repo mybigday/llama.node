@@ -58,7 +58,7 @@ void LlamaCompletionWorker::Execute() {
   const auto n_keep = _params.n_keep;
   size_t n_cur = 0;
   size_t n_input = 0;
-  const auto model = llama_get_model(_sess->context());
+  const auto model = _sess->model();
   const bool add_bos = llama_should_add_bos_token(model);
   auto ctx = _sess->context();
 
@@ -144,6 +144,9 @@ void LlamaCompletionWorker::Execute() {
   }
   const auto t_main_end = ggml_time_us();
   _sess->get_mutex().unlock();
+  if (_onComplete) {
+    _onComplete();
+  }
 }
 
 void LlamaCompletionWorker::OnOK() {

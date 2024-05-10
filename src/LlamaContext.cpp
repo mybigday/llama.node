@@ -70,7 +70,7 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
         .ThrowAsJavaScriptException();
   }
 
-  _sess = std::make_shared<LlamaSession>(ctx, params);
+  _sess = std::make_shared<LlamaSession>(model, ctx, params);
   _info = get_system_info(params);
 }
 
@@ -91,6 +91,10 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   }
   if (_sess == nullptr) {
     Napi::TypeError::New(env, "Context is disposed")
+        .ThrowAsJavaScriptException();
+  }
+  if (_wip != nullptr) {
+    Napi::TypeError::New(env, "Another completion is in progress")
         .ThrowAsJavaScriptException();
   }
   auto options = info[0].As<Napi::Object>();
@@ -143,6 +147,7 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
       new LlamaCompletionWorker(info, _sess, callback, params, stop_words);
   worker->Queue();
   _wip = worker;
+  worker->onComplete([this]() { _wip = nullptr; });
   return worker->Promise();
 }
 

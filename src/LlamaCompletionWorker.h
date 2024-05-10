@@ -1,4 +1,5 @@
 #include "common.hpp"
+#include <functional>
 
 struct CompletionResult {
   std::string text = "";
@@ -18,6 +19,8 @@ public:
 
   inline void Stop() { _stop = true; }
 
+  inline void onComplete(std::function<void()> cb) { _onComplete = cb; }
+
 protected:
   void Execute();
   void OnOK();
@@ -30,5 +33,6 @@ private:
   Napi::ThreadSafeFunction _tsfn;
   bool _has_callback = false;
   bool _stop = false;
+  std::function<void()> _onComplete;
   CompletionResult _result;
 };
