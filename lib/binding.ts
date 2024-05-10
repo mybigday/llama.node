@@ -23,6 +23,7 @@ export type LlamaCompletionOptions = {
   max_tokens?: number
   seed?: number
   stop?: string[]
+  grammar?: string
 }
 
 export type LlamaCompletionResult = {

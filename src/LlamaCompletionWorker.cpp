@@ -110,6 +110,7 @@ void LlamaCompletionWorker::Execute() {
     // sample the next token
     const llama_token new_token_id =
         llama_sampling_sample(sampling.get(), ctx, nullptr);
+    llama_sampling_accept(sampling.get(), ctx, new_token_id, true);
     // prepare the next batch
     embd->emplace_back(new_token_id);
     auto token = llama_token_to_piece(ctx, new_token_id);
