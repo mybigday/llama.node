@@ -168,6 +168,12 @@ Napi::Value LlamaContext::SaveSession(const Napi::CallbackInfo &info) {
     Napi::TypeError::New(env, "Context is disposed")
         .ThrowAsJavaScriptException();
   }
+#ifdef GGML_USE_VULKAN
+  if (_sess->params().n_gpu_layers > 0) {
+    Napi::TypeError::New(env, "Vulkan cannot save session")
+        .ThrowAsJavaScriptException();
+  }
+#endif
   auto *worker = new SaveSessionWorker(info, _sess);
   worker->Queue();
   return worker->Promise();
@@ -183,6 +189,12 @@ Napi::Value LlamaContext::LoadSession(const Napi::CallbackInfo &info) {
     Napi::TypeError::New(env, "Context is disposed")
         .ThrowAsJavaScriptException();
   }
+#ifdef GGML_USE_VULKAN
+  if (_sess->params().n_gpu_layers > 0) {
+    Napi::TypeError::New(env, "Vulkan cannot load session")
+        .ThrowAsJavaScriptException();
+  }
+#endif
   auto *worker = new LoadSessionWorker(info, _sess);
   worker->Queue();
   return worker->Promise();
