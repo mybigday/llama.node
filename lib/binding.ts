@@ -62,7 +62,7 @@ export interface Module {
   LlamaContext: LlamaContext
 }
 
-export type LibVariant = 'default' | 'opencl'
+export type LibVariant = 'default' | 'vulkan'
 
 const setupEnv = (variant?: string) => {
   const postfix = variant ? `-${variant}` : ''
