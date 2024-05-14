@@ -1,7 +1,7 @@
 {
   "name": "@fugood/llama.node",
   "access": "public",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Llama.cpp for Node.js",
   "main": "lib/index.js",
   "scripts": {
