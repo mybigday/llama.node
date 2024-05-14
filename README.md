@@ -30,7 +30,7 @@ const context = await loadModel({
 })
 
 // Do completion
-const { text, timings } = await context.completion(
+const { text } = await context.completion(
   {
     prompt: 'This is a conversation between user and llama, a friendly chatbot. respond in simple markdown.\n\nUser: Hello!\nLlama:',
     n_predict: 100,
