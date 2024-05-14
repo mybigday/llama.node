@@ -38,6 +38,7 @@
     ]
   },
   "files": [
+    "patches/*.patch",
     "bin/**/*",
     "src/**/*.{c,cc,cpp,h,hh,hpp,txt,cmake}",
     "lib/*.js",
