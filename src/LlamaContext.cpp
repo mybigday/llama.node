@@ -43,9 +43,14 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   auto options = info[0].As<Napi::Object>();
 
   gpt_params params;
-  params.model = get_option<std::string>(options, "model", "");
-  if (params.model.empty()) {
+  auto model_uri = get_option<std::string>(options, "model", "");
+  if (model_uri.empty()) {
     Napi::TypeError::New(env, "Model is required").ThrowAsJavaScriptException();
+  }
+  if (model_uri.find("http://") == 0 || model_uri.find("https://") == 0) {
+    params.model_url = model_uri;
+  } else {
+    params.model = model_uri;
   }
   params.embedding = get_option<bool>(options, "embedding", false);
   params.n_ctx = get_option<int32_t>(options, "n_ctx", 512);
