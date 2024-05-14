@@ -11,6 +11,9 @@ private:
   Napi::Value GetSystemInfo(const Napi::CallbackInfo &info);
   Napi::Value Completion(const Napi::CallbackInfo &info);
   void StopCompletion(const Napi::CallbackInfo &info);
+  Napi::Value Tokenize(const Napi::CallbackInfo &info);
+  Napi::Value Detokenize(const Napi::CallbackInfo &info);
+  Napi::Value Embedding(const Napi::CallbackInfo &info);
   Napi::Value SaveSession(const Napi::CallbackInfo &info);
   Napi::Value LoadSession(const Napi::CallbackInfo &info);
   Napi::Value Release(const Napi::CallbackInfo &info);

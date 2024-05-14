@@ -24,3 +24,27 @@ it('work fine', async () => {
   await model.loadSession(path.resolve(__dirname, './tmp.sess'))
   await model.release()
 })
+
+it('tokeneize', async () => {
+  const model = await loadModel({ model: path.resolve(__dirname, './tiny-random-llama.gguf') })
+  {
+    const result = await model.tokenize('Once upon a time')
+    expect(result).toMatchSnapshot()
+  }
+  {
+    const result = await model.detokenize([123, 123, 123])
+    expect(result).toMatchSnapshot()
+  }
+  await model.release()
+})
+
+it('embedding', async () => {
+  const model = await loadModel({
+    model: path.resolve(__dirname, './bge-small-en.gguf'),
+    embedding: true,
+    n_gpu_layers: 0,
+  })
+  const result = await model.embedding('Once upon a time')
+  expect(result).toMatchSnapshot()
+  await model.release()
+})

@@ -47,7 +47,8 @@ constexpr T get_option(const Napi::Object &options, const std::string &name,
 class LlamaSession {
 public:
   LlamaSession(llama_model *model, llama_context *ctx, gpt_params params)
-      : model_(LlamaCppModel(model, llama_free_model)), ctx_(LlamaCppContext(ctx, llama_free)), params_(params) {
+      : model_(LlamaCppModel(model, llama_free_model)),
+        ctx_(LlamaCppContext(ctx, llama_free)), params_(params) {
     tokens_.reserve(params.n_ctx);
   }
 
@@ -57,7 +58,7 @@ public:
 
   inline llama_model *model() { return model_.get(); }
 
-  inline std::vector<llama_token>* tokens_ptr() { return &tokens_; }
+  inline std::vector<llama_token> *tokens_ptr() { return &tokens_; }
 
   inline void set_tokens(std::vector<llama_token> tokens) {
     tokens_ = std::move(tokens);

@@ -1,8 +1,11 @@
 #include "LlamaContext.h"
+#include "DetokenizeWorker.h"
 #include "DisposeWorker.h"
+#include "EmbeddingWorker.h"
 #include "LlamaCompletionWorker.h"
 #include "LoadSessionWorker.h"
 #include "SaveSessionWorker.h"
+#include "TokenizeWorker.h"
 
 void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
   Napi::Function func = DefineClass(
@@ -16,6 +19,13 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
        InstanceMethod<&LlamaContext::StopCompletion>(
            "stopCompletion",
            static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::Tokenize>(
+           "tokenize", static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::Detokenize>(
+           "detokenize",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::Embedding>(
+           "embedding", static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::SaveSession>(
            "saveSession",
            static_cast<napi_property_attributes>(napi_enumerable)),
@@ -161,6 +171,58 @@ void LlamaContext::StopCompletion(const Napi::CallbackInfo &info) {
   if (_wip != nullptr) {
     _wip->Stop();
   }
+}
+
+// tokenize(text: string): Promise<TokenizeResult>
+Napi::Value LlamaContext::Tokenize(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (info.Length() < 1 || !info[0].IsString()) {
+    Napi::TypeError::New(env, "String expected").ThrowAsJavaScriptException();
+  }
+  if (_sess == nullptr) {
+    Napi::TypeError::New(env, "Context is disposed")
+        .ThrowAsJavaScriptException();
+  }
+  auto text = info[0].ToString().Utf8Value();
+  auto *worker = new TokenizeWorker(info, _sess, text);
+  worker->Queue();
+  return worker->Promise();
+}
+
+// detokenize(tokens: number[]): Promise<string>
+Napi::Value LlamaContext::Detokenize(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (info.Length() < 1 || !info[0].IsArray()) {
+    Napi::TypeError::New(env, "Array expected").ThrowAsJavaScriptException();
+  }
+  if (_sess == nullptr) {
+    Napi::TypeError::New(env, "Context is disposed")
+        .ThrowAsJavaScriptException();
+  }
+  auto tokens = info[0].As<Napi::Array>();
+  std::vector<int32_t> token_ids;
+  for (size_t i = 0; i < tokens.Length(); i++) {
+    token_ids.push_back(tokens.Get(i).ToNumber().Int32Value());
+  }
+  auto *worker = new DetokenizeWorker(info, _sess, token_ids);
+  worker->Queue();
+  return worker->Promise();
+}
+
+// embedding(text: string): Promise<EmbeddingResult>
+Napi::Value LlamaContext::Embedding(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (info.Length() < 1 || !info[0].IsString()) {
+    Napi::TypeError::New(env, "String expected").ThrowAsJavaScriptException();
+  }
+  if (_sess == nullptr) {
+    Napi::TypeError::New(env, "Context is disposed")
+        .ThrowAsJavaScriptException();
+  }
+  auto text = info[0].ToString().Utf8Value();
+  auto *worker = new EmbeddingWorker(info, _sess, text);
+  worker->Queue();
+  return worker->Promise();
 }
 
 // saveSession(path: string): Promise<void> throws error

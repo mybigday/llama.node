@@ -47,7 +47,8 @@ console.log('Result:', text)
 
 ## Lib Variants
 
-- [x] `default`: General usage, Supported GPU: Metal (macOS) and Vulkan (Linux / Windows)
+- [x] `default`: General usage, not support GPU except macOS (Metal)
+- [x] `vulkan`: Support GPU Vulkan (Windows/Linux), but some scenario might unstable
 
 ## License
 

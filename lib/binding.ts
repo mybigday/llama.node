@@ -37,11 +37,22 @@ export type LlamaCompletionToken = {
   token: string
 }
 
+export type TokenizeResult = {
+  tokens: Int32Array
+}
+
+export type EmbeddingResult = {
+  embedding: Float32Array
+}
+
 export interface LlamaContext {
   new (options: LlamaModelOptions): LlamaContext
   getSystemInfo(): string
   completion(options: LlamaCompletionOptions, callback?: (token: LlamaCompletionToken) => void): Promise<LlamaCompletionResult>
   stopCompletion(): void
+  tokenize(text: string): Promise<TokenizeResult>
+  detokenize(tokens: number[]): Promise<string>
+  embedding(text: string): Promise<EmbeddingResult>
   saveSession(path: string): Promise<void>
   loadSession(path: string): Promise<void>
   release(): Promise<void>
