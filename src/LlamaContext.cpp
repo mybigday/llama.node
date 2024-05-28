@@ -61,7 +61,7 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   params.n_ctx = get_option<int32_t>(options, "n_ctx", 512);
   params.n_batch = get_option<int32_t>(options, "n_batch", 2048);
   params.n_threads =
-      get_option<int32_t>(options, "n_threads", get_math_cpu_count() / 2);
+      get_option<int32_t>(options, "n_threads", cpu_get_num_math() / 2);
   params.n_gpu_layers = get_option<int32_t>(options, "n_gpu_layers", -1);
   params.use_mlock = get_option<bool>(options, "use_mlock", false);
   params.use_mmap = get_option<bool>(options, "use_mmap", true);
@@ -81,7 +81,7 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   }
 
   _sess = std::make_shared<LlamaSession>(model, ctx, params);
-  _info = get_system_info(params);
+  _info = gpt_params_get_system_info(params);
 }
 
 // getSystemInfo(): string
