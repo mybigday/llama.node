@@ -15,6 +15,7 @@ void LoadSessionWorker::Execute() {
                              tokens.capacity(), &count)) {
     SetError("Failed to load session");
   }
+  tokens.resize(count);
   _sess->set_tokens(std::move(tokens));
   _sess->get_mutex().unlock();
 }
