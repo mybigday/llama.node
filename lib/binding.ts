@@ -1,5 +1,10 @@
 import * as path from 'path'
 
+export type ChatMessage = {
+  role: string
+  text: string
+}
+
 export type LlamaModelOptions = {
   model: string
   embedding?: boolean
@@ -12,7 +17,8 @@ export type LlamaModelOptions = {
 }
 
 export type LlamaCompletionOptions = {
-  prompt: string
+  messages?: ChatMessage[]
+  prompt?: string
   n_samples?: number
   temperature?: number
   top_k?: number
@@ -48,6 +54,7 @@ export type EmbeddingResult = {
 export interface LlamaContext {
   new (options: LlamaModelOptions): LlamaContext
   getSystemInfo(): string
+  getFormattedChat(messages: ChatMessage[]): string
   completion(options: LlamaCompletionOptions, callback?: (token: LlamaCompletionToken) => void): Promise<LlamaCompletionResult>
   stopCompletion(): void
   tokenize(text: string): Promise<TokenizeResult>

@@ -35,6 +35,13 @@ it('tokeneize', async () => {
     const result = await model.detokenize([123, 123, 123])
     expect(result).toMatchSnapshot()
   }
+  {
+    const result = model.getFormattedChat([
+      { role: 'user', text: 'Hello' },
+      { role: 'bot', text: 'Hi' },
+    ])
+    expect(result).toMatchSnapshot()
+  }
   await model.release()
 })
 

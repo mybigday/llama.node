@@ -404,6 +404,15 @@ exports[`tokeneize 1`] = `
 
 exports[`tokeneize 2`] = `"xxx"`;
 
+exports[`tokeneize 3`] = `
+"<|im_start|>user
+<|im_end|>
+<|im_start|>bot
+<|im_end|>
+<|im_start|>assistant
+"
+`;
+
 exports[`work fine 1`] = `
 {
   "text": " swochadoorter scientific WindowsCa occupiedrå alta",

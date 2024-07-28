@@ -7,11 +7,26 @@
 #include "SaveSessionWorker.h"
 #include "TokenizeWorker.h"
 
+std::vector<llama_chat_msg> get_messages(Napi::Array messages) {
+  std::vector<llama_chat_msg> chat;
+  for (size_t i = 0; i < messages.Length(); i++) {
+    auto message = messages.Get(i).As<Napi::Object>();
+    chat.push_back({
+      get_option<std::string>(message, "role", ""),
+      get_option<std::string>(message, "content", ""),
+    });
+  }
+  return std::move(chat);
+}
+
 void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
   Napi::Function func = DefineClass(
       env, "LlamaContext",
       {InstanceMethod<&LlamaContext::GetSystemInfo>(
            "getSystemInfo",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::GetFormattedChat>(
+           "getFormattedChat",
            static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::Completion>(
            "completion",
@@ -89,6 +104,17 @@ Napi::Value LlamaContext::GetSystemInfo(const Napi::CallbackInfo &info) {
   return Napi::String::New(info.Env(), _info);
 }
 
+// getFormattedChat(messages: [{ role: string, content: string }]): string
+Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (info.Length() < 1 || !info[0].IsArray()) {
+    Napi::TypeError::New(env, "Array expected").ThrowAsJavaScriptException();
+  }
+  auto messages = info[0].As<Napi::Array>();
+  auto formatted = llama_chat_apply_template(_sess->model(), "", get_messages(messages), true);
+  return Napi::String::New(env, formatted);
+}
+
 // completion(options: LlamaCompletionOptions, onToken?: (token: string) =>
 // void): Promise<LlamaCompletionResult>
 Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
@@ -110,7 +136,13 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   auto options = info[0].As<Napi::Object>();
 
   gpt_params params = _sess->params();
-  params.prompt = get_option<std::string>(options, "prompt", "");
+  if (options.Has("messages") && options.Get("messages").IsArray()) {
+    auto messages = options.Get("messages").As<Napi::Array>();
+    auto formatted = llama_chat_apply_template(_sess->model(), "", get_messages(messages), true);
+    params.prompt = formatted;
+  } else {
+    params.prompt = get_option<std::string>(options, "prompt", "");
+  }
   if (params.prompt.empty()) {
     Napi::TypeError::New(env, "Prompt is required")
         .ThrowAsJavaScriptException();
