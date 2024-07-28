@@ -53,8 +53,6 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
   endif()
 endif()
 
-include_directories(${CMAKE_JS_INC})
-
 # flags: -fPIC
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -75,6 +73,11 @@ add_custom_target(
 
 set(LLAMA_STATIC ON CACHE BOOL "Build llama as static library")
 add_subdirectory("src/llama.cpp")
+
+include_directories(
+  ${CMAKE_JS_INC}
+  "src/llama.cpp"
+)
 
 file(
   GLOB SOURCE_FILES

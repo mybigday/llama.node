@@ -1,20 +1,20 @@
-diff --git a/ggml-vulkan.cpp b/ggml-vulkan.cpp
-index b9449be0..cfa0f774 100644
---- a/ggml-vulkan.cpp
-+++ b/ggml-vulkan.cpp
-@@ -525,9 +525,15 @@ static void ggml_vk_create_pipeline(ggml_backend_vk_context * ctx, vk_pipeline&
+diff --git a/ggml/src/ggml-vulkan.cpp b/ggml/src/ggml-vulkan.cpp
+index fa68360b..f9ff7b5d 100644
+--- a/ggml/src/ggml-vulkan.cpp
++++ b/ggml/src/ggml-vulkan.cpp
+@@ -617,9 +617,15 @@ static void ggml_vk_create_pipeline(vk_device& device, vk_pipeline& pipeline, co
          vk::PipelineCreateFlags(),
          pipeline_shader_create_info,
          pipeline->layout);
--    pipeline->pipeline = ctx->device->device.createComputePipeline(VK_NULL_HANDLE, compute_pipeline_create_info).value;
+-    pipeline->pipeline = device->device.createComputePipeline(VK_NULL_HANDLE, compute_pipeline_create_info).value;
  
--    ctx->device->pipelines.push_back(pipeline);
+-    device->pipelines.push_back(pipeline);
 +    try {
-+        pipeline->pipeline = ctx->device->device.createComputePipeline(VK_NULL_HANDLE, compute_pipeline_create_info).value;
-+        ctx->device->pipelines.push_back(pipeline);
-+    } catch (vk::UnknownError const&) {
-+        std::cerr << "ggml_vk_create_pipeline: Failed to create pipeline " << name << std::endl;
-+        ggml_vk_destroy_pipeline(ctx->device->device, pipeline);
++        pipeline->pipeline = device->device.createComputePipeline(VK_NULL_HANDLE, compute_pipeline_create_info).value;
++        device->pipelines.push_back(pipeline);
++    } catch(vk::UnknownError const&) {
++        VK_LOG_DEBUG("Failed to create pipeline " << name);
++        ggml_vk_destroy_pipeline(device->device, pipeline);
 +        pipeline.reset();
 +    }
  }
