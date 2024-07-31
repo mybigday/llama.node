@@ -71,7 +71,7 @@ add_custom_target(
   COMMENT "Applying patches"
 )
 
-set(LLAMA_STATIC ON CACHE BOOL "Build llama as static library")
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
 add_subdirectory("src/llama.cpp")
 
 include_directories(
