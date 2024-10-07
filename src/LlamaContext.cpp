@@ -75,7 +75,7 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   params.embedding = get_option<bool>(options, "embedding", false);
   params.n_ctx = get_option<int32_t>(options, "n_ctx", 512);
   params.n_batch = get_option<int32_t>(options, "n_batch", 2048);
-  params.n_threads =
+  params.cpuparams.n_threads =
       get_option<int32_t>(options, "n_threads", cpu_get_num_math() / 2);
   params.n_gpu_layers = get_option<int32_t>(options, "n_gpu_layers", -1);
   params.use_mlock = get_option<bool>(options, "use_mlock", false);
@@ -86,16 +86,14 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   llama_backend_init();
   llama_numa_init(params.numa);
 
-  llama_model *model;
-  llama_context *ctx;
-  std::tie(model, ctx) = llama_init_from_gpt_params(params);
+  auto result = llama_init_from_gpt_params(params);
 
-  if (model == nullptr || ctx == nullptr) {
+  if (result.model == nullptr || result.context == nullptr) {
     Napi::TypeError::New(env, "Failed to load model")
         .ThrowAsJavaScriptException();
   }
 
-  _sess = std::make_shared<LlamaSession>(model, ctx, params);
+  _sess = std::make_shared<LlamaSession>(result.model, result.context, params);
   _info = gpt_params_get_system_info(params);
 }
 
@@ -167,11 +165,11 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   params.sparams.penalty_present =
       get_option<float>(options, "penalty_present", 0.00f);
   params.sparams.penalize_nl = get_option<bool>(options, "penalize_nl", false);
-  params.sparams.typical_p = get_option<float>(options, "typical_p", 1.00f);
-  params.ignore_eos = get_option<float>(options, "ignore_eos", false);
+  params.sparams.typ_p = get_option<float>(options, "typical_p", 1.00f);
+  params.sparams.ignore_eos = get_option<float>(options, "ignore_eos", false);
   params.sparams.grammar = get_option<std::string>(options, "grammar", "");
   params.n_keep = get_option<int32_t>(options, "n_keep", 0);
-  params.seed = get_option<int32_t>(options, "seed", LLAMA_DEFAULT_SEED);
+  params.sparams.seed = get_option<int32_t>(options, "seed", LLAMA_DEFAULT_SEED);
   std::vector<std::string> stop_words;
   if (options.Has("stop") && options.Get("stop").IsArray()) {
     auto stop_words_array = options.Get("stop").As<Napi::Array>();

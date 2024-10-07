@@ -62,15 +62,6 @@ if (VULKAN_SDK)
   find_package(Vulkan REQUIRED)
 endif()
 
-find_program(PATCH patch REQUIRED)
-
-add_custom_target(
-  patch ALL
-  COMMAND ${PATCH} -p1 -N < ${CMAKE_SOURCE_DIR}/patches/llama.patch || true
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/src/llama.cpp
-  COMMENT "Applying patches"
-)
-
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
 add_subdirectory("src/llama.cpp")
 

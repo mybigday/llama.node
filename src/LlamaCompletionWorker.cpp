@@ -59,13 +59,13 @@ void LlamaCompletionWorker::Execute() {
   size_t n_cur = 0;
   size_t n_input = 0;
   const auto model = _sess->model();
-  const bool add_bos = llama_should_add_bos_token(model);
+  const bool add_bos = llama_add_bos_token(model);
   auto ctx = _sess->context();
 
-  llama_set_rng_seed(ctx, _params.seed);
+  auto sparams = llama_sampler_chain_default_params();
 
-  LlamaCppSampling sampling{llama_sampling_init(_params.sparams),
-                            llama_sampling_free};
+  LlamaCppSampling sampling{gpt_sampler_init(model, _params.sparams),
+                            gpt_sampler_free};
 
   std::vector<llama_token> prompt_tokens =
       ::llama_tokenize(ctx, _params.prompt, add_bos);
@@ -109,8 +109,8 @@ void LlamaCompletionWorker::Execute() {
     }
     // sample the next token
     const llama_token new_token_id =
-        llama_sampling_sample(sampling.get(), ctx, nullptr);
-    llama_sampling_accept(sampling.get(), ctx, new_token_id, true);
+        gpt_sampler_sample(sampling.get(), ctx, -1);
+    gpt_sampler_accept(sampling.get(), new_token_id, true);
     // prepare the next batch
     embd->emplace_back(new_token_id);
     auto token = llama_token_to_piece(ctx, new_token_id);

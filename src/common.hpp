@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common/common.h"
+#include "common/sampling.h"
 #include "llama.h"
 #include <memory>
 #include <mutex>
@@ -12,7 +13,7 @@
 
 typedef std::unique_ptr<llama_model, decltype(&llama_free_model)> LlamaCppModel;
 typedef std::unique_ptr<llama_context, decltype(&llama_free)> LlamaCppContext;
-typedef std::unique_ptr<llama_sampling_context, decltype(&llama_sampling_free)>
+typedef std::unique_ptr<gpt_sampler, decltype(&gpt_sampler_free)>
     LlamaCppSampling;
 typedef std::unique_ptr<llama_batch, decltype(&llama_batch_free)> LlamaCppBatch;
 
