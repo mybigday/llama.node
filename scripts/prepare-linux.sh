@@ -12,7 +12,9 @@ function run_as_root() {
 
 export DEBIAN_FRONTEND=noninteractive
 
-if [ $(uname -m) == "x86_64" ]; then
+ARCH=${ARCH:-${1:-$(uname -m)}}
+
+if [ $ARCH == "x86_64" ]; then
   DISTRO=$(lsb_release -c -s)
   wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | run_as_root tee /etc/apt/trusted.gpg.d/lunarg.asc
   run_as_root wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.3.280-$DISTRO.list https://packages.lunarg.com/vulkan/1.3.280/lunarg-vulkan-1.3.280-$DISTRO.list

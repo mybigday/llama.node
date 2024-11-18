@@ -4,7 +4,9 @@ set -e
 
 # General
 
-if [ $(uname -m) == "x86_64" ]; then
+ARCH=${ARCH:-${1:-$(uname -m)}}
+
+if [ $ARCH == "x86_64" ]; then
   yarn clean && yarn build-native
   yarn clean && yarn build-native --CDLLAMA_VULKAN=1 --CDVARIANT=vulkan
 else

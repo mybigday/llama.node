@@ -53,6 +53,7 @@ jobs:
         run: |
           docker run --rm \
             -v $(pwd):/work \
+            -e ARCH=arm64 \
             dockcross/linux-arm64:latest \
             bash -c "./scripts/prepare-linux.sh && ./scripts/build-linux.sh"
       - name: Build (macOS)
