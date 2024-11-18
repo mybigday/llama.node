@@ -62,6 +62,8 @@ if (VULKAN_SDK)
   find_package(Vulkan REQUIRED)
 endif()
 
+set(LLAMA_BUILD_COMMON ON CACHE BOOL "Build common")
+
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
 add_subdirectory("src/llama.cpp")
 
