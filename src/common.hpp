@@ -13,7 +13,7 @@
 
 typedef std::unique_ptr<llama_model, decltype(&llama_free_model)> LlamaCppModel;
 typedef std::unique_ptr<llama_context, decltype(&llama_free)> LlamaCppContext;
-typedef std::unique_ptr<gpt_sampler, decltype(&gpt_sampler_free)>
+typedef std::unique_ptr<common_sampler, decltype(&common_sampler_free)>
     LlamaCppSampling;
 typedef std::unique_ptr<llama_batch, decltype(&llama_batch_free)> LlamaCppBatch;
 
@@ -47,7 +47,7 @@ constexpr T get_option(const Napi::Object &options, const std::string &name,
 
 class LlamaSession {
 public:
-  LlamaSession(llama_model *model, llama_context *ctx, gpt_params params)
+  LlamaSession(llama_model *model, llama_context *ctx, common_params params)
       : model_(LlamaCppModel(model, llama_free_model)),
         ctx_(LlamaCppContext(ctx, llama_free)), params_(params) {
     tokens_.reserve(params.n_ctx);
@@ -65,7 +65,7 @@ public:
     tokens_ = std::move(tokens);
   }
 
-  inline const gpt_params &params() const { return params_; }
+  inline const common_params &params() const { return params_; }
 
   inline std::mutex &get_mutex() { return mutex; }
 
@@ -79,7 +79,7 @@ public:
 private:
   LlamaCppModel model_;
   LlamaCppContext ctx_;
-  const gpt_params params_;
+  const common_params params_;
   std::vector<llama_token> tokens_{};
   std::mutex mutex;
 };

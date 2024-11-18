@@ -6,7 +6,7 @@ TokenizeWorker::TokenizeWorker(const Napi::CallbackInfo &info,
     : AsyncWorker(info.Env()), Deferred(info.Env()), _sess(sess), _text(text) {}
 
 void TokenizeWorker::Execute() {
-  const auto tokens = ::llama_tokenize(_sess->context(), _text, false);
+  const auto tokens = ::common_tokenize(_sess->context(), _text, false);
   _result.tokens = std::move(tokens);
 }
 

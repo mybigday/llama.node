@@ -12,7 +12,7 @@ class LlamaCompletionWorker : public Napi::AsyncWorker,
                               public Napi::Promise::Deferred {
 public:
   LlamaCompletionWorker(const Napi::CallbackInfo &info, LlamaSessionPtr &sess,
-                        Napi::Function callback, gpt_params params,
+                        Napi::Function callback, common_params params,
                         std::vector<std::string> stop_words = {});
 
   ~LlamaCompletionWorker();
@@ -28,7 +28,7 @@ protected:
 
 private:
   LlamaSessionPtr _sess;
-  gpt_params _params;
+  common_params _params;
   std::vector<std::string> _stop_words;
   Napi::ThreadSafeFunction _tsfn;
   bool _has_callback = false;

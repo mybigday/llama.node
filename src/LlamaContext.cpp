@@ -7,8 +7,8 @@
 #include "SaveSessionWorker.h"
 #include "TokenizeWorker.h"
 
-std::vector<llama_chat_msg> get_messages(Napi::Array messages) {
-  std::vector<llama_chat_msg> chat;
+std::vector<common_chat_msg> get_messages(Napi::Array messages) {
+  std::vector<common_chat_msg> chat;
   for (size_t i = 0; i < messages.Length(); i++) {
     auto message = messages.Get(i).As<Napi::Object>();
     chat.push_back({
@@ -67,7 +67,7 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   }
   auto options = info[0].As<Napi::Object>();
 
-  gpt_params params;
+  common_params params;
   params.model = get_option<std::string>(options, "model", "");
   if (params.model.empty()) {
     Napi::TypeError::New(env, "Model is required").ThrowAsJavaScriptException();
@@ -86,7 +86,7 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   llama_backend_init();
   llama_numa_init(params.numa);
 
-  auto result = llama_init_from_gpt_params(params);
+  auto result = common_init_from_params(params);
 
   if (result.model == nullptr || result.context == nullptr) {
     Napi::TypeError::New(env, "Failed to load model")
@@ -94,7 +94,7 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   }
 
   _sess = std::make_shared<LlamaSession>(result.model, result.context, params);
-  _info = gpt_params_get_system_info(params);
+  _info = common_params_get_system_info(params);
 }
 
 // getSystemInfo(): string
@@ -109,7 +109,7 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
     Napi::TypeError::New(env, "Array expected").ThrowAsJavaScriptException();
   }
   auto messages = info[0].As<Napi::Array>();
-  auto formatted = llama_chat_apply_template(_sess->model(), "", get_messages(messages), true);
+  auto formatted = common_chat_apply_template(_sess->model(), "", get_messages(messages), true);
   return Napi::String::New(env, formatted);
 }
 
@@ -133,10 +133,10 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   }
   auto options = info[0].As<Napi::Object>();
 
-  gpt_params params = _sess->params();
+  common_params params = _sess->params();
   if (options.Has("messages") && options.Get("messages").IsArray()) {
     auto messages = options.Get("messages").As<Napi::Array>();
-    auto formatted = llama_chat_apply_template(_sess->model(), "", get_messages(messages), true);
+    auto formatted = common_chat_apply_template(_sess->model(), "", get_messages(messages), true);
     params.prompt = formatted;
   } else {
     params.prompt = get_option<std::string>(options, "prompt", "");
@@ -150,7 +150,6 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   params.sparams.top_k = get_option<int32_t>(options, "top_k", 40);
   params.sparams.top_p = get_option<float>(options, "top_p", 0.95f);
   params.sparams.min_p = get_option<float>(options, "min_p", 0.05f);
-  params.sparams.tfs_z = get_option<float>(options, "tfs_z", 1.00f);
   params.sparams.mirostat = get_option<int32_t>(options, "mirostat", 0.00f);
   params.sparams.mirostat_tau =
       get_option<float>(options, "mirostat_tau", 5.00f);
