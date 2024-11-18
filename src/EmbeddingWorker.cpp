@@ -7,7 +7,7 @@ EmbeddingWorker::EmbeddingWorker(const Napi::CallbackInfo &info,
 
 void EmbeddingWorker::Execute() {
   llama_kv_cache_clear(_sess->context());
-  auto tokens = ::llama_tokenize(_sess->context(), _text, true);
+  auto tokens = ::common_tokenize(_sess->context(), _text, true);
   // add SEP if not present
   if (tokens.empty() || tokens.back() != llama_token_sep(_sess->model())) {
     tokens.push_back(llama_token_sep(_sess->model()));
@@ -16,7 +16,7 @@ void EmbeddingWorker::Execute() {
   do {
     int ret =
         llama_decode(_sess->context(),
-                     llama_batch_get_one(tokens.data(), tokens.size(), 0, 0));
+                     llama_batch_get_one(tokens.data(), tokens.size()));
     if (ret < 0) {
       SetError("Failed to inference, code: " + std::to_string(ret));
       break;

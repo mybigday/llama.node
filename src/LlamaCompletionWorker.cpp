@@ -34,7 +34,7 @@ size_t findStoppingStrings(const std::string &text,
 
 LlamaCompletionWorker::LlamaCompletionWorker(
     const Napi::CallbackInfo &info, LlamaSessionPtr &sess,
-    Napi::Function callback, gpt_params params,
+    Napi::Function callback, common_params params,
     std::vector<std::string> stop_words)
     : AsyncWorker(info.Env()), Deferred(info.Env()), _sess(sess),
       _params(params), _stop_words(stop_words) {
@@ -64,11 +64,11 @@ void LlamaCompletionWorker::Execute() {
 
   auto sparams = llama_sampler_chain_default_params();
 
-  LlamaCppSampling sampling{gpt_sampler_init(model, _params.sparams),
-                            gpt_sampler_free};
+  LlamaCppSampling sampling{common_sampler_init(model, _params.sparams),
+                            common_sampler_free};
 
   std::vector<llama_token> prompt_tokens =
-      ::llama_tokenize(ctx, _params.prompt, add_bos);
+      ::common_tokenize(ctx, _params.prompt, add_bos);
   n_input = prompt_tokens.size();
   if (_sess->tokens_ptr()->size() > 0) {
     n_cur = common_part(*(_sess->tokens_ptr()), prompt_tokens);
@@ -102,18 +102,18 @@ void LlamaCompletionWorker::Execute() {
       _result.truncated = true;
     }
     int ret = llama_decode(
-        ctx, llama_batch_get_one(embd->data() + n_cur, n_input, n_cur, 0));
+        ctx, llama_batch_get_one(embd->data() + n_cur, n_input));
     if (ret < 0) {
       SetError("Failed to decode token, code: " + std::to_string(ret));
       break;
     }
     // sample the next token
     const llama_token new_token_id =
-        gpt_sampler_sample(sampling.get(), ctx, -1);
-    gpt_sampler_accept(sampling.get(), new_token_id, true);
+        common_sampler_sample(sampling.get(), ctx, -1);
+    common_sampler_accept(sampling.get(), new_token_id, true);
     // prepare the next batch
     embd->emplace_back(new_token_id);
-    auto token = llama_token_to_piece(ctx, new_token_id);
+    auto token = common_token_to_piece(ctx, new_token_id);
     _result.text += token;
     n_cur += n_input;
     _result.tokens_evaluated += n_input;

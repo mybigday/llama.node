@@ -8,7 +8,7 @@ DetokenizeWorker::DetokenizeWorker(const Napi::CallbackInfo &info,
       _tokens(std::move(tokens)) {}
 
 void DetokenizeWorker::Execute() {
-  const auto text = ::llama_detokenize(_sess->context(), _tokens);
+  const auto text = ::common_detokenize(_sess->context(), _tokens);
   _text = std::move(text);
 }
 
