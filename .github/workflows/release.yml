@@ -16,6 +16,7 @@ jobs:
         with:
           submodules: 'true'
       - name: Set up QEMU
+        if: runner.os == 'Linux'
         uses: docker/setup-qemu-action@v3
       - uses: actions/setup-node@v4.0.2
         with:
