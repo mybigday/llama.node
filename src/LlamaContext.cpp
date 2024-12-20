@@ -146,29 +146,28 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
         .ThrowAsJavaScriptException();
   }
   params.n_predict = get_option<int32_t>(options, "n_predict", -1);
-  params.sparams.temp = get_option<float>(options, "temperature", 0.80f);
-  params.sparams.top_k = get_option<int32_t>(options, "top_k", 40);
-  params.sparams.top_p = get_option<float>(options, "top_p", 0.95f);
-  params.sparams.min_p = get_option<float>(options, "min_p", 0.05f);
-  params.sparams.mirostat = get_option<int32_t>(options, "mirostat", 0.00f);
-  params.sparams.mirostat_tau =
+  params.sampling.temp = get_option<float>(options, "temperature", 0.80f);
+  params.sampling.top_k = get_option<int32_t>(options, "top_k", 40);
+  params.sampling.top_p = get_option<float>(options, "top_p", 0.95f);
+  params.sampling.min_p = get_option<float>(options, "min_p", 0.05f);
+  params.sampling.mirostat = get_option<int32_t>(options, "mirostat", 0.00f);
+  params.sampling.mirostat_tau =
       get_option<float>(options, "mirostat_tau", 5.00f);
-  params.sparams.mirostat_eta =
+  params.sampling.mirostat_eta =
       get_option<float>(options, "mirostat_eta", 0.10f);
-  params.sparams.penalty_last_n =
+  params.sampling.penalty_last_n =
       get_option<int32_t>(options, "penalty_last_n", 64);
-  params.sparams.penalty_repeat =
+  params.sampling.penalty_repeat =
       get_option<float>(options, "penalty_repeat", 1.00f);
-  params.sparams.penalty_freq =
+  params.sampling.penalty_freq =
       get_option<float>(options, "penalty_freq", 0.00f);
-  params.sparams.penalty_present =
+  params.sampling.penalty_present =
       get_option<float>(options, "penalty_present", 0.00f);
-  params.sparams.penalize_nl = get_option<bool>(options, "penalize_nl", false);
-  params.sparams.typ_p = get_option<float>(options, "typical_p", 1.00f);
-  params.sparams.ignore_eos = get_option<float>(options, "ignore_eos", false);
-  params.sparams.grammar = get_option<std::string>(options, "grammar", "");
+  params.sampling.typ_p = get_option<float>(options, "typical_p", 1.00f);
+  params.sampling.ignore_eos = get_option<bool>(options, "ignore_eos", false);
+  params.sampling.grammar = get_option<std::string>(options, "grammar", "");
   params.n_keep = get_option<int32_t>(options, "n_keep", 0);
-  params.sparams.seed = get_option<int32_t>(options, "seed", LLAMA_DEFAULT_SEED);
+  params.sampling.seed = get_option<int32_t>(options, "seed", LLAMA_DEFAULT_SEED);
   std::vector<std::string> stop_words;
   if (options.Has("stop") && options.Get("stop").IsArray()) {
     auto stop_words_array = options.Get("stop").As<Napi::Array>();
