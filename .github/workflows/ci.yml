@@ -19,5 +19,8 @@ jobs:
         path: node_modules
         key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
     - run: yarn install
-    - run: yarn build-native && rm -rf build
+    - name: build
+      env:
+        CMAKE_BUILD_PARALLEL_LEVEL: 4
+      run: yarn build-native && rm -rf build
     - run: yarn test
