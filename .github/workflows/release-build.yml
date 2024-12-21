@@ -34,21 +34,19 @@ jobs:
       - name: externals cache
         uses: actions/cache@v4.0.2
         if: runner.os != 'Windows'
-        env:
-          CMAKE_BUILD_PARALLEL_LEVEL: 4
         with:
           path: externals
           key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
       - name: externals cache (Windows)
         uses: actions/cache@v4.0.2
         if: runner.os == 'Windows'
-        env:
-          CMAKE_BUILD_PARALLEL_LEVEL: 4
         with:
           path: externals
           key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.ps1') }}
       - name: Install dependencies
         run: yarn install
+      - uses: msys2/setup-msys2@v2
+        if: runner.os == 'Windows'
       - name: Prepare & build (Windows)
         if: runner.os == 'Windows'
         env:
