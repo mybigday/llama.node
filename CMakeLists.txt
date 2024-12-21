@@ -149,3 +149,7 @@ if (LLAMA_CLBLAST)
     )
   endif()
 endif()
+
+if (NOT DEFINED GGML_CUDA_GRAPHS)
+    set(GGML_CUDA_GRAPHS_DEFAULT ON)
+endif()
