@@ -90,7 +90,9 @@ export const loadModule = async (variant?: LibVariant): Promise<Module> => {
       setupEnv(variant)
       return await import(`../bin/${process.platform}-${variant}/${process.arch}/llama-node.node`) as Module
     }
-  } catch {} // ignore errors and try the common path
+  } catch (e) {
+    console.error(`Failed to load module with variant ${variant}`, e)
+  } // ignore errors and try the common path
   setupEnv()
   return await import(`../bin/${process.platform}/${process.arch}/llama-node.node`) as Module
 }
