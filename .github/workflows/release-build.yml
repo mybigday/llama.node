@@ -1,6 +1,11 @@
 name: Release build
 on:
   push:
+  workflow_dispatch:
+    inputs:
+      upload-artifacts:
+        type: boolean
+        default: false
   workflow_call:
     inputs:
       upload-artifacts:
@@ -8,24 +13,15 @@ on:
         default: false
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-13, macos-14]
+  build-linux-x86_64:
+    runs-on: ubuntu-latest
+    container: nvidia/cuda:12.6.2-devel-ubuntu24.04
     steps:
+      - name: Upgrade git
+        run: apt-get update && apt-get install -y git
       - uses: actions/checkout@v4
         with:
           submodules: 'true'
-      - name: Setup QEMU
-        if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: linux/arm64
-      - uses: actions/setup-node@v4.0.2
-        with:
-          node-version: 20
-          cache: 'yarn'
       - name: node_modules cache
         uses: actions/cache@v4.0.2
         with:
@@ -33,36 +29,57 @@ jobs:
           key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
       - name: externals cache
         uses: actions/cache@v4.0.2
-        if: runner.os != 'Windows'
         with:
           path: externals
           key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
-      - name: externals cache (Windows)
-        uses: actions/cache@v4.0.2
-        if: runner.os == 'Windows'
+      - uses: actions/setup-node@v4.0.2
         with:
-          path: externals
-          key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.ps1') }}
+          node-version: 20
+      - name: Install yarn
+        run: npm install -g yarn
       - name: Install dependencies
         run: yarn install
-      - uses: msys2/setup-msys2@v2
-        if: runner.os == 'Windows'
-      - name: Prepare & build (Windows)
-        if: runner.os == 'Windows'
-        env:
-          CMAKE_BUILD_PARALLEL_LEVEL: 4
-        run: |
-          powershell ./scripts/prepare-windows.ps1
-          powershell ./scripts/build-windows.ps1
-      - name: Prepare & build (Linux x86_64)
-        if: runner.os == 'Linux'
+      - name: Prepare & build
         env:
           CMAKE_BUILD_PARALLEL_LEVEL: 4
         run: |
           bash ./scripts/prepare-linux.sh
           bash ./scripts/build-linux.sh
-      - name: Prepare & build (Linux arm64)
-        if: runner.os == 'Linux'
+      - name: Upload build artifacts
+        if: inputs.upload-artifacts == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-linux-arm64
+          path: bin
+          retention-days: 3
+
+  build-linux-arm64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+      - name: node_modules cache
+        uses: actions/cache@v4.0.2
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
+      - name: externals cache
+        uses: actions/cache@v4.0.2
+        with:
+          path: externals
+          key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
+      - uses: actions/setup-node@v4.0.2
+        with:
+          node-version: 20
+          cache: 'yarn'
+      - name: Install dependencies
+        run: yarn install
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/arm64
+      - name: Prepare & build
         env:
           CMAKE_BUILD_PARALLEL_LEVEL: 4
         run: |
@@ -71,10 +88,42 @@ jobs:
             -v $(pwd):/${{ github.workspace }} \
             -w /${{ github.workspace }} \
             --platform linux/arm64 \
-            arm64v8/ubuntu:latest \
+            nvidia/cuda:12.6.2-devel-ubuntu24.04 \
             bash -c "./scripts/prepare-linux.sh && ./scripts/build-linux.sh"
+      - name: Upload build artifacts
+        if: inputs.upload-artifacts == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-linux-arm64
+          path: bin
+          retention-days: 3
+
+  build-macos:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-13, macos-14]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+      - name: node_modules cache
+        uses: actions/cache@v4.0.2
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
+      - name: externals cache
+        uses: actions/cache@v4.0.2
+        with:
+          path: externals
+          key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
+      - uses: actions/setup-node@v4.0.2
+        with:
+          node-version: 20
+          cache: 'yarn'
+      - name: Install dependencies
+        run: yarn install
       - name: Build (macOS)
-        if: runner.os == 'macOS'
         env:
           CMAKE_BUILD_PARALLEL_LEVEL: 4
         run: bash ./scripts/build-macos.sh
@@ -82,6 +131,40 @@ jobs:
         if: inputs.upload-artifacts == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: bin-${{ matrix.os }}
+          name: bin-macos
+          path: bin
+          retention-days: 3
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+      - name: node_modules cache
+        uses: actions/cache@v4.0.2
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
+      - name: externals cache
+        uses: actions/cache@v4.0.2
+        with:
+          path: externals
+          key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.ps1') }}
+      - uses: actions/setup-node@v4.0.2
+        with:
+          node-version: 20
+          cache: 'yarn'
+      - name: Install dependencies
+        run: yarn install
+      - name: Prepare & build
+        run: |
+          powershell ./scripts/prepare-windows.ps1
+          powershell ./scripts/build-windows.ps1
+      - name: Upload build artifacts
+        if: inputs.upload-artifacts == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-windows
           path: bin
           retention-days: 3
