@@ -25,7 +25,21 @@ export type LlamaCompletionOptions = {
   temperature?: number
   top_k?: number
   top_p?: number
-  repetition_penalty?: number
+  min_p?: number
+  mirostat?: number
+  mirostat_tau?: number
+  mirostat_eta?: number
+  penalty_last_n?: number
+  penalty_repeat?: number
+  penalty_freq?: number
+  penalty_present?: number
+  typ_p?: number
+  xtc_threshold?: number
+  xtc_probability?: number
+  dry_multiplier?: number
+  dry_base?: number
+  dry_allowed_length?: number
+  dry_penalty_last_n?: number
   n_predict?: number
   max_length?: number
   max_tokens?: number
