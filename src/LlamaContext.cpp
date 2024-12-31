@@ -214,6 +214,12 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   params.sampling.penalty_present =
       get_option<float>(options, "penalty_present", 0.00f);
   params.sampling.typ_p = get_option<float>(options, "typical_p", 1.00f);
+  params.sampling.xtc_threshold = get_option<float>(options, "xtc_threshold", 0.00f);
+  params.sampling.xtc_probability = get_option<float>(options, "xtc_probability", 0.10f);
+  params.sampling.dry_multiplier = get_option<float>(options, "dry_multiplier", 1.75f);
+  params.sampling.dry_base = get_option<float>(options, "dry_base", 2);
+  params.sampling.dry_allowed_length = get_option<float>(options, "dry_allowed_length", -1);
+  params.sampling.dry_penalty_last_n = get_option<float>(options, "dry_penalty_last_n", 0);
   params.sampling.ignore_eos = get_option<bool>(options, "ignore_eos", false);
   params.sampling.grammar = get_option<std::string>(options, "grammar", "");
   params.n_keep = get_option<int32_t>(options, "n_keep", 0);
