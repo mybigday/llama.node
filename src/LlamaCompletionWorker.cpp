@@ -64,7 +64,7 @@ void LlamaCompletionWorker::Execute() {
 
   auto sparams = llama_sampler_chain_default_params();
 
-  LlamaCppSampling sampling{common_sampler_init(model, _params.sparams),
+  LlamaCppSampling sampling{common_sampler_init(model, _params.sampling),
                             common_sampler_free};
 
   std::vector<llama_token> prompt_tokens =
