@@ -25,6 +25,9 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
       {InstanceMethod<&LlamaContext::GetSystemInfo>(
            "getSystemInfo",
            static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::GetModelInfo>(
+           "getModelInfo",
+           static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::GetFormattedChat>(
            "getFormattedChat",
            static_cast<napi_property_attributes>(napi_enumerable)),
@@ -100,6 +103,44 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
 // getSystemInfo(): string
 Napi::Value LlamaContext::GetSystemInfo(const Napi::CallbackInfo &info) {
   return Napi::String::New(info.Env(), _info);
+}
+
+bool validateModelChatTemplate(const struct llama_model * model) {
+    std::vector<char> model_template(2048, 0); // longest known template is about 1200 bytes
+    std::string template_key = "tokenizer.chat_template";
+    int32_t res = llama_model_meta_val_str(model, template_key.c_str(), model_template.data(), model_template.size());
+    if (res >= 0) {
+        llama_chat_message chat[] = {{"user", "test"}};
+        std::string tmpl = std::string(model_template.data(), model_template.size());
+        int32_t chat_res = llama_chat_apply_template(model, tmpl.c_str(), chat, 1, true, nullptr, 0);
+        return chat_res > 0;
+    }
+    return res > 0;
+}
+
+// getModelInfo(): object
+Napi::Value LlamaContext::GetModelInfo(const Napi::CallbackInfo &info) {
+  char desc[1024];
+  auto model = _sess->model();
+  llama_model_desc(model, desc, sizeof(desc));
+
+  int count = llama_model_meta_count(model);
+  Napi::Object metadata = Napi::Object::New(info.Env());
+  for (int i = 0; i < count; i++) {
+    char key[256];
+    llama_model_meta_key_by_index(model, i, key, sizeof(key));
+    char val[2048];
+    llama_model_meta_val_str_by_index(model, i, val, sizeof(val));
+
+    metadata.Set(key, val);
+  }
+  Napi::Object details = Napi::Object::New(info.Env());
+  details.Set("desc", desc);
+  details.Set("nParams", llama_model_n_params(model));
+  details.Set("size", llama_model_size(model));
+  details.Set("isChatTemplateSupported", validateModelChatTemplate(model));
+  details.Set("metadata", metadata);
+  return details;
 }
 
 // getFormattedChat(messages: [{ role: string, content: string }]): string

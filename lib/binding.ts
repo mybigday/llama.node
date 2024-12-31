@@ -54,6 +54,7 @@ export type EmbeddingResult = {
 export interface LlamaContext {
   new (options: LlamaModelOptions): LlamaContext
   getSystemInfo(): string
+  getModelInfo(): object
   getFormattedChat(messages: ChatMessage[]): string
   completion(options: LlamaCompletionOptions, callback?: (token: LlamaCompletionToken) => void): Promise<LlamaCompletionResult>
   stopCompletion(): void

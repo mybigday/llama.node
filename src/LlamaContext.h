@@ -9,6 +9,7 @@ public:
 
 private:
   Napi::Value GetSystemInfo(const Napi::CallbackInfo &info);
+  Napi::Value GetModelInfo(const Napi::CallbackInfo &info);
   Napi::Value GetFormattedChat(const Napi::CallbackInfo &info);
   Napi::Value Completion(const Napi::CallbackInfo &info);
   void StopCompletion(const Napi::CallbackInfo &info);
@@ -20,6 +21,7 @@ private:
   Napi::Value Release(const Napi::CallbackInfo &info);
 
   std::string _info;
+  Napi::Object _meta;
   LlamaSessionPtr _sess = nullptr;
   LlamaCompletionWorker *_wip = nullptr;
 };
