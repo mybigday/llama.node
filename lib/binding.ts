@@ -8,6 +8,8 @@ export type ChatMessage = {
 export type LlamaModelOptions = {
   model: string
   embedding?: boolean
+  embd_normalize?: number
+  pooling_type?: number
   n_ctx?: number
   n_batch?: number
   n_threads?: number

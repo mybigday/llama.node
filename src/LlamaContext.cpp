@@ -72,9 +72,18 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   if (params.model.empty()) {
     Napi::TypeError::New(env, "Model is required").ThrowAsJavaScriptException();
   }
-  params.embedding = get_option<bool>(options, "embedding", false);
+
   params.n_ctx = get_option<int32_t>(options, "n_ctx", 512);
   params.n_batch = get_option<int32_t>(options, "n_batch", 2048);
+  params.embedding = get_option<bool>(options, "embedding", false);
+  if (params.embedding) {
+    // For non-causal models, batch size must be equal to ubatch size
+    params.n_ubatch = params.n_batch;
+  }
+  params.embd_normalize = get_option<int32_t>(options, "embd_normalize", 2);
+  int32_t pooling_type = get_option<int32_t>(options, "pooling_type", -1);
+  params.pooling_type = (enum llama_pooling_type) pooling_type;
+
   params.cpuparams.n_threads =
       get_option<int32_t>(options, "n_threads", cpu_get_num_math() / 2);
   params.n_gpu_layers = get_option<int32_t>(options, "n_gpu_layers", -1);
@@ -243,8 +252,16 @@ Napi::Value LlamaContext::Embedding(const Napi::CallbackInfo &info) {
     Napi::TypeError::New(env, "Context is disposed")
         .ThrowAsJavaScriptException();
   }
+  auto options = Napi::Object::New(env);
+  if (info.Length() >= 2 && info[1].IsObject()) {
+    options = info[1].As<Napi::Object>();
+  }
+
+  common_params embdParams;
+  embdParams.embedding = true;
+  embdParams.embd_normalize = get_option<int32_t>(options, "embd_normalize", 2);
   auto text = info[0].ToString().Utf8Value();
-  auto *worker = new EmbeddingWorker(info, _sess, text);
+  auto *worker = new EmbeddingWorker(info, _sess, text, embdParams);
   worker->Queue();
   return worker->Promise();
 }
