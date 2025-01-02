@@ -53,6 +53,16 @@ export type LlamaCompletionResult = {
   tokens_predicted: number
   tokens_evaluated: number
   truncated: boolean
+  timings: {
+    prompt_n: number
+    prompt_ms: number
+    prompt_per_token_ms: number
+    prompt_per_second: number
+    predicted_n: number
+    predicted_ms: number
+    predicted_per_token_ms: number
+    predicted_per_second: number
+  }
 }
 
 export type LlamaCompletionToken = {
