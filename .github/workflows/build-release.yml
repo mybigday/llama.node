@@ -1,6 +1,5 @@
 name: Build release artifacts
 on:
-  push:
   workflow_dispatch:
     inputs:
       upload-artifacts:
