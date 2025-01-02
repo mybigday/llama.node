@@ -1,0 +1,167 @@
+name: Build release artifacts
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      upload-artifacts:
+        type: boolean
+        default: false
+      artifacts-retention-days:
+        type: number
+        default: 1
+  workflow_call:
+    inputs:
+      upload-artifacts:
+        type: boolean
+        default: false
+      artifacts-retention-days:
+        type: number
+        default: 3
+
+jobs:
+  build-linux-x86_64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+      - name: node_modules cache
+        uses: actions/cache@v4.0.2
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
+      - name: externals cache
+        uses: actions/cache@v4.0.2
+        with:
+          path: externals
+          key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
+      - uses: actions/setup-node@v4.0.2
+        with:
+          node-version: 20
+      - name: Install yarn
+        run: npm install -g yarn
+      - name: Install dependencies
+        run: yarn install
+      - name: Prepare & build
+        run: |
+          bash ./scripts/prepare-linux.sh
+          bash ./scripts/build-linux.sh
+      - name: Upload build artifacts
+        if: inputs.upload-artifacts == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-linux-arm64
+          path: bin
+          retention-days: ${{ inputs.artifacts-retention-days }}
+
+  build-linux-arm64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+      - name: node_modules cache
+        uses: actions/cache@v4.0.2
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
+      - name: externals cache
+        uses: actions/cache@v4.0.2
+        with:
+          path: externals
+          key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
+      - uses: actions/setup-node@v4.0.2
+        with:
+          node-version: 20
+          cache: 'yarn'
+      - name: Install dependencies
+        run: yarn install
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/arm64
+      - name: Prepare & build
+        run: |
+          docker run --rm \
+            -e CMAKE_BUILD_PARALLEL_LEVEL=${{ env.CMAKE_BUILD_PARALLEL_LEVEL }} \
+            -v $(pwd):/${{ github.workspace }} \
+            -w /${{ github.workspace }} \
+            --platform linux/arm64 \
+            arm64v8/ubuntu:latest \
+            bash -c "./scripts/prepare-linux.sh && ./scripts/build-linux.sh"
+      - name: Upload build artifacts
+        if: inputs.upload-artifacts == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-linux-arm64
+          path: bin
+          retention-days: ${{ inputs.artifacts-retention-days }}
+
+  build-macos:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-13, macos-14]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+      - name: node_modules cache
+        uses: actions/cache@v4.0.2
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
+      - name: externals cache
+        uses: actions/cache@v4.0.2
+        with:
+          path: externals
+          key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
+      - uses: actions/setup-node@v4.0.2
+        with:
+          node-version: 20
+          cache: 'yarn'
+      - name: Install dependencies
+        run: yarn install
+      - name: Build (macOS)
+        run: bash ./scripts/build-macos.sh
+      - name: Upload build artifacts
+        if: inputs.upload-artifacts == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-macos
+          path: bin
+          retention-days: ${{ inputs.artifacts-retention-days }}
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+      - name: node_modules cache
+        uses: actions/cache@v4.0.2
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
+      - name: externals cache
+        uses: actions/cache@v4.0.2
+        with:
+          path: externals
+          key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.ps1') }}
+      - uses: actions/setup-node@v4.0.2
+        with:
+          node-version: 20
+          cache: 'yarn'
+      - name: Install dependencies
+        run: yarn install
+      - name: Prepare & build
+        run: |
+          powershell ./scripts/prepare-windows.ps1
+          powershell ./scripts/build-windows.ps1
+      - name: Upload build artifacts
+        if: inputs.upload-artifacts == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-windows
+          path: bin
+          retention-days: ${{ inputs.artifacts-retention-days }}
