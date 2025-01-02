@@ -2,8 +2,8 @@
 #include "LlamaContext.h"
 
 EmbeddingWorker::EmbeddingWorker(const Napi::CallbackInfo &info,
-                                 LlamaSessionPtr &sess, std::string text)
-    : AsyncWorker(info.Env()), Deferred(info.Env()), _sess(sess), _text(text) {}
+                                 LlamaSessionPtr &sess, std::string text, common_params &params)
+    : AsyncWorker(info.Env()), Deferred(info.Env()), _sess(sess), _text(text), _params(params) {}
 
 void EmbeddingWorker::Execute() {
   llama_kv_cache_clear(_sess->context());
@@ -14,20 +14,30 @@ void EmbeddingWorker::Execute() {
   }
   const int n_embd = llama_n_embd(_sess->model());
   do {
+    auto ctx = _sess->context();
     int ret =
-        llama_decode(_sess->context(),
+        llama_decode(ctx,
                      llama_batch_get_one(tokens.data(), tokens.size()));
     if (ret < 0) {
       SetError("Failed to inference, code: " + std::to_string(ret));
       break;
     }
-    const float *embd = llama_get_embeddings_seq(_sess->context(), 0);
+
+    float *embd;
+    const enum llama_pooling_type pooling_type = llama_pooling_type(ctx);
+    if (pooling_type == LLAMA_POOLING_TYPE_NONE) {
+      embd = llama_get_embeddings(ctx);
+    } else {
+      embd = llama_get_embeddings_seq(ctx, 0);
+    }
     if (embd == nullptr) {
       SetError("Failed to get embeddings");
       break;
     }
     _result.embedding.resize(n_embd);
-    memcpy(_result.embedding.data(), embd, n_embd * sizeof(float));
+    std::vector<float> embedding(embd, embd + n_embd), out(embd, embd + n_embd);
+        common_embd_normalize(embedding.data(), out.data(), n_embd, _params.embd_normalize);
+    memcpy(_result.embedding.data(), out.data(), n_embd * sizeof(float));
   } while (false);
 }
 

@@ -25,6 +25,9 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
       {InstanceMethod<&LlamaContext::GetSystemInfo>(
            "getSystemInfo",
            static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::GetModelInfo>(
+           "getModelInfo",
+           static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::GetFormattedChat>(
            "getFormattedChat",
            static_cast<napi_property_attributes>(napi_enumerable)),
@@ -72,9 +75,23 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   if (params.model.empty()) {
     Napi::TypeError::New(env, "Model is required").ThrowAsJavaScriptException();
   }
-  params.embedding = get_option<bool>(options, "embedding", false);
+
+  params.vocab_only = get_option<bool>(options, "vocab_only", false);
+  if (params.vocab_only) {
+    params.warmup = false;
+  }
+
   params.n_ctx = get_option<int32_t>(options, "n_ctx", 512);
   params.n_batch = get_option<int32_t>(options, "n_batch", 2048);
+  params.embedding = get_option<bool>(options, "embedding", false);
+  if (params.embedding) {
+    // For non-causal models, batch size must be equal to ubatch size
+    params.n_ubatch = params.n_batch;
+  }
+  params.embd_normalize = get_option<int32_t>(options, "embd_normalize", 2);
+  int32_t pooling_type = get_option<int32_t>(options, "pooling_type", -1);
+  params.pooling_type = (enum llama_pooling_type) pooling_type;
+
   params.cpuparams.n_threads =
       get_option<int32_t>(options, "n_threads", cpu_get_num_math() / 2);
   params.n_gpu_layers = get_option<int32_t>(options, "n_gpu_layers", -1);
@@ -100,6 +117,44 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
 // getSystemInfo(): string
 Napi::Value LlamaContext::GetSystemInfo(const Napi::CallbackInfo &info) {
   return Napi::String::New(info.Env(), _info);
+}
+
+bool validateModelChatTemplate(const struct llama_model * model) {
+    std::vector<char> model_template(2048, 0); // longest known template is about 1200 bytes
+    std::string template_key = "tokenizer.chat_template";
+    int32_t res = llama_model_meta_val_str(model, template_key.c_str(), model_template.data(), model_template.size());
+    if (res >= 0) {
+        llama_chat_message chat[] = {{"user", "test"}};
+        std::string tmpl = std::string(model_template.data(), model_template.size());
+        int32_t chat_res = llama_chat_apply_template(model, tmpl.c_str(), chat, 1, true, nullptr, 0);
+        return chat_res > 0;
+    }
+    return res > 0;
+}
+
+// getModelInfo(): object
+Napi::Value LlamaContext::GetModelInfo(const Napi::CallbackInfo &info) {
+  char desc[1024];
+  auto model = _sess->model();
+  llama_model_desc(model, desc, sizeof(desc));
+
+  int count = llama_model_meta_count(model);
+  Napi::Object metadata = Napi::Object::New(info.Env());
+  for (int i = 0; i < count; i++) {
+    char key[256];
+    llama_model_meta_key_by_index(model, i, key, sizeof(key));
+    char val[2048];
+    llama_model_meta_val_str_by_index(model, i, val, sizeof(val));
+
+    metadata.Set(key, val);
+  }
+  Napi::Object details = Napi::Object::New(info.Env());
+  details.Set("desc", desc);
+  details.Set("nParams", llama_model_n_params(model));
+  details.Set("size", llama_model_size(model));
+  details.Set("isChatTemplateSupported", validateModelChatTemplate(model));
+  details.Set("metadata", metadata);
+  return details;
 }
 
 // getFormattedChat(messages: [{ role: string, content: string }]): string
@@ -164,6 +219,12 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   params.sampling.penalty_present =
       get_option<float>(options, "penalty_present", 0.00f);
   params.sampling.typ_p = get_option<float>(options, "typical_p", 1.00f);
+  params.sampling.xtc_threshold = get_option<float>(options, "xtc_threshold", 0.00f);
+  params.sampling.xtc_probability = get_option<float>(options, "xtc_probability", 0.10f);
+  params.sampling.dry_multiplier = get_option<float>(options, "dry_multiplier", 1.75f);
+  params.sampling.dry_base = get_option<float>(options, "dry_base", 2);
+  params.sampling.dry_allowed_length = get_option<float>(options, "dry_allowed_length", -1);
+  params.sampling.dry_penalty_last_n = get_option<float>(options, "dry_penalty_last_n", 0);
   params.sampling.ignore_eos = get_option<bool>(options, "ignore_eos", false);
   params.sampling.grammar = get_option<std::string>(options, "grammar", "");
   params.n_keep = get_option<int32_t>(options, "n_keep", 0);
@@ -242,8 +303,16 @@ Napi::Value LlamaContext::Embedding(const Napi::CallbackInfo &info) {
     Napi::TypeError::New(env, "Context is disposed")
         .ThrowAsJavaScriptException();
   }
+  auto options = Napi::Object::New(env);
+  if (info.Length() >= 2 && info[1].IsObject()) {
+    options = info[1].As<Napi::Object>();
+  }
+
+  common_params embdParams;
+  embdParams.embedding = true;
+  embdParams.embd_normalize = get_option<int32_t>(options, "embd_normalize", 2);
   auto text = info[0].ToString().Utf8Value();
-  auto *worker = new EmbeddingWorker(info, _sess, text);
+  auto *worker = new EmbeddingWorker(info, _sess, text, embdParams);
   worker->Queue();
   return worker->Promise();
 }

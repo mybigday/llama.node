@@ -8,12 +8,15 @@ export type ChatMessage = {
 export type LlamaModelOptions = {
   model: string
   embedding?: boolean
+  embd_normalize?: number
+  pooling_type?: number
   n_ctx?: number
   n_batch?: number
   n_threads?: number
   n_gpu_layers?: number
   use_mlock?: boolean
   use_mmap?: boolean
+  vocab_only?: boolean
 }
 
 export type LlamaCompletionOptions = {
@@ -23,7 +26,21 @@ export type LlamaCompletionOptions = {
   temperature?: number
   top_k?: number
   top_p?: number
-  repetition_penalty?: number
+  min_p?: number
+  mirostat?: number
+  mirostat_tau?: number
+  mirostat_eta?: number
+  penalty_last_n?: number
+  penalty_repeat?: number
+  penalty_freq?: number
+  penalty_present?: number
+  typ_p?: number
+  xtc_threshold?: number
+  xtc_probability?: number
+  dry_multiplier?: number
+  dry_base?: number
+  dry_allowed_length?: number
+  dry_penalty_last_n?: number
   n_predict?: number
   max_length?: number
   max_tokens?: number
@@ -37,6 +54,16 @@ export type LlamaCompletionResult = {
   tokens_predicted: number
   tokens_evaluated: number
   truncated: boolean
+  timings: {
+    prompt_n: number
+    prompt_ms: number
+    prompt_per_token_ms: number
+    prompt_per_second: number
+    predicted_n: number
+    predicted_ms: number
+    predicted_per_token_ms: number
+    predicted_per_second: number
+  }
 }
 
 export type LlamaCompletionToken = {
@@ -54,6 +81,7 @@ export type EmbeddingResult = {
 export interface LlamaContext {
   new (options: LlamaModelOptions): LlamaContext
   getSystemInfo(): string
+  getModelInfo(): object
   getFormattedChat(messages: ChatMessage[]): string
   completion(options: LlamaCompletionOptions, callback?: (token: LlamaCompletionToken) => void): Promise<LlamaCompletionResult>
   stopCompletion(): void

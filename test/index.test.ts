@@ -2,9 +2,11 @@ import path from 'path'
 import waitForExpect from 'wait-for-expect'
 import { loadModel } from '../lib'
 
-it('work fine', async () => {
+it('works fine', async () => {
   let tokens = ''
   const model = await loadModel({ model: path.resolve(__dirname, './tiny-random-llama.gguf') })
+  const info = model.getModelInfo()
+  expect(info).toMatchSnapshot('model info')
   const result = await model.completion({
     prompt: 'My name is Merve and my favorite',
     n_samples: 1,
@@ -16,13 +18,23 @@ it('work fine', async () => {
     expect(data).toMatchObject({ token: expect.any(String) })
     tokens += data.token
   })
-  expect(result).toMatchSnapshot()
+  expect({
+    ...result,
+    timings: `Timings: (${Object.keys(result.timings).length}) keys`
+  }).toMatchSnapshot()
   await waitForExpect(() => {
     expect(tokens).toBe(result.text)
   })
   await model.saveSession(path.resolve(__dirname, './tmp.sess'))
   await model.loadSession(path.resolve(__dirname, './tmp.sess'))
   await model.release()
+})
+
+it('works fine with vocab_only', async () => {
+  const model = await loadModel({ model: path.resolve(__dirname, './tiny-random-llama.gguf'), vocab_only: true })
+  expect(model.getModelInfo()).toMatchSnapshot('model info')
+  expect(await model.tokenize('Once upon a time')).toMatchSnapshot('tokenize')
+  expect(await model.completion({ prompt: 'Once upon a time' })).toMatchSnapshot('empty result')
 })
 
 it('tokeneize', async () => {

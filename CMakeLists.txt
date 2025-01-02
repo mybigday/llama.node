@@ -7,7 +7,7 @@ project (llama-node)
 set(CMAKE_CXX_STANDARD 17)
 
 execute_process(COMMAND
-  git apply ${CMAKE_CURRENT_SOURCE_DIR}/scripts/ggml-cpu-CMakeLists.txt.patch
+  git apply ${CMAKE_CURRENT_SOURCE_DIR}/scripts/llama.cpp.patch
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 

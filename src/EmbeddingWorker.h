@@ -9,7 +9,7 @@ class EmbeddingWorker : public Napi::AsyncWorker,
                         public Napi::Promise::Deferred {
 public:
   EmbeddingWorker(const Napi::CallbackInfo &info, LlamaSessionPtr &sess,
-                  std::string text);
+                  std::string text, common_params &params);
 
 protected:
   void Execute();
@@ -19,5 +19,6 @@ protected:
 private:
   LlamaSessionPtr _sess;
   std::string _text;
+  common_params _params;
   EmbeddingResult _result;
 };
