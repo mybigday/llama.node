@@ -16,6 +16,7 @@ export type LlamaModelOptions = {
   n_gpu_layers?: number
   use_mlock?: boolean
   use_mmap?: boolean
+  vocab_only?: boolean
 }
 
 export type LlamaCompletionOptions = {

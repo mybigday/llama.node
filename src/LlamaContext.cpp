@@ -76,6 +76,11 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
     Napi::TypeError::New(env, "Model is required").ThrowAsJavaScriptException();
   }
 
+  params.vocab_only = get_option<bool>(options, "vocab_only", false);
+  if (params.vocab_only) {
+    params.warmup = false;
+  }
+
   params.n_ctx = get_option<int32_t>(options, "n_ctx", 512);
   params.n_batch = get_option<int32_t>(options, "n_batch", 2048);
   params.embedding = get_option<bool>(options, "embedding", false);
