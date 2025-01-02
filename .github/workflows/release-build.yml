@@ -6,11 +6,17 @@ on:
       upload-artifacts:
         type: boolean
         default: false
+      artifacts-retention-days:
+        type: number
+        default: 1
   workflow_call:
     inputs:
       upload-artifacts:
         type: boolean
         default: false
+      artifacts-retention-days:
+        type: number
+        default: 3
 
 jobs:
   build-linux-x86_64:
@@ -48,7 +54,7 @@ jobs:
         with:
           name: bin-linux-arm64
           path: bin
-          retention-days: 3
+          retention-days: ${{ inputs.artifacts-retention-days }}
 
   build-linux-arm64:
     runs-on: ubuntu-latest
@@ -93,7 +99,7 @@ jobs:
         with:
           name: bin-linux-arm64
           path: bin
-          retention-days: 3
+          retention-days: ${{ inputs.artifacts-retention-days }}
 
   build-macos:
     runs-on: ${{ matrix.os }}
@@ -130,7 +136,7 @@ jobs:
         with:
           name: bin-macos
           path: bin
-          retention-days: 3
+          retention-days: ${{ inputs.artifacts-retention-days }}
 
   build-windows:
     runs-on: windows-latest
@@ -164,4 +170,4 @@ jobs:
         with:
           name: bin-windows
           path: bin
-          retention-days: 3
+          retention-days: ${{ inputs.artifacts-retention-days }}
