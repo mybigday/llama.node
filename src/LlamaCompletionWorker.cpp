@@ -159,6 +159,22 @@ void LlamaCompletionWorker::OnOK() {
              Napi::Boolean::New(Napi::AsyncWorker::Env(), _result.truncated));
   result.Set("text",
              Napi::String::New(Napi::AsyncWorker::Env(), _result.text.c_str()));
+
+  auto ctx = _sess->context();
+  const auto timings_token = llama_perf_context(ctx);
+
+  auto timingsResult = Napi::Object::New(Napi::AsyncWorker::Env());
+  timingsResult.Set("prompt_n", Napi::Number::New(Napi::AsyncWorker::Env(), timings_token.n_p_eval));
+  timingsResult.Set("prompt_ms", Napi::Number::New(Napi::AsyncWorker::Env(), timings_token.t_p_eval_ms));
+  timingsResult.Set("prompt_per_token_ms", Napi::Number::New(Napi::AsyncWorker::Env(), timings_token.t_p_eval_ms / timings_token.n_p_eval));
+  timingsResult.Set("prompt_per_second", Napi::Number::New(Napi::AsyncWorker::Env(), 1e3 / timings_token.t_p_eval_ms * timings_token.n_p_eval));
+  timingsResult.Set("predicted_n", Napi::Number::New(Napi::AsyncWorker::Env(), timings_token.n_eval));
+  timingsResult.Set("predicted_ms", Napi::Number::New(Napi::AsyncWorker::Env(), timings_token.t_eval_ms));
+  timingsResult.Set("predicted_per_token_ms", Napi::Number::New(Napi::AsyncWorker::Env(), timings_token.t_eval_ms / timings_token.n_eval));
+  timingsResult.Set("predicted_per_second", Napi::Number::New(Napi::AsyncWorker::Env(), 1e3 / timings_token.t_eval_ms * timings_token.n_eval));
+
+  result.Set("timings", timingsResult);
+  
   Napi::Promise::Deferred::Resolve(result);
 }
 
