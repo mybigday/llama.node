@@ -7,70 +7,10 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-13, macos-14]
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: 'true'
-      - name: Setup QEMU
-        if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: linux/arm64
-      - uses: actions/setup-node@v4.0.2
-        with:
-          node-version: 20
-          cache: 'yarn'
-      - name: node_modules cache
-        uses: actions/cache@v4.0.2
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
-      - name: externals cache
-        uses: actions/cache@v4.0.2
-        if: runner.os != 'Windows'
-        with:
-          path: externals
-          key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
-      - name: externals cache (Windows)
-        uses: actions/cache@v4.0.2
-        if: runner.os == 'Windows'
-        with:
-          path: externals
-          key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.ps1') }}
-      - name: Install dependencies
-        run: yarn install
-      - name: Prepare & build (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          powershell ./scripts/prepare-windows.ps1
-          powershell ./scripts/build-windows.ps1
-      - name: Prepare & build (Linux x86_64)
-        if: runner.os == 'Linux'
-        run: |
-          bash ./scripts/prepare-linux.sh
-          bash ./scripts/build-linux.sh
-      - name: Prepare & build (Linux arm64)
-        if: runner.os == 'Linux'
-        run: |
-          docker run --rm \
-            -v $(pwd):/${{ github.workspace }} \
-            -w /${{ github.workspace }} \
-            --platform linux/arm64 \
-            arm64v8/ubuntu:latest \
-            bash -c "./scripts/prepare-linux.sh && ./scripts/build-linux.sh"
-      - name: Build (macOS)
-        if: runner.os == 'macOS'
-        run: bash ./scripts/build-macos.sh
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: bin-${{ matrix.os }}
-          path: bin
-          retention-days: 3
+    uses: ./.github/workflows/build-release.yml
+    with:
+      upload-artifacts: true
+      artifacts-retention-days: 3
   publish:
     permissions:
       contents: write
