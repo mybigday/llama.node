@@ -416,6 +416,7 @@ exports[`tokeneize 3`] = `
 exports[`work fine 1`] = `
 {
   "text": " swochadoorter scientific WindowsCa occupiedrå alta",
+  "timings": "Timings: (8) keys",
   "tokens_evaluated": 18,
   "tokens_predicted": 10,
   "truncated": false,

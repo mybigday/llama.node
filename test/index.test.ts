@@ -18,7 +18,10 @@ it('work fine', async () => {
     expect(data).toMatchObject({ token: expect.any(String) })
     tokens += data.token
   })
-  expect(result).toMatchSnapshot()
+  expect({
+    ...result,
+    timings: `Timings: (${Object.keys(result.timings).length}) keys`
+  }).toMatchSnapshot()
   await waitForExpect(() => {
     expect(tokens).toBe(result.text)
   })
