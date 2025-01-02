@@ -32,9 +32,9 @@ it('work fine', async () => {
 
 it('work fine with vocab_only', async () => {
   const model = await loadModel({ model: path.resolve(__dirname, './tiny-random-llama.gguf'), vocab_only: true })
-  expect(model.getModelInfo()).toMatchSnapshot()
-  expect(await model.tokenize('Once upon a time')).toMatchSnapshot()
-  expect(await model.completion({ prompt: 'Once upon a time' })).toMatchSnapshot()
+  expect(model.getModelInfo()).toMatchSnapshot('model info')
+  expect(await model.tokenize('Once upon a time')).toMatchSnapshot('tokenize')
+  expect(await model.completion({ prompt: 'Once upon a time' })).toMatchSnapshot('empty result')
 })
 
 it('tokeneize', async () => {
