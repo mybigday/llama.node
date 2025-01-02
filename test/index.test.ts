@@ -2,7 +2,7 @@ import path from 'path'
 import waitForExpect from 'wait-for-expect'
 import { loadModel } from '../lib'
 
-it('work fine', async () => {
+it('works fine', async () => {
   let tokens = ''
   const model = await loadModel({ model: path.resolve(__dirname, './tiny-random-llama.gguf') })
   const info = model.getModelInfo()
@@ -30,7 +30,7 @@ it('work fine', async () => {
   await model.release()
 })
 
-it('work fine with vocab_only', async () => {
+it('works fine with vocab_only', async () => {
   const model = await loadModel({ model: path.resolve(__dirname, './tiny-random-llama.gguf'), vocab_only: true })
   expect(model.getModelInfo()).toMatchSnapshot('model info')
   expect(await model.tokenize('Once upon a time')).toMatchSnapshot('tokenize')

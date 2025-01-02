@@ -413,7 +413,7 @@ exports[`tokeneize 3`] = `
 "
 `;
 
-exports[`work fine 1`] = `
+exports[`works fine 1`] = `
 {
   "text": " swochadoorter scientific WindowsCa occupiedrå alta",
   "timings": "Timings: (8) keys",
@@ -423,7 +423,7 @@ exports[`work fine 1`] = `
 }
 `;
 
-exports[`work fine with vocab_only: empty result 1`] = `
+exports[`works fine with vocab_only: empty result 1`] = `
 {
   "text": "",
   "timings": {
@@ -442,7 +442,7 @@ exports[`work fine with vocab_only: empty result 1`] = `
 }
 `;
 
-exports[`work fine with vocab_only: model info 1`] = `
+exports[`works fine with vocab_only: model info 1`] = `
 {
   "desc": "llama ?B all F32",
   "isChatTemplateSupported": false,
@@ -468,7 +468,7 @@ exports[`work fine with vocab_only: model info 1`] = `
 }
 `;
 
-exports[`work fine with vocab_only: tokenize 1`] = `
+exports[`works fine with vocab_only: tokenize 1`] = `
 {
   "tokens": Int32Array [
     9038,
@@ -479,7 +479,7 @@ exports[`work fine with vocab_only: tokenize 1`] = `
 }
 `;
 
-exports[`work fine: model info 1`] = `
+exports[`works fine: model info 1`] = `
 {
   "desc": "llama ?B F16",
   "isChatTemplateSupported": false,
