@@ -127,7 +127,7 @@ jobs:
         if: inputs.upload-artifacts == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: bin-macos
+          name: bin-${{ matrix.os }}
           path: bin
           retention-days: ${{ inputs.artifacts-retention-days }}
 
