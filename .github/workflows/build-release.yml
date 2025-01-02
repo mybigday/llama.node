@@ -3,16 +3,16 @@ on:
   workflow_dispatch:
     inputs:
       upload-artifacts:
-        type: boolean
-        default: false
+        type: string
+        default: 'NO'
       artifacts-retention-days:
         type: number
         default: 1
   workflow_call:
     inputs:
       upload-artifacts:
-        type: boolean
-        default: false
+        type: string
+        default: 'YES'
       artifacts-retention-days:
         type: number
         default: 3
@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: 'true'
+          submodules: "true"
       - name: node_modules cache
         uses: actions/cache@v4.0.2
         with:
@@ -46,7 +46,7 @@ jobs:
           bash ./scripts/prepare-linux.sh
           bash ./scripts/build-linux.sh
       - name: Upload build artifacts
-        if: inputs.upload-artifacts == 'true'
+        if: github.event.inputs.upload-artifacts == 'YES' || inputs.upload-artifacts == 'YES'
         uses: actions/upload-artifact@v4
         with:
           name: bin-linux-x86_64
@@ -58,7 +58,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: 'true'
+          submodules: "true"
       - name: node_modules cache
         uses: actions/cache@v4.0.2
         with:
@@ -72,7 +72,7 @@ jobs:
       - uses: actions/setup-node@v4.0.2
         with:
           node-version: 20
-          cache: 'yarn'
+          cache: "yarn"
       - name: Install dependencies
         run: yarn install
       - name: Setup QEMU
@@ -89,7 +89,7 @@ jobs:
             arm64v8/ubuntu:latest \
             bash -c "./scripts/prepare-linux.sh && ./scripts/build-linux.sh"
       - name: Upload build artifacts
-        if: inputs.upload-artifacts == 'true'
+        if: github.event.inputs.upload-artifacts == 'YES' || inputs.upload-artifacts == 'YES'
         uses: actions/upload-artifact@v4
         with:
           name: bin-linux-arm64
@@ -104,7 +104,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: 'true'
+          submodules: "true"
       - name: node_modules cache
         uses: actions/cache@v4.0.2
         with:
@@ -118,13 +118,13 @@ jobs:
       - uses: actions/setup-node@v4.0.2
         with:
           node-version: 20
-          cache: 'yarn'
+          cache: "yarn"
       - name: Install dependencies
         run: yarn install
       - name: Build (macOS)
         run: bash ./scripts/build-macos.sh
       - name: Upload build artifacts
-        if: inputs.upload-artifacts == 'true'
+        if: github.event.inputs.upload-artifacts == 'YES' || inputs.upload-artifacts == 'YES'
         uses: actions/upload-artifact@v4
         with:
           name: bin-${{ matrix.os }}
@@ -136,7 +136,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: 'true'
+          submodules: "true"
       - name: node_modules cache
         uses: actions/cache@v4.0.2
         with:
@@ -150,7 +150,7 @@ jobs:
       - uses: actions/setup-node@v4.0.2
         with:
           node-version: 20
-          cache: 'yarn'
+          cache: "yarn"
       - name: Install dependencies
         run: yarn install
       - name: Prepare & build
@@ -158,7 +158,7 @@ jobs:
           powershell ./scripts/prepare-windows.ps1
           powershell ./scripts/build-windows.ps1
       - name: Upload build artifacts
-        if: inputs.upload-artifacts == 'true'
+        if: github.event.inputs.upload-artifacts == 'YES' || inputs.upload-artifacts == 'YES'
         uses: actions/upload-artifact@v4
         with:
           name: bin-windows

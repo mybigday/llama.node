@@ -8,9 +8,6 @@ on:
 jobs:
   build:
     uses: ./.github/workflows/build-release.yml
-    with:
-      upload-artifacts: true
-      artifacts-retention-days: 3
   publish:
     permissions:
       contents: write
