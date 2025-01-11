@@ -1,16 +1,3 @@
-diff --git a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
-index 683b90af..e1bf104c 100644
---- a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
-+++ b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
-@@ -80,7 +80,7 @@ function(ggml_add_cpu_backend_variant_impl tag_name)
-         message(STATUS "ARM detected")
- 
-         if (MSVC AND NOT CMAKE_C_COMPILER_ID STREQUAL "Clang")
--            message(FATAL_ERROR "MSVC is not supported for ARM, use clang")
-+            list(APPEND ARCH_FLAGS /arch:armv8.7)
-         else()
-             check_cxx_compiler_flag(-mfp16-format=ieee COMPILER_SUPPORTS_FP16_FORMAT_I3E)
-             if (NOT "${COMPILER_SUPPORTS_FP16_FORMAT_I3E}" STREQUAL "")
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
 index 1d2bd932..b5007c66 100644
 --- a/src/llama.cpp/common/common.h
@@ -35,3 +22,16 @@ index 20be9291..1bedc55d 100644
      mparams.rpc_servers     = params.rpc_servers.c_str();
      mparams.main_gpu        = params.main_gpu;
      mparams.split_mode      = params.split_mode;
+diff --git a/ggml/src/ggml-cpu/CMakeLists.txt b/ggml/src/ggml-cpu/CMakeLists.txt
+index 6b3641c4..6d6cb27f 100644
+--- a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
++++ b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
+@@ -80,7 +80,7 @@ function(ggml_add_cpu_backend_variant_impl tag_name)
+         message(STATUS "ARM detected")
+ 
+         if (MSVC AND NOT CMAKE_C_COMPILER_ID STREQUAL "Clang")
+-            message(FATAL_ERROR "MSVC is not supported for ARM, use clang")
++            list(APPEND ARCH_FLAGS /arch:armv8.7)
+         else()
+             check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
+             if (NOT "${GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E}" STREQUAL "")

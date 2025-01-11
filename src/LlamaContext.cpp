@@ -140,14 +140,14 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   llama_backend_init();
   llama_numa_init(params.numa);
 
-  auto result = common_init_from_params(params);
+  auto sess = std::make_shared<LlamaSession>(params);
 
-  if (result.model == nullptr || result.context == nullptr) {
+  if (sess->model() == nullptr || sess->context() == nullptr) {
     Napi::TypeError::New(env, "Failed to load model")
         .ThrowAsJavaScriptException();
   }
 
-  _sess = std::make_shared<LlamaSession>(result.model, result.context, params);
+  _sess = sess;
   _info = common_params_get_system_info(params);
 }
 
