@@ -9,7 +9,7 @@ export type LlamaModelOptions = {
   model: string
   embedding?: boolean
   embd_normalize?: number
-  pooling_type?: number
+  pooling_type?: 'none' | 'mean' | 'cls' | 'last' | 'rank'
   n_ctx?: number
   n_batch?: number
   n_ubatch?: number
