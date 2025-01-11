@@ -15,6 +15,25 @@ export type LlamaModelOptions = {
   n_ubatch?: number
   n_threads?: number
   n_gpu_layers?: number
+  flash_attn?: boolean
+  cache_type_k?:
+    | 'f16'
+    | 'f32'
+    | 'q8_0'
+    | 'q4_0'
+    | 'q4_1'
+    | 'iq4_nl'
+    | 'q5_0'
+    | 'q5_1'
+  cache_type_v?:
+    | 'f16'
+    | 'f32'
+    | 'q8_0'
+    | 'q4_0'
+    | 'q4_1'
+    | 'iq4_nl'
+    | 'q5_0'
+    | 'q5_1'
   use_mlock?: boolean
   use_mmap?: boolean
   vocab_only?: boolean
