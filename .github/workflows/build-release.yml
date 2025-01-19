@@ -20,7 +20,10 @@ on:
 jobs:
   build-linux-x86_64:
     runs-on: ubuntu-22.04
+    container: nvidia/cuda:12.6.2-devel-ubuntu22.04
     steps:
+      - name: Upgrade git
+        run: apt-get update && apt-get install -y git
       - uses: actions/checkout@v4
         with:
           submodules: "true"
@@ -55,7 +58,10 @@ jobs:
 
   build-linux-arm64:
     runs-on: ubuntu-22.04-arm
+    container: nvidia/cuda:12.6.2-devel-ubuntu22.04
     steps:
+      - name: Upgrade git
+        run: apt-get update && apt-get install -y git
       - uses: actions/checkout@v4
         with:
           submodules: "true"
