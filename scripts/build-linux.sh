@@ -10,6 +10,6 @@ if [ $ARCH == "x86_64" ]; then
   yarn clean && yarn build-native
   yarn clean && yarn build-native --CDLLAMA_VULKAN=1 --CDVARIANT=vulkan
 else
-  yarn clean && yarn build-native
-  yarn clean && yarn build-native --CDLLAMA_VULKAN=1 --CDVULKAN_SDK="$(realpath 'externals/arm64-Vulkan-SDK')" --CDVARIANT=vulkan
+  yarn clean && yarn build-native --CDGGML_NATIVE=OFF
+  yarn clean && yarn build-native --CDGGML_NATIVE=OFF --CDLLAMA_VULKAN=1 --CDVULKAN_SDK="$(realpath 'externals/arm64-Vulkan-SDK')" --CDVARIANT=vulkan
 fi
