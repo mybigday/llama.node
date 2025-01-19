@@ -12,7 +12,10 @@ if [ $ARCH == "x86_64" ]; then
 
   # Check CUDA is available
   if [ -f /usr/local/cuda/bin/nvcc ]; then
-    yarn clean && yarn build-native --CDLLAMA_CUDA=1 --CDVARIANT=cuda
+    yarn clean && yarn build-native \
+      --CDLLAMA_CUDA=1 \
+      --CDVARIANT=cuda \
+      --CDCMAKE_CUDA_ARCHITECTURES=89 # > GeForce RTX 40 series
   else
     echo "CUDA is not available, skipping CUDA build"
   fi
@@ -22,7 +25,10 @@ else
 
   # Check CUDA is available
   if [ -f /usr/local/cuda/bin/nvcc ]; then
-    yarn clean && yarn build-native --CDLLAMA_CUDA=1 --CDVARIANT=cuda
+    yarn clean && yarn build-native \
+      --CDLLAMA_CUDA=1 \
+      --CDVARIANT=cuda \
+      --CDCMAKE_CUDA_ARCHITECTURES=87 # > Jetson Orin series
   else
     echo "CUDA is not available, skipping CUDA build"
   fi
