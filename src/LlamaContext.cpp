@@ -1,4 +1,5 @@
 #include "ggml.h"
+#include "gguf.h"
 #include "LlamaContext.h"
 #include "DetokenizeWorker.h"
 #include "DisposeWorker.h"
@@ -7,6 +8,34 @@
 #include "LoadSessionWorker.h"
 #include "SaveSessionWorker.h"
 #include "TokenizeWorker.h"
+
+Napi::Object LlamaContext::ModelInfo(Napi::Env env, const std::string & path) {
+  struct gguf_init_params params = {
+    /*.no_alloc = */ false,
+    /*.ctx      = */ NULL,
+  };
+  struct gguf_context * ctx = gguf_init_from_file(path.c_str(), params);
+
+  Napi::Object info = Napi::Object::New(env);
+  info.Set("version", Napi::Number::New(env, gguf_get_version(ctx)));
+  info.Set("alignment", Napi::Number::New(env, gguf_get_alignment(ctx)));
+  info.Set("data_offset", Napi::Number::New(env, gguf_get_data_offset(ctx)));
+
+  // kv
+  {
+    const int n_kv = gguf_get_n_kv(ctx);
+
+    for (int i = 0; i < n_kv; ++i) {
+      const char * key = gguf_get_key(ctx, i);
+      const std::string value = gguf_kv_to_str(ctx, i);
+      info.Set(key, Napi::String::New(env, value.c_str()));
+    }
+  }
+
+  gguf_free(ctx);
+
+  return info;
+}
 
 std::vector<common_chat_msg> get_messages(Napi::Array messages) {
   std::vector<common_chat_msg> chat;
