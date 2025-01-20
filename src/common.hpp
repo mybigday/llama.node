@@ -11,8 +11,6 @@
 #include <tuple>
 #include <vector>
 
-typedef std::unique_ptr<llama_model, decltype(&llama_free_model)> LlamaCppModel;
-typedef std::unique_ptr<llama_context, decltype(&llama_free)> LlamaCppContext;
 typedef std::unique_ptr<common_sampler, decltype(&common_sampler_free)>
     LlamaCppSampling;
 typedef std::unique_ptr<llama_batch, decltype(&llama_batch_free)> LlamaCppBatch;
@@ -47,17 +45,17 @@ constexpr T get_option(const Napi::Object &options, const std::string &name,
 
 class LlamaSession {
 public:
-  LlamaSession(llama_model *model, llama_context *ctx, common_params params)
-      : model_(LlamaCppModel(model, llama_free_model)),
-        ctx_(LlamaCppContext(ctx, llama_free)), params_(params) {
+  LlamaSession(common_params params)
+      : params_(params) {
+    llama_init_ = common_init_from_params(params);
     tokens_.reserve(params.n_ctx);
   }
 
   ~LlamaSession() { dispose(); }
 
-  inline llama_context *context() { return ctx_.get(); }
+  inline llama_context *context() { return llama_init_.context.get(); }
 
-  inline llama_model *model() { return model_.get(); }
+  inline llama_model *model() { return llama_init_.model.get(); }
 
   inline std::vector<llama_token> *tokens_ptr() { return &tokens_; }
 
@@ -72,13 +70,10 @@ public:
   void dispose() {
     std::lock_guard<std::mutex> lock(mutex);
     tokens_.clear();
-    ctx_.reset();
-    model_.reset();
   }
 
 private:
-  LlamaCppModel model_;
-  LlamaCppContext ctx_;
+  common_init_result llama_init_;
   const common_params params_;
   std::vector<llama_token> tokens_{};
   std::mutex mutex;
