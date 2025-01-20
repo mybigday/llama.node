@@ -4,9 +4,23 @@
 [![NPM Version](https://img.shields.io/npm/v/%40fugood%2Fllama.node)](https://www.npmjs.com/package/@fugood/llama.node)
 ![NPM Downloads](https://img.shields.io/npm/dw/%40fugood%2Fllama.node)
 
-Node binding of [llama.cpp](https://github.com/ggerganov/llama.cpp).
+An another Node binding of [llama.cpp](https://github.com/ggerganov/llama.cpp) to make same API with [llama.rn](https://github.com/mybigday/llama.rn) as much as possible.
 
-[llama.cpp](https://github.com/ggerganov/llama.cpp): Inference of [LLaMA](https://arxiv.org/abs/2302.13971) model in pure C/C++
+- [llama.cpp](https://github.com/ggerganov/llama.cpp): Inference of [LLaMA](https://arxiv.org/abs/2302.13971) model in pure C/C++
+- [llama.rn](https://github.com/mybigday/llama.rn): React Native binding of llama.cpp
+
+## Platform Support
+
+- macOS
+  - arm64: CPU and Metal GPU acceleration
+  - x86_64: CPU only
+- Windows (x86_64 and arm64)
+  - CPU
+  - GPU acceleration via Vulkan
+- Linux (x86_64 and arm64)
+  - CPU
+  - GPU acceleration via Vulkan
+  - GPU acceleration via CUDA
 
 ## Installation
 
