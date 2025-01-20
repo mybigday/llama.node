@@ -63,6 +63,7 @@ console.log('Result:', text)
 
 - [x] `default`: General usage, not support GPU except macOS (Metal)
 - [x] `vulkan`: Support GPU Vulkan (Windows/Linux), but some scenario might unstable
+- [x] `cuda`: Support GPU CUDA (Linux), but only for limited capability (x86_64: 8.9, arm64: 8.7)
 
 ## License
 
