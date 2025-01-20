@@ -444,7 +444,7 @@ exports[`works fine with vocab_only: empty result 1`] = `
 
 exports[`works fine with vocab_only: model info 1`] = `
 {
-  "desc": "llama ?B all F32",
+  "desc": "",
   "isChatTemplateSupported": false,
   "metadata": {
     "general.architecture": "llama",

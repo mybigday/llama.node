@@ -169,14 +169,14 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   llama_backend_init();
   llama_numa_init(params.numa);
 
-  auto result = common_init_from_params(params);
+  auto sess = std::make_shared<LlamaSession>(params);
 
-  if (result.model == nullptr || result.context == nullptr) {
+  if (sess->model() == nullptr || sess->context() == nullptr) {
     Napi::TypeError::New(env, "Failed to load model")
         .ThrowAsJavaScriptException();
   }
 
-  _sess = std::make_shared<LlamaSession>(result.model, result.context, params);
+  _sess = sess;
   _info = common_params_get_system_info(params);
 }
 
@@ -191,8 +191,8 @@ bool validateModelChatTemplate(const struct llama_model * model) {
     int32_t res = llama_model_meta_val_str(model, template_key.c_str(), model_template.data(), model_template.size());
     if (res >= 0) {
         llama_chat_message chat[] = {{"user", "test"}};
-        std::string tmpl = std::string(model_template.data(), model_template.size());
-        int32_t chat_res = llama_chat_apply_template(model, tmpl.c_str(), chat, 1, true, nullptr, 0);
+        const char * tmpl = llama_model_chat_template(model);
+        int32_t chat_res = llama_chat_apply_template(tmpl, chat, 1, true, nullptr, 0);
         return chat_res > 0;
     }
     return res > 0;
