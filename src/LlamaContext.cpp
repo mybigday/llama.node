@@ -1,5 +1,6 @@
 #include "ggml.h"
 #include "gguf.h"
+#include "llama-impl.h"
 #include "LlamaContext.h"
 #include "DetokenizeWorker.h"
 #include "DisposeWorker.h"
