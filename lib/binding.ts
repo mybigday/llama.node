@@ -111,6 +111,8 @@ export interface LlamaContext {
   saveSession(path: string): Promise<void>
   loadSession(path: string): Promise<void>
   release(): Promise<void>
+  // static
+  loadModelInfo(path: string, skip: string[]): Promise<Object>
 }
 
 export interface Module {

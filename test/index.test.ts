@@ -1,6 +1,6 @@
 import path from 'path'
 import waitForExpect from 'wait-for-expect'
-import { loadModel } from '../lib'
+import { loadModel, loadLlamaModelInfo } from '../lib'
 
 it('works fine', async () => {
   let tokens = ''
@@ -66,4 +66,9 @@ it('embedding', async () => {
   const result = await model.embedding('Once upon a time')
   expect(result).toMatchSnapshot()
   await model.release()
+})
+
+it('loadModelInfo', async () => {
+  const result = await loadLlamaModelInfo(path.resolve(__dirname, './tiny-random-llama.gguf'))
+  expect(result).toMatchSnapshot()
 })

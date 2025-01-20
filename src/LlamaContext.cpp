@@ -10,17 +10,36 @@
 #include "SaveSessionWorker.h"
 #include "TokenizeWorker.h"
 
-Napi::Object LlamaContext::ModelInfo(Napi::Env env, const std::string & path) {
+// loadModelInfo(path: string): object
+Napi::Value LlamaContext::ModelInfo(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
   struct gguf_init_params params = {
     /*.no_alloc = */ false,
     /*.ctx      = */ NULL,
   };
+  std::string path = info[0].ToString().Utf8Value();
+  
+  // Convert Napi::Array to vector<string>
+  std::vector<std::string> skip;
+  if (info.Length() > 1 && info[1].IsArray()) {
+    Napi::Array skipArray = info[1].As<Napi::Array>();
+    for (uint32_t i = 0; i < skipArray.Length(); i++) {
+      skip.push_back(skipArray.Get(i).ToString().Utf8Value());
+    }
+  }
+
   struct gguf_context * ctx = gguf_init_from_file(path.c_str(), params);
 
-  Napi::Object info = Napi::Object::New(env);
-  info.Set("version", Napi::Number::New(env, gguf_get_version(ctx)));
-  info.Set("alignment", Napi::Number::New(env, gguf_get_alignment(ctx)));
-  info.Set("data_offset", Napi::Number::New(env, gguf_get_data_offset(ctx)));
+  Napi::Object metadata = Napi::Object::New(env);
+  if (std::find(skip.begin(), skip.end(), "version") == skip.end()) {
+    metadata.Set("version", Napi::Number::New(env, gguf_get_version(ctx)));
+  }
+  if (std::find(skip.begin(), skip.end(), "alignment") == skip.end()) {
+    metadata.Set("alignment", Napi::Number::New(env, gguf_get_alignment(ctx)));
+  }
+  if (std::find(skip.begin(), skip.end(), "data_offset") == skip.end()) {
+    metadata.Set("data_offset", Napi::Number::New(env, gguf_get_data_offset(ctx)));
+  }
 
   // kv
   {
@@ -28,14 +47,17 @@ Napi::Object LlamaContext::ModelInfo(Napi::Env env, const std::string & path) {
 
     for (int i = 0; i < n_kv; ++i) {
       const char * key = gguf_get_key(ctx, i);
+      if (std::find(skip.begin(), skip.end(), key) != skip.end()) {
+        continue;
+      }
       const std::string value = gguf_kv_to_str(ctx, i);
-      info.Set(key, Napi::String::New(env, value.c_str()));
+      metadata.Set(key, Napi::String::New(env, value.c_str()));
     }
   }
 
   gguf_free(ctx);
 
-  return info;
+  return metadata;
 }
 
 std::vector<common_chat_msg> get_messages(Napi::Array messages) {
@@ -82,7 +104,10 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
            "loadSession",
            static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::Release>(
-           "release", static_cast<napi_property_attributes>(napi_enumerable))});
+           "release", static_cast<napi_property_attributes>(napi_enumerable)),
+       StaticMethod<&LlamaContext::ModelInfo>(
+           "loadModelInfo",
+           static_cast<napi_property_attributes>(napi_enumerable))});
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
 #if NAPI_VERSION > 5

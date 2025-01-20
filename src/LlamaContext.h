@@ -5,7 +5,7 @@ class LlamaCompletionWorker;
 class LlamaContext : public Napi::ObjectWrap<LlamaContext> {
 public:
   LlamaContext(const Napi::CallbackInfo &info);
-  static Napi::Object ModelInfo(Napi::Env env, const std::string & path);
+  static Napi::Value ModelInfo(const Napi::CallbackInfo& info);
   static void Init(Napi::Env env, Napi::Object &exports);
 
 private:

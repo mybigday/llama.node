@@ -14,3 +14,19 @@ export const loadModel = async (options: LlamaModelOptionsExtended): Promise<Lla
   mods[variant] ??= await loadModule(options.lib_variant)
   return new mods[variant].LlamaContext(options)
 }
+
+export const initLlama = loadModule
+
+const modelInfoSkip = [
+  // Large fields
+  'tokenizer.ggml.tokens',
+  'tokenizer.ggml.token_type',
+  'tokenizer.ggml.merges',
+  'tokenizer.ggml.scores',
+]
+
+export const loadLlamaModelInfo = async (path: string): Promise<Object> => {
+  const variant = 'default'
+  mods[variant] ??= await loadModule(variant)
+  return mods[variant].LlamaContext.loadModelInfo(path, modelInfoSkip)
+}
