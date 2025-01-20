@@ -391,6 +391,29 @@ exports[`embedding 1`] = `
 }
 `;
 
+exports[`loadModelInfo 1`] = `
+{
+  "alignment": 32,
+  "data_offset": 724416,
+  "general.architecture": "llama",
+  "general.file_type": "1",
+  "general.name": "LLaMA v2",
+  "llama.attention.head_count": "2",
+  "llama.attention.head_count_kv": "2",
+  "llama.attention.layer_norm_rms_epsilon": "0.000010",
+  "llama.block_count": "1",
+  "llama.context_length": "4096",
+  "llama.embedding_length": "8",
+  "llama.feed_forward_length": "32",
+  "llama.rope.dimension_count": "4",
+  "tokenizer.ggml.bos_token_id": "1",
+  "tokenizer.ggml.eos_token_id": "2",
+  "tokenizer.ggml.model": "llama",
+  "tokenizer.ggml.unknown_token_id": "0",
+  "version": 3,
+}
+`;
+
 exports[`tokeneize 1`] = `
 {
   "tokens": Int32Array [
