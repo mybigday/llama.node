@@ -59,7 +59,9 @@ void LlamaCompletionWorker::Execute() {
   size_t n_cur = 0;
   size_t n_input = 0;
   const auto model = _sess->model();
-  const bool add_bos = llama_add_bos_token(model);
+  auto vocab = llama_model_get_vocab(model);
+
+  const bool add_bos = llama_vocab_get_add_bos(vocab);
   auto ctx = _sess->context();
 
   auto sparams = llama_sampler_chain_default_params();
@@ -130,7 +132,7 @@ void LlamaCompletionWorker::Execute() {
       });
     }
     // is it an end of generation?
-    if (llama_token_is_eog(model, new_token_id)) {
+    if (llama_vocab_is_eog(vocab, new_token_id)) {
       break;
     }
     // check for stop words

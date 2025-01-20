@@ -9,10 +9,11 @@ void EmbeddingWorker::Execute() {
   llama_kv_cache_clear(_sess->context());
   auto tokens = ::common_tokenize(_sess->context(), _text, true);
   // add SEP if not present
-  if (tokens.empty() || tokens.back() != llama_token_sep(_sess->model())) {
-    tokens.push_back(llama_token_sep(_sess->model()));
+  auto vocab = llama_model_get_vocab(_sess->model());
+  if (tokens.empty() || tokens.back() != llama_vocab_sep(vocab)) {
+    tokens.push_back(llama_vocab_sep(vocab));
   }
-  const int n_embd = llama_n_embd(_sess->model());
+  const int n_embd = llama_model_n_embd(_sess->model());
   do {
     auto ctx = _sess->context();
     int ret =

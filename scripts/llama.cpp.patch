@@ -1,8 +1,20 @@
-diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index 1d2bd932..b5007c66 100644
+diff --git a/src/llama.cpp/common/common.cpp b/src/llama.cpp/common/common.cpp
+index 451826d5..a85ac028 100644
+--- a/src/llama.cpp/common/common.cpp
++++ b/src/llama.cpp/common/common.cpp
+@@ -1043,6 +1043,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
+     if (params.n_gpu_layers != -1) {
+         mparams.n_gpu_layers = params.n_gpu_layers;
+     }
++    mparams.vocab_only      = params.vocab_only;
+     mparams.main_gpu        = params.main_gpu;
+     mparams.split_mode      = params.split_mode;
+     mparams.tensor_split    = params.tensor_split;
+diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp  /common/common.h
+index 3bcc637c..19ae7dad 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
-@@ -183,6 +183,7 @@ struct common_params_vocoder {
+@@ -189,6 +189,7 @@ struct common_params_vocoder {
  };
  
  struct common_params {
@@ -10,18 +22,6 @@ index 1d2bd932..b5007c66 100644
      int32_t n_predict             =    -1; // new tokens to predict
      int32_t n_ctx                 =  4096; // context size
      int32_t n_batch               =  2048; // logical batch size for prompt processing (must be >=32 to use BLAS)
-diff --git a/src/llama.cpp/common/common.cpp b/src/llama.cpp/common/common.cpp
-index 20be9291..1bedc55d 100644
---- a/src/llama.cpp/common/common.cpp
-+++ b/src/llama.cpp/common/common.cpp
-@@ -1017,6 +1017,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
-     if (params.n_gpu_layers != -1) {
-         mparams.n_gpu_layers = params.n_gpu_layers;
-     }
-+    mparams.vocab_only      = params.vocab_only;
-     mparams.rpc_servers     = params.rpc_servers.c_str();
-     mparams.main_gpu        = params.main_gpu;
-     mparams.split_mode      = params.split_mode;
 diff --git a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
 index 6b3641c4..6d6cb27f 100644
 --- a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
