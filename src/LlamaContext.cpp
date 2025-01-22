@@ -229,22 +229,24 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
     lora.push_back(la);
   }
 
-  auto lora_list = options.Get("lora_list").As<Napi::Array>();
-  if (lora_list != nullptr) {
-    int lora_list_size = lora_list.Length();
-    for (int i = 0; i < lora_list_size; i++) {
-      auto lora_adapter = lora_list.Get(i).As<Napi::Object>();
-      auto path = lora_adapter.Get("path").ToString();
-      if (path != nullptr) {
-        common_adapter_lora_info la;
-        la.path = path;
-        la.scale = lora_adapter.Get("scaled").ToNumber().FloatValue();
-        la.ptr = llama_adapter_lora_init(model, path.Utf8Value().c_str());
-        if (la.ptr == nullptr) {
-          Napi::TypeError::New(env, "Failed to load lora adapter")
-              .ThrowAsJavaScriptException();
+  if (options.Has("lora_list") && options.Get("lora_list").IsArray()) {
+    auto lora_list = options.Get("lora_list").As<Napi::Array>();
+    if (lora_list != nullptr) {
+      int lora_list_size = lora_list.Length();
+      for (int i = 0; i < lora_list_size; i++) {
+        auto lora_adapter = lora_list.Get(i).As<Napi::Object>();
+        auto path = lora_adapter.Get("path").ToString();
+        if (path != nullptr) {
+          common_adapter_lora_info la;
+          la.path = path;
+          la.scale = lora_adapter.Get("scaled").ToNumber().FloatValue();
+          la.ptr = llama_adapter_lora_init(model, path.Utf8Value().c_str());
+          if (la.ptr == nullptr) {
+            Napi::TypeError::New(env, "Failed to load lora adapter")
+                .ThrowAsJavaScriptException();
+          }
+          lora.push_back(la);
         }
-        lora.push_back(la);
       }
     }
   }
