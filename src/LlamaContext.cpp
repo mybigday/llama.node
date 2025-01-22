@@ -242,6 +242,7 @@ Napi::Value LlamaContext::GetModelInfo(const Napi::CallbackInfo &info) {
   }
   Napi::Object details = Napi::Object::New(info.Env());
   details.Set("desc", desc);
+  details.Set("nEmbd", llama_model_n_embd(model));
   details.Set("nParams", llama_model_n_params(model));
   details.Set("size", llama_model_size(model));
   details.Set("isChatTemplateSupported", validateModelChatTemplate(model));
