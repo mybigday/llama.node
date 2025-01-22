@@ -486,6 +486,7 @@ exports[`works fine with vocab_only: model info 1`] = `
     "tokenizer.ggml.model": "llama",
     "tokenizer.ggml.unknown_token_id": "0",
   },
+  "nEmbd": 0,
   "nParams": 513048,
   "size": 1026144,
 }
@@ -523,6 +524,7 @@ exports[`works fine: model info 1`] = `
     "tokenizer.ggml.model": "llama",
     "tokenizer.ggml.unknown_token_id": "0",
   },
+  "nEmbd": 8,
   "nParams": 513048,
   "size": 1026144,
 }
