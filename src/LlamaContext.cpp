@@ -103,6 +103,9 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
        InstanceMethod<&LlamaContext::LoadSession>(
            "loadSession",
            static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::GetLoadedLoraAdapters>(
+           "getLoadedLoraAdapters",
+           static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::Release>(
            "release", static_cast<napi_property_attributes>(napi_enumerable)),
        StaticMethod<&LlamaContext::ModelInfo>(
@@ -240,6 +243,7 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
     }
   }
   common_set_adapter_lora(ctx, lora);
+  _lora = lora;
 
   _sess = sess;
   _info = common_params_get_system_info(params);
@@ -493,9 +497,17 @@ Napi::Value LlamaContext::LoadSession(const Napi::CallbackInfo &info) {
 
 // getLoadedLoraAdapters(): Promise<{ count, lora_adapters: [{ path: string,
 // scaled: number }] }>
-// Napi::Value LlamaContext::GetLoadedLoraAdapters(const Napi::CallbackInfo &info) {
-
-// }
+Napi::Value LlamaContext::GetLoadedLoraAdapters(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  Napi::Array lora_adapters = Napi::Array::New(env, _lora.size());
+  for (size_t i = 0; i < _lora.size(); i++) {
+    Napi::Object lora_adapter = Napi::Object::New(env);
+    lora_adapter.Set("path", _lora[i].path);
+    lora_adapter.Set("scaled", _lora[i].scale);
+    lora_adapters.Set(i, lora_adapter);
+  }
+  return lora_adapters;
+}
 
 // release(): Promise<void>
 Napi::Value LlamaContext::Release(const Napi::CallbackInfo &info) {
