@@ -106,6 +106,9 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
        InstanceMethod<&LlamaContext::ApplyLoraAdapters>(
            "applyLoraAdapters",
            static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::RemoveLoraAdapters>(
+           "removeLoraAdapters",
+           static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::GetLoadedLoraAdapters>(
            "getLoadedLoraAdapters",
            static_cast<napi_property_attributes>(napi_enumerable)),
@@ -519,6 +522,12 @@ void LlamaContext::ApplyLoraAdapters(const Napi::CallbackInfo &info) {
   }
   common_set_adapter_lora(_sess->context(), lora);
   _lora = lora;
+}
+
+// removeLoraAdapters(): void
+void LlamaContext::RemoveLoraAdapters(const Napi::CallbackInfo &info) {
+  _lora.clear();
+  common_set_adapter_lora(_sess->context(), _lora);
 }
 
 // getLoadedLoraAdapters(): Promise<{ count, lora_adapters: [{ path: string,

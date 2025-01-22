@@ -116,6 +116,12 @@ export interface LlamaContext {
   embedding(text: string): Promise<EmbeddingResult>;
   saveSession(path: string): Promise<void>;
   loadSession(path: string): Promise<void>;
+  applyLoraAdapters(lora_adapters: { path: string; scaled: number }[]): void;
+  removeLoraAdapters(): void;
+  getLoadedLoraAdapters(): Promise<{
+    count: number;
+    lora_adapters: { path: string; scaled: number }[];
+  }>;
   release(): Promise<void>;
   // static
   loadModelInfo(path: string, skip: string[]): Promise<Object>;
