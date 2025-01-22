@@ -19,6 +19,7 @@ private:
   Napi::Value Embedding(const Napi::CallbackInfo &info);
   Napi::Value SaveSession(const Napi::CallbackInfo &info);
   Napi::Value LoadSession(const Napi::CallbackInfo &info);
+  void ApplyLoraAdapters(const Napi::CallbackInfo &info);
   Napi::Value GetLoadedLoraAdapters(const Napi::CallbackInfo &info);
   Napi::Value Release(const Napi::CallbackInfo &info);
 

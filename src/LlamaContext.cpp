@@ -103,6 +103,9 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
        InstanceMethod<&LlamaContext::LoadSession>(
            "loadSession",
            static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::ApplyLoraAdapters>(
+           "applyLoraAdapters",
+           static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::GetLoadedLoraAdapters>(
            "getLoadedLoraAdapters",
            static_cast<napi_property_attributes>(napi_enumerable)),
@@ -493,6 +496,29 @@ Napi::Value LlamaContext::LoadSession(const Napi::CallbackInfo &info) {
   auto *worker = new LoadSessionWorker(info, _sess);
   worker->Queue();
   return worker->Promise();
+}
+
+// applyLoraAdapters(lora_adapters: [{ path: string, scaled: number }]): void
+void LlamaContext::ApplyLoraAdapters(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  std::vector<common_adapter_lora_info> lora;
+  auto lora_adapters = info[0].As<Napi::Array>();
+  for (size_t i = 0; i < lora_adapters.Length(); i++) {
+    auto lora_adapter = lora_adapters.Get(i).As<Napi::Object>();
+    auto path = lora_adapter.Get("path").ToString().Utf8Value();
+    auto scaled = lora_adapter.Get("scaled").ToNumber().FloatValue();
+    common_adapter_lora_info la;
+    la.path = path;
+    la.scale = scaled;
+    la.ptr = llama_adapter_lora_init(_sess->model(), path.c_str());
+    if (la.ptr == nullptr) {
+      Napi::TypeError::New(env, "Failed to load lora adapter")
+          .ThrowAsJavaScriptException();
+    }
+    lora.push_back(la);
+  }
+  common_set_adapter_lora(_sess->context(), lora);
+  _lora = lora;
 }
 
 // getLoadedLoraAdapters(): Promise<{ count, lora_adapters: [{ path: string,
