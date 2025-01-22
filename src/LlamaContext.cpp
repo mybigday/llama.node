@@ -103,6 +103,15 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
        InstanceMethod<&LlamaContext::LoadSession>(
            "loadSession",
            static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::ApplyLoraAdapters>(
+           "applyLoraAdapters",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::RemoveLoraAdapters>(
+           "removeLoraAdapters",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::GetLoadedLoraAdapters>(
+           "getLoadedLoraAdapters",
+           static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::Release>(
            "release", static_cast<napi_property_attributes>(napi_enumerable)),
        StaticMethod<&LlamaContext::ModelInfo>(
@@ -201,6 +210,48 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
     Napi::TypeError::New(env, "Failed to load model")
         .ThrowAsJavaScriptException();
   }
+
+  auto ctx = sess->context();
+  auto model = sess->model();
+
+  std::vector<common_adapter_lora_info> lora;
+  auto lora_path = get_option<std::string>(options, "lora", "");
+  auto lora_scaled = get_option<float>(options, "lora_scaled", 1.0f);
+  if (lora_path != "") {
+    common_adapter_lora_info la;
+    la.path = lora_path;
+    la.scale = lora_scaled;
+    la.ptr = llama_adapter_lora_init(model, lora_path.c_str());
+    if (la.ptr == nullptr) {
+      Napi::TypeError::New(env, "Failed to load lora adapter")
+          .ThrowAsJavaScriptException();
+    }
+    lora.push_back(la);
+  }
+
+  if (options.Has("lora_list") && options.Get("lora_list").IsArray()) {
+    auto lora_list = options.Get("lora_list").As<Napi::Array>();
+    if (lora_list != nullptr) {
+      int lora_list_size = lora_list.Length();
+      for (int i = 0; i < lora_list_size; i++) {
+        auto lora_adapter = lora_list.Get(i).As<Napi::Object>();
+        auto path = lora_adapter.Get("path").ToString();
+        if (path != nullptr) {
+          common_adapter_lora_info la;
+          la.path = path;
+          la.scale = lora_adapter.Get("scaled").ToNumber().FloatValue();
+          la.ptr = llama_adapter_lora_init(model, path.Utf8Value().c_str());
+          if (la.ptr == nullptr) {
+            Napi::TypeError::New(env, "Failed to load lora adapter")
+                .ThrowAsJavaScriptException();
+          }
+          lora.push_back(la);
+        }
+      }
+    }
+  }
+  common_set_adapter_lora(ctx, lora);
+  _lora = lora;
 
   _sess = sess;
   _info = common_params_get_system_info(params);
@@ -450,6 +501,49 @@ Napi::Value LlamaContext::LoadSession(const Napi::CallbackInfo &info) {
   auto *worker = new LoadSessionWorker(info, _sess);
   worker->Queue();
   return worker->Promise();
+}
+
+// applyLoraAdapters(lora_adapters: [{ path: string, scaled: number }]): void
+void LlamaContext::ApplyLoraAdapters(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  std::vector<common_adapter_lora_info> lora;
+  auto lora_adapters = info[0].As<Napi::Array>();
+  for (size_t i = 0; i < lora_adapters.Length(); i++) {
+    auto lora_adapter = lora_adapters.Get(i).As<Napi::Object>();
+    auto path = lora_adapter.Get("path").ToString().Utf8Value();
+    auto scaled = lora_adapter.Get("scaled").ToNumber().FloatValue();
+    common_adapter_lora_info la;
+    la.path = path;
+    la.scale = scaled;
+    la.ptr = llama_adapter_lora_init(_sess->model(), path.c_str());
+    if (la.ptr == nullptr) {
+      Napi::TypeError::New(env, "Failed to load lora adapter")
+          .ThrowAsJavaScriptException();
+    }
+    lora.push_back(la);
+  }
+  common_set_adapter_lora(_sess->context(), lora);
+  _lora = lora;
+}
+
+// removeLoraAdapters(): void
+void LlamaContext::RemoveLoraAdapters(const Napi::CallbackInfo &info) {
+  _lora.clear();
+  common_set_adapter_lora(_sess->context(), _lora);
+}
+
+// getLoadedLoraAdapters(): Promise<{ count, lora_adapters: [{ path: string,
+// scaled: number }] }>
+Napi::Value LlamaContext::GetLoadedLoraAdapters(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  Napi::Array lora_adapters = Napi::Array::New(env, _lora.size());
+  for (size_t i = 0; i < _lora.size(); i++) {
+    Napi::Object lora_adapter = Napi::Object::New(env);
+    lora_adapter.Set("path", _lora[i].path);
+    lora_adapter.Set("scaled", _lora[i].scale);
+    lora_adapters.Set(i, lora_adapter);
+  }
+  return lora_adapters;
 }
 
 // release(): Promise<void>

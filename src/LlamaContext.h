@@ -19,10 +19,14 @@ private:
   Napi::Value Embedding(const Napi::CallbackInfo &info);
   Napi::Value SaveSession(const Napi::CallbackInfo &info);
   Napi::Value LoadSession(const Napi::CallbackInfo &info);
+  void ApplyLoraAdapters(const Napi::CallbackInfo &info);
+  void RemoveLoraAdapters(const Napi::CallbackInfo &info);
+  Napi::Value GetLoadedLoraAdapters(const Napi::CallbackInfo &info);
   Napi::Value Release(const Napi::CallbackInfo &info);
 
   std::string _info;
   Napi::Object _meta;
   LlamaSessionPtr _sess = nullptr;
+  std::vector<common_adapter_lora_info> _lora;
   LlamaCompletionWorker *_wip = nullptr;
 };

@@ -37,6 +37,9 @@ export type LlamaModelOptions = {
   use_mlock?: boolean
   use_mmap?: boolean
   vocab_only?: boolean
+  lora?: string
+  lora_scaled?: number
+  lora_list?: { path: string; scaled: number }[]
 }
 
 export type LlamaCompletionOptions = {
@@ -111,6 +114,9 @@ export interface LlamaContext {
   saveSession(path: string): Promise<void>
   loadSession(path: string): Promise<void>
   release(): Promise<void>
+  applyLoraAdapters(adapters: { path: string; scaled: number }[]): void
+  removeLoraAdapters(adapters: { path: string }[]): void
+  getLoadedLoraAdapters(): { path: string; scaled: number }[]
   // static
   loadModelInfo(path: string, skip: string[]): Promise<Object>
 }
