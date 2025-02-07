@@ -299,6 +299,35 @@ Napi::Value LlamaContext::GetModelInfo(const Napi::CallbackInfo &info) {
   details.Set("nEmbd", llama_model_n_embd(model));
   details.Set("nParams", llama_model_n_params(model));
   details.Set("size", llama_model_size(model));
+
+  Napi::Object chatTemplates = Napi::Object::New(info.Env());
+  chatTemplates.Set("llamaChat", validateModelChatTemplate(model, false, ""));
+  Napi::Object minja = Napi::Object::New(info.Env());
+  minja.Set("default", validateModelChatTemplate(model, true, ""));
+  Napi::Object defaultCaps = Napi::Object::New(info.Env());
+  defaultCaps.Set("tools", _templates.template_default->original_caps().supports_tools);
+  defaultCaps.Set("toolCalls", _templates.template_default->original_caps().supports_tool_calls);
+  defaultCaps.Set("toolResponses", _templates.template_default->original_caps().supports_tool_responses);
+  defaultCaps.Set("systemRole", _templates.template_default->original_caps().supports_system_role);
+  defaultCaps.Set("parallelToolCalls", _templates.template_default->original_caps().supports_parallel_tool_calls);
+  defaultCaps.Set("toolCallId", _templates.template_default->original_caps().supports_tool_call_id);
+  minja.Set("defaultCaps", defaultCaps);
+  Napi::Object toolUse = Napi::Object::New(info.Env());
+  toolUse.Set("toolUse", validateModelChatTemplate(model, true, "tool_use"));
+  if (_templates.template_tool_use) {
+    Napi::Object toolUseCaps = Napi::Object::New(info.Env());
+    toolUseCaps.Set("tools", _templates.template_tool_use->original_caps().supports_tools);
+    toolUseCaps.Set("toolCalls", _templates.template_tool_use->original_caps().supports_tool_calls);
+    toolUseCaps.Set("toolResponses", _templates.template_tool_use->original_caps().supports_tool_responses);
+    toolUseCaps.Set("systemRole", _templates.template_tool_use->original_caps().supports_system_role);
+    toolUseCaps.Set("parallelToolCalls", _templates.template_tool_use->original_caps().supports_parallel_tool_calls);
+    toolUseCaps.Set("toolCallId", _templates.template_tool_use->original_caps().supports_tool_call_id);
+    toolUse.Set("toolUseCaps", toolUseCaps);
+  }
+  minja.Set("toolUse", toolUse);
+  chatTemplates.Set("minja", minja);
+  details.Set("chatTemplates", chatTemplates);
+
   // details.Set("isChatTemplateSupported", validateModelChatTemplate(model, false, ""));
   details.Set("metadata", metadata);
   return details;
@@ -393,11 +422,13 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
     Napi::TypeError::New(env, "Array expected").ThrowAsJavaScriptException();
   }
   auto messages = json_stringify(info[0].As<Napi::Array>());
-  auto chat_template = get_option<std::string>(info[1].As<Napi::Object>(), "chat_template", "");
-  auto params = info[2].As<Napi::Object>();
+  printf("messages: %s\n", messages.c_str());
+  auto chat_template = info[1].IsString() ? info[1].ToString().Utf8Value() : "";
 
-  auto useJinja = get_option<bool>(params, "jinja", false);
-  if (useJinja) {
+  auto has_params = info.Length() >= 2;
+  auto params = has_params ? info[2].As<Napi::Object>() : Napi::Object::New(env);
+
+  if (get_option<bool>(params, "jinja", false)) {
     std::string json_schema_str = "";
     if (!is_nil(params.Get("response_format"))) {
       auto response_format = params.Get("response_format").As<Napi::Object>();
@@ -530,9 +561,9 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
         for (const auto & trigger : chatParams.grammar_triggers) {
           auto ids = common_tokenize(_sess->context(), trigger.word, /* add_special= */ false, /* parse_special= */ true);
           if (ids.size() == 1) {
-              params.sampling.grammar_trigger_tokens.push_back(ids[0]);
-              params.sampling.preserved_tokens.insert(ids[0]);
-              continue;
+            params.sampling.grammar_trigger_tokens.push_back(ids[0]);
+            params.sampling.preserved_tokens.insert(ids[0]);
+            continue;
           }
           params.sampling.grammar_trigger_words.push_back(trigger);
         }

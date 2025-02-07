@@ -2,7 +2,7 @@ import * as path from 'path'
 
 export type ChatMessage = {
   role: string
-  text: string
+  content: string
 }
 
 export type LlamaModelOptions = {
@@ -115,7 +115,7 @@ export interface LlamaContext {
   new (options: LlamaModelOptions): LlamaContext
   getSystemInfo(): string
   getModelInfo(): object
-  getFormattedChat(messages: ChatMessage[]): object | string
+  getFormattedChat(messages: ChatMessage[], chat_template?: string, params?: object): object | string
   completion(options: LlamaCompletionOptions, callback?: (token: LlamaCompletionToken) => void): Promise<LlamaCompletionResult>
   stopCompletion(): void
   tokenize(text: string): Promise<TokenizeResult>

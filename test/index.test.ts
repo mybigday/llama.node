@@ -49,9 +49,42 @@ it('tokeneize', async () => {
   }
   {
     const result = model.getFormattedChat([
-      { role: 'user', text: 'Hello' },
-      { role: 'bot', text: 'Hi' },
+      { role: 'user', content: 'Hello' },
+      { role: 'bot', content: 'Hi' },
     ])
+    expect(result).toMatchSnapshot()
+  }
+  {
+    const result = model.getFormattedChat(
+      [
+        { role: 'user', content: 'Hello' },
+        { role: 'bot', content: 'Hi' },
+      ],
+      "",
+      {
+        jinja: true,
+        tools: [
+          {
+            type: 'function',
+            function: {
+              name: 'ipython',
+              description:
+                'Runs code in an ipython interpreter and returns the result of the execution after 60 seconds.',
+              parameters: {
+                type: 'object',
+                properties: {
+                  code: {
+                    type: 'string',
+                    description: 'The code to run in the ipython interpreter.',
+                  },
+                },
+                required: ['code'],
+              },
+            },
+          },
+        ],
+        tool_choice: 'auto',
+      })
     expect(result).toMatchSnapshot()
   }
   await model.release()
@@ -64,7 +97,12 @@ it('embedding', async () => {
     n_gpu_layers: 0,
   })
   const result = await model.embedding('Once upon a time')
-  expect(result).toMatchSnapshot()
+  const normalized: number[] = []
+  for (let i = 0; i < result.embedding.length; i++) {
+    // normalize float to the same between Linux & macOS
+    normalized[i] = Math.round(result.embedding[i] * 1000000) / 1000000
+  }
+  expect(normalized).toMatchSnapshot('Embedding (normalized)')
   await model.release()
 })
 
