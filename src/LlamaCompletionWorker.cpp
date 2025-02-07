@@ -153,31 +153,36 @@ void LlamaCompletionWorker::Execute() {
 }
 
 void LlamaCompletionWorker::OnOK() {
-  auto result = Napi::Object::New(Napi::AsyncWorker::Env());
-  result.Set("tokens_evaluated", Napi::Number::New(Napi::AsyncWorker::Env(),
+  auto env = Napi::AsyncWorker::Env();
+  auto result = Napi::Object::New(env);
+  result.Set("tokens_evaluated", Napi::Number::New(env,
                                                    _result.tokens_evaluated));
   result.Set("tokens_predicted", Napi::Number::New(Napi::AsyncWorker::Env(),
                                                    _result.tokens_predicted));
   result.Set("truncated",
-             Napi::Boolean::New(Napi::AsyncWorker::Env(), _result.truncated));
+             Napi::Boolean::New(env, _result.truncated));
   result.Set("text",
-             Napi::String::New(Napi::AsyncWorker::Env(), _result.text.c_str()));
+             Napi::String::New(env, _result.text.c_str()));
 
   Napi::Array tool_calls = Napi::Array::New(Napi::AsyncWorker::Env());
   if (!_stop) {
-    common_chat_msg message = common_chat_parse(_result.text, static_cast<common_chat_format>(_chat_format));
-    for (size_t i = 0; i < message.tool_calls.size(); i++) {
-      const auto &tc = message.tool_calls[i];
-      Napi::Object tool_call = Napi::Object::New(Napi::AsyncWorker::Env());
-      tool_call.Set("type", "function");
-      Napi::Object function = Napi::Object::New(Napi::AsyncWorker::Env());
-      function.Set("name", tc.name);
-      function.Set("arguments", tc.arguments);
-      tool_call.Set("function", function);
-      if (!tc.id.empty()) {
-        tool_call.Set("id", tc.id);
+    try {
+      common_chat_msg message = common_chat_parse(_result.text, static_cast<common_chat_format>(_chat_format));
+      for (size_t i = 0; i < message.tool_calls.size(); i++) {
+        const auto &tc = message.tool_calls[i];
+        Napi::Object tool_call = Napi::Object::New(env);
+        tool_call.Set("type", "function");
+        Napi::Object function = Napi::Object::New(env);
+        function.Set("name", tc.name);
+        function.Set("arguments", tc.arguments);
+        tool_call.Set("function", function);
+        if (!tc.id.empty()) {
+          tool_call.Set("id", tc.id);
+        }
+        tool_calls.Set(i, tool_call);
       }
-      tool_calls.Set(i, tool_call);
+    } catch (const std::exception &e) {
+      // console_log(env, "Error parsing tool calls: " + std::string(e.what()));
     }
   }
   if (tool_calls.Length() > 0) {

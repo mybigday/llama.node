@@ -1,5 +1,89 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`basic completion 1`] = `
+{
+  "text": " swochadoorter scientific WindowsCa occupiedrå alta",
+  "timings": "Timings: (8) keys",
+  "tokens_evaluated": 18,
+  "tokens_predicted": 10,
+  "truncated": false,
+}
+`;
+
+exports[`basic completion: model info 1`] = `
+{
+  "chatTemplates": {
+    "llamaChat": false,
+    "minja": {
+      "default": false,
+      "defaultCaps": {
+        "parallelToolCalls": false,
+        "systemRole": true,
+        "toolCallId": false,
+        "toolCalls": false,
+        "toolResponses": false,
+        "tools": false,
+      },
+      "toolUse": {
+        "toolUse": false,
+      },
+    },
+  },
+  "desc": "llama ?B F16",
+  "metadata": {
+    "general.architecture": "llama",
+    "general.file_type": "1",
+    "general.name": "LLaMA v2",
+    "llama.attention.head_count": "2",
+    "llama.attention.head_count_kv": "2",
+    "llama.attention.layer_norm_rms_epsilon": "0.000010",
+    "llama.block_count": "1",
+    "llama.context_length": "4096",
+    "llama.embedding_length": "8",
+    "llama.feed_forward_length": "32",
+    "llama.rope.dimension_count": "4",
+    "tokenizer.ggml.bos_token_id": "1",
+    "tokenizer.ggml.eos_token_id": "2",
+    "tokenizer.ggml.model": "llama",
+    "tokenizer.ggml.unknown_token_id": "0",
+  },
+  "nEmbd": 8,
+  "nParams": 513048,
+  "size": 1026144,
+}
+`;
+
+exports[`completion with response_format: json_object 1`] = `
+{
+  "text": "{"\` También player et",
+  "timings": "Timings: (8) keys",
+  "tokens_evaluated": 5,
+  "tokens_predicted": 5,
+  "truncated": false,
+}
+`;
+
+exports[`completion with response_format: json_schema 1`] = `
+{
+  "text": "{
+"name"",
+  "timings": "Timings: (8) keys",
+  "tokens_evaluated": 13,
+  "tokens_predicted": 5,
+  "truncated": false,
+}
+`;
+
+exports[`completion with tools 1`] = `
+{
+  "text": "{"tool_call":{"na",
+  "timings": "Timings: (8) keys",
+  "tokens_evaluated": 326,
+  "tokens_predicted": 10,
+  "truncated": false,
+}
+`;
+
 exports[`embedding: Embedding (normalized) 1`] = `
 [
   -0.034051,
@@ -412,7 +496,7 @@ exports[`loadModelInfo 1`] = `
 }
 `;
 
-exports[`tokeneize 1`] = `
+exports[`tokeneize & detokenize & getFormattedChat 1`] = `
 {
   "tokens": Int32Array [
     9038,
@@ -423,9 +507,9 @@ exports[`tokeneize 1`] = `
 }
 `;
 
-exports[`tokeneize 2`] = `"xxx"`;
+exports[`tokeneize & detokenize & getFormattedChat 2`] = `"xxx"`;
 
-exports[`tokeneize 3`] = `
+exports[`tokeneize & detokenize & getFormattedChat 3`] = `
 "<|im_start|>user
 Hello<|im_end|>
 <|im_start|>bot
@@ -434,7 +518,7 @@ Hi<|im_end|>
 "
 `;
 
-exports[`tokeneize 4`] = `
+exports[`tokeneize & detokenize & getFormattedChat 4`] = `
 {
   "additional_stops": [],
   "chat_format": 1,
@@ -501,16 +585,6 @@ Hello<|im_end|>
 Hi<|im_end|>
 <|im_start|>assistant
 ",
-}
-`;
-
-exports[`works fine 1`] = `
-{
-  "text": " swochadoorter scientific WindowsCa occupiedrå alta",
-  "timings": "Timings: (8) keys",
-  "tokens_evaluated": 18,
-  "tokens_predicted": 10,
-  "truncated": false,
 }
 `;
 
@@ -584,48 +658,5 @@ exports[`works fine with vocab_only: tokenize 1`] = `
     263,
     931,
   ],
-}
-`;
-
-exports[`works fine: model info 1`] = `
-{
-  "chatTemplates": {
-    "llamaChat": false,
-    "minja": {
-      "default": false,
-      "defaultCaps": {
-        "parallelToolCalls": false,
-        "systemRole": true,
-        "toolCallId": false,
-        "toolCalls": false,
-        "toolResponses": false,
-        "tools": false,
-      },
-      "toolUse": {
-        "toolUse": false,
-      },
-    },
-  },
-  "desc": "llama ?B F16",
-  "metadata": {
-    "general.architecture": "llama",
-    "general.file_type": "1",
-    "general.name": "LLaMA v2",
-    "llama.attention.head_count": "2",
-    "llama.attention.head_count_kv": "2",
-    "llama.attention.layer_norm_rms_epsilon": "0.000010",
-    "llama.block_count": "1",
-    "llama.context_length": "4096",
-    "llama.embedding_length": "8",
-    "llama.feed_forward_length": "32",
-    "llama.rope.dimension_count": "4",
-    "tokenizer.ggml.bos_token_id": "1",
-    "tokenizer.ggml.eos_token_id": "2",
-    "tokenizer.ggml.model": "llama",
-    "tokenizer.ggml.unknown_token_id": "0",
-  },
-  "nEmbd": 8,
-  "nParams": 513048,
-  "size": 1026144,
 }
 `;

@@ -28,6 +28,11 @@ static std::string json_stringify(const Napi::Object &obj) {
   return stringify.Call(json, { obj }).As<Napi::String>().ToString();
 }
 
+static void console_log(Napi::Env env, const std::string& message) {
+  Napi::Function consoleLog = env.Global().Get("console").As<Napi::Object>().Get("log").As<Napi::Function>();
+  consoleLog.Call({ Napi::String::New(env, message) });
+} 
+
 template <typename T>
 constexpr T get_option(const Napi::Object &options, const std::string &name,
                        const T default_value) {

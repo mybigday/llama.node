@@ -432,17 +432,20 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
     if (!is_nil(params.Get("response_format"))) {
       auto response_format = params.Get("response_format").As<Napi::Object>();
       auto response_format_type = get_option<std::string>(response_format, "type", "text");
-      if (response_format_type == "json_schema") {
+      if (response_format_type == "json_schema" && response_format.Has("json_schema")) {
         auto json_schema = response_format.Get("json_schema").As<Napi::Object>();
-        auto schema = json_schema.Get("schema").As<Napi::Object>();
-        json_schema_str = json_stringify(schema);
+        json_schema_str = json_schema.Has("schema") ?
+          json_stringify(json_schema.Get("schema").As<Napi::Object>()) :
+          "{}";
       } else if (response_format_type == "json_object") {
-        auto schema = response_format.Get("schema").As<Napi::Object>();
-        json_schema_str = json_stringify(schema);
+        json_schema_str = response_format.Has("schema") ?
+          json_stringify(response_format.Get("schema").As<Napi::Object>()) :
+          "{}";
       }
     }
-    auto tools = params.Get("tools");
-    auto tools_str = is_nil(tools) ? "" : json_stringify(tools.As<Napi::Object>());
+    auto tools_str = params.Has("tools") ?
+      json_stringify(params.Get("tools").As<Napi::Array>()) :
+      "";
     auto parallel_tool_calls = get_option<bool>(params, "parallel_tool_calls", false);
     auto tool_choice = get_option<std::string>(params, "tool_choice", "");
 
@@ -524,16 +527,18 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   }
 
   std::string json_schema_str = "";
-  if (!is_nil(options.Get("response_format"))) {
+  if (options.Has("response_format")) {
     auto response_format = options.Get("response_format").As<Napi::Object>();
     auto response_format_type = get_option<std::string>(response_format, "type", "text");
-    if (response_format_type == "json_schema") {
+    if (response_format_type == "json_schema" && response_format.Has("json_schema")) {
       auto json_schema = response_format.Get("json_schema").As<Napi::Object>();
-      auto schema = json_schema.Get("schema").As<Napi::Object>();
-      json_schema_str = json_stringify(schema);
+      json_schema_str = json_schema.Has("schema") ?
+        json_stringify(json_schema.Get("schema").As<Napi::Object>()) :
+        "{}";
     } else if (response_format_type == "json_object") {
-      auto schema = response_format.Get("schema").As<Napi::Object>();
-      json_schema_str = json_stringify(schema);
+      json_schema_str = response_format.Has("schema") ?
+        json_stringify(response_format.Get("schema").As<Napi::Object>()) :
+        "{}";
     }
   }
 
@@ -542,14 +547,25 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
     auto chat_template = get_option<std::string>(options, "chat_template", "");
     auto jinja = get_option<bool>(options, "jinja", false);
     if (jinja) {
-      auto tools = options.Get("tools");
-      auto tools_str = is_nil(tools) ? "" : json_stringify(tools.As<Napi::Object>());
+      auto tools_str = options.Has("tools") ?
+        json_stringify(options.Get("tools").As<Napi::Array>()) :
+        "";
       auto parallel_tool_calls = get_option<bool>(options, "parallel_tool_calls", false);
-      auto tool_choice = get_option<std::string>(options, "tool_choice", "");
+      auto tool_choice = get_option<std::string>(options, "tool_choice", "none");
 
-      auto chatParams = getFormattedChatWithJinja(_sess->model(), _templates, json_stringify(messages), chat_template, json_schema_str, tools_str, parallel_tool_calls, tool_choice);  
+      auto chatParams = getFormattedChatWithJinja(
+        _sess->model(),
+        _templates,
+        json_stringify(messages),
+        chat_template,
+        json_schema_str,
+        tools_str,
+        parallel_tool_calls,
+        tool_choice
+      );  
       
       params.prompt = chatParams.prompt.get<std::string>();
+
       chat_format = chatParams.format;
 
       if (!has_grammar_set) {
@@ -580,7 +596,12 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
         stop_words.push_back(stop);
       }
     } else {
-      auto formatted = getFormattedChat(_sess->model(), _templates, json_stringify(messages), chat_template);
+      auto formatted = getFormattedChat(
+        _sess->model(),
+        _templates,
+        json_stringify(messages),
+        chat_template
+      );
       params.prompt = formatted;
     }
   } else {

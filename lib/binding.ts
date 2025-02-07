@@ -61,7 +61,6 @@ export type LlamaCompletionOptions = {
   parallel_tool_calls?: boolean;
   tool_choice?: string;
   prompt?: string;
-  n_samples?: number;
   temperature?: number;
   top_k?: number;
   top_p?: number;
