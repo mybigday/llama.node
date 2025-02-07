@@ -35,9 +35,10 @@ size_t findStoppingStrings(const std::string &text,
 LlamaCompletionWorker::LlamaCompletionWorker(
     const Napi::CallbackInfo &info, LlamaSessionPtr &sess,
     Napi::Function callback, common_params params,
-    std::vector<std::string> stop_words)
+    std::vector<std::string> stop_words,
+    int32_t chat_format)
     : AsyncWorker(info.Env()), Deferred(info.Env()), _sess(sess),
-      _params(params), _stop_words(stop_words) {
+      _params(params), _stop_words(stop_words), _chat_format(chat_format) {
   if (!callback.IsEmpty()) {
     _tsfn = Napi::ThreadSafeFunction::New(info.Env(), callback,
                                           "LlamaCompletionCallback", 0, 1);
@@ -161,6 +162,27 @@ void LlamaCompletionWorker::OnOK() {
              Napi::Boolean::New(Napi::AsyncWorker::Env(), _result.truncated));
   result.Set("text",
              Napi::String::New(Napi::AsyncWorker::Env(), _result.text.c_str()));
+
+  Napi::Array tool_calls = Napi::Array::New(Napi::AsyncWorker::Env());
+  if (!_stop) {
+    common_chat_msg message = common_chat_parse(_result.text, static_cast<common_chat_format>(_chat_format));
+    for (size_t i = 0; i < message.tool_calls.size(); i++) {
+      const auto &tc = message.tool_calls[i];
+      Napi::Object tool_call = Napi::Object::New(Napi::AsyncWorker::Env());
+      tool_call.Set("type", Napi::String::New(Napi::AsyncWorker::Env(), "function"));
+      Napi::Object function = Napi::Object::New(Napi::AsyncWorker::Env());
+      function.Set("name", Napi::String::New(Napi::AsyncWorker::Env(), tc.name.c_str()));
+      function.Set("arguments", Napi::String::New(Napi::AsyncWorker::Env(), tc.arguments.c_str()));
+      tool_call.Set("function", function);
+      if (!tc.id.empty()) {
+        tool_call.Set("id", Napi::String::New(Napi::AsyncWorker::Env(), tc.id.c_str()));
+      }
+      tool_calls.Set(i, tool_call);
+    }
+  }
+  if (tool_calls.Length() > 0) {
+    result.Set("tool_calls", tool_calls);
+  }
 
   auto ctx = _sess->context();
   const auto timings_token = llama_perf_context(ctx);

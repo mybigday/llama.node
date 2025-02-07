@@ -27,6 +27,7 @@ private:
   std::string _info;
   Napi::Object _meta;
   LlamaSessionPtr _sess = nullptr;
+  common_chat_templates _templates;
   std::vector<common_adapter_lora_info> _lora;
   LlamaCompletionWorker *_wip = nullptr;
 };
