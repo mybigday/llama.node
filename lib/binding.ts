@@ -7,6 +7,7 @@ export type ChatMessage = {
 
 export type LlamaModelOptions = {
   model: string
+  chat_template?: string
   embedding?: boolean
   embd_normalize?: number
   pooling_type?: 'none' | 'mean' | 'cls' | 'last' | 'rank'
@@ -44,6 +45,12 @@ export type LlamaModelOptions = {
 
 export type LlamaCompletionOptions = {
   messages?: ChatMessage[]
+  jinja?: boolean
+  chat_template?: string
+  json_schema?: object
+  tools?: object
+  parallel_tool_calls?: boolean
+  tool_choice?: string
   prompt?: string
   n_samples?: number
   temperature?: number
@@ -70,6 +77,9 @@ export type LlamaCompletionOptions = {
   seed?: number
   stop?: string[]
   grammar?: string
+  grammar_lazy?: boolean
+  grammar_triggers?: { word: string; at_start: boolean }[]
+  preserved_tokens?: string[]
 }
 
 export type LlamaCompletionResult = {
@@ -105,7 +115,7 @@ export interface LlamaContext {
   new (options: LlamaModelOptions): LlamaContext
   getSystemInfo(): string
   getModelInfo(): object
-  getFormattedChat(messages: ChatMessage[]): string
+  getFormattedChat(messages: ChatMessage[]): object | string
   completion(options: LlamaCompletionOptions, callback?: (token: LlamaCompletionToken) => void): Promise<LlamaCompletionResult>
   stopCompletion(): void
   tokenize(text: string): Promise<TokenizeResult>
