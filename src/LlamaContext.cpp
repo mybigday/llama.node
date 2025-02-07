@@ -328,7 +328,6 @@ Napi::Value LlamaContext::GetModelInfo(const Napi::CallbackInfo &info) {
   chatTemplates.Set("minja", minja);
   details.Set("chatTemplates", chatTemplates);
 
-  // details.Set("isChatTemplateSupported", validateModelChatTemplate(model, false, ""));
   details.Set("metadata", metadata);
   return details;
 }
