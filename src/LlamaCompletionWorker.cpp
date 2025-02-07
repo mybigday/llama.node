@@ -169,13 +169,13 @@ void LlamaCompletionWorker::OnOK() {
     for (size_t i = 0; i < message.tool_calls.size(); i++) {
       const auto &tc = message.tool_calls[i];
       Napi::Object tool_call = Napi::Object::New(Napi::AsyncWorker::Env());
-      tool_call.Set("type", Napi::String::New(Napi::AsyncWorker::Env(), "function"));
+      tool_call.Set("type", "function");
       Napi::Object function = Napi::Object::New(Napi::AsyncWorker::Env());
-      function.Set("name", Napi::String::New(Napi::AsyncWorker::Env(), tc.name.c_str()));
-      function.Set("arguments", Napi::String::New(Napi::AsyncWorker::Env(), tc.arguments.c_str()));
+      function.Set("name", tc.name);
+      function.Set("arguments", tc.arguments);
       tool_call.Set("function", function);
       if (!tc.id.empty()) {
-        tool_call.Set("id", Napi::String::New(Napi::AsyncWorker::Env(), tc.id.c_str()));
+        tool_call.Set("id", tc.id);
       }
       tool_calls.Set(i, tool_call);
     }
