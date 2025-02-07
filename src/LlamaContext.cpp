@@ -2,6 +2,7 @@
 #include "gguf.h"
 #include "llama-impl.h"
 #include "json.hpp"
+#include "json-schema-to-grammar.h"
 #include "LlamaContext.h"
 #include "DetokenizeWorker.h"
 #include "DisposeWorker.h"
@@ -385,7 +386,7 @@ std::string getFormattedChat(
 //   messages: [{ role: string, content: string }],
 //   chat_template: string,
 //   params: { jinja: boolean, json_schema: string, tools: string, parallel_tool_calls: boolean, tool_choice: string }
-// ): <object | string>
+// ): object | string
 Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   if (info.Length() < 1 || !info[0].IsArray()) {
@@ -397,8 +398,19 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
 
   auto useJinja = get_option<bool>(params, "jinja", false);
   if (useJinja) {
-    auto json_schema = params.Get("json_schema");
-    auto json_schema_str = is_nil(json_schema) ? "" : json_stringify(json_schema.As<Napi::Object>());
+    std::string json_schema_str = "";
+    if (!is_nil(params.Get("response_format"))) {
+      auto response_format = params.Get("response_format").As<Napi::Object>();
+      auto response_format_type = get_option<std::string>(response_format, "type", "text");
+      if (response_format_type == "json_schema") {
+        auto json_schema = response_format.Get("json_schema").As<Napi::Object>();
+        auto schema = json_schema.Get("schema").As<Napi::Object>();
+        json_schema_str = json_stringify(schema);
+      } else if (response_format_type == "json_object") {
+        auto schema = response_format.Get("schema").As<Napi::Object>();
+        json_schema_str = json_stringify(schema);
+      }
+    }
     auto tools = params.Get("tools");
     auto tools_str = is_nil(tools) ? "" : json_stringify(tools.As<Napi::Object>());
     auto parallel_tool_calls = get_option<bool>(params, "parallel_tool_calls", false);
@@ -475,14 +487,31 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   int32_t chat_format = get_option<int32_t>(options, "chat_format", 0);
 
   common_params params = _sess->params();
-  params.sampling.grammar = get_option<std::string>(options, "grammar", "");
+  auto grammar_from_params = get_option<std::string>(options, "grammar", "");
+  auto has_grammar_set = !grammar_from_params.empty();
+  if (has_grammar_set) {
+    params.sampling.grammar = grammar_from_params;
+  }
+
+  std::string json_schema_str = "";
+  if (!is_nil(options.Get("response_format"))) {
+    auto response_format = options.Get("response_format").As<Napi::Object>();
+    auto response_format_type = get_option<std::string>(response_format, "type", "text");
+    if (response_format_type == "json_schema") {
+      auto json_schema = response_format.Get("json_schema").As<Napi::Object>();
+      auto schema = json_schema.Get("schema").As<Napi::Object>();
+      json_schema_str = json_stringify(schema);
+    } else if (response_format_type == "json_object") {
+      auto schema = response_format.Get("schema").As<Napi::Object>();
+      json_schema_str = json_stringify(schema);
+    }
+  }
+
   if (options.Has("messages") && options.Get("messages").IsArray()) {
     auto messages = options.Get("messages").As<Napi::Array>();
     auto chat_template = get_option<std::string>(options, "chat_template", "");
     auto jinja = get_option<bool>(options, "jinja", false);
     if (jinja) {
-      auto json_schema = options.Get("json_schema");
-      auto json_schema_str = is_nil(json_schema) ? "" : json_stringify(json_schema.As<Napi::Object>());
       auto tools = options.Get("tools");
       auto tools_str = is_nil(tools) ? "" : json_stringify(tools.As<Napi::Object>());
       auto parallel_tool_calls = get_option<bool>(options, "parallel_tool_calls", false);
@@ -492,17 +521,22 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
       
       params.prompt = chatParams.prompt.get<std::string>();
       chat_format = chatParams.format;
-      params.sampling.grammar = chatParams.grammar;
-      params.sampling.grammar_lazy = chatParams.grammar_lazy;
-      
-      for (const auto & trigger : chatParams.grammar_triggers) {
-        auto ids = common_tokenize(_sess->context(), trigger.word, /* add_special= */ false, /* parse_special= */ true);
-        if (ids.size() == 1) {
-            params.sampling.grammar_trigger_tokens.push_back(ids[0]);
-            params.sampling.preserved_tokens.insert(ids[0]);
-            continue;
+
+      if (!has_grammar_set) {
+        // grammar param always wins jinja template & json_schema
+        params.sampling.grammar = chatParams.grammar;
+        params.sampling.grammar_lazy = chatParams.grammar_lazy;
+        
+        for (const auto & trigger : chatParams.grammar_triggers) {
+          auto ids = common_tokenize(_sess->context(), trigger.word, /* add_special= */ false, /* parse_special= */ true);
+          if (ids.size() == 1) {
+              params.sampling.grammar_trigger_tokens.push_back(ids[0]);
+              params.sampling.preserved_tokens.insert(ids[0]);
+              continue;
+          }
+          params.sampling.grammar_trigger_words.push_back(trigger);
         }
-        params.sampling.grammar_trigger_words.push_back(trigger);
+        has_grammar_set = true;
       }
 
       for (const auto & token : chatParams.preserved_tokens) {
@@ -526,6 +560,11 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
     Napi::TypeError::New(env, "Prompt is required")
         .ThrowAsJavaScriptException();
   }
+
+  if (!has_grammar_set && !json_schema_str.empty()) {
+    params.sampling.grammar = json_schema_to_grammar(json::parse(json_schema_str));
+  }
+
   params.n_predict = get_option<int32_t>(options, "n_predict", -1);
   params.sampling.temp = get_option<float>(options, "temperature", 0.80f);
   params.sampling.top_k = get_option<int32_t>(options, "top_k", 40);
