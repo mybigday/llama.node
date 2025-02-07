@@ -35,9 +35,10 @@ size_t findStoppingStrings(const std::string &text,
 LlamaCompletionWorker::LlamaCompletionWorker(
     const Napi::CallbackInfo &info, LlamaSessionPtr &sess,
     Napi::Function callback, common_params params,
-    std::vector<std::string> stop_words)
+    std::vector<std::string> stop_words,
+    int32_t chat_format)
     : AsyncWorker(info.Env()), Deferred(info.Env()), _sess(sess),
-      _params(params), _stop_words(stop_words) {
+      _params(params), _stop_words(stop_words), _chat_format(chat_format) {
   if (!callback.IsEmpty()) {
     _tsfn = Napi::ThreadSafeFunction::New(info.Env(), callback,
                                           "LlamaCompletionCallback", 0, 1);
@@ -152,15 +153,41 @@ void LlamaCompletionWorker::Execute() {
 }
 
 void LlamaCompletionWorker::OnOK() {
-  auto result = Napi::Object::New(Napi::AsyncWorker::Env());
-  result.Set("tokens_evaluated", Napi::Number::New(Napi::AsyncWorker::Env(),
+  auto env = Napi::AsyncWorker::Env();
+  auto result = Napi::Object::New(env);
+  result.Set("tokens_evaluated", Napi::Number::New(env,
                                                    _result.tokens_evaluated));
   result.Set("tokens_predicted", Napi::Number::New(Napi::AsyncWorker::Env(),
                                                    _result.tokens_predicted));
   result.Set("truncated",
-             Napi::Boolean::New(Napi::AsyncWorker::Env(), _result.truncated));
+             Napi::Boolean::New(env, _result.truncated));
   result.Set("text",
-             Napi::String::New(Napi::AsyncWorker::Env(), _result.text.c_str()));
+             Napi::String::New(env, _result.text.c_str()));
+
+  Napi::Array tool_calls = Napi::Array::New(Napi::AsyncWorker::Env());
+  if (!_stop) {
+    try {
+      common_chat_msg message = common_chat_parse(_result.text, static_cast<common_chat_format>(_chat_format));
+      for (size_t i = 0; i < message.tool_calls.size(); i++) {
+        const auto &tc = message.tool_calls[i];
+        Napi::Object tool_call = Napi::Object::New(env);
+        tool_call.Set("type", "function");
+        Napi::Object function = Napi::Object::New(env);
+        function.Set("name", tc.name);
+        function.Set("arguments", tc.arguments);
+        tool_call.Set("function", function);
+        if (!tc.id.empty()) {
+          tool_call.Set("id", tc.id);
+        }
+        tool_calls.Set(i, tool_call);
+      }
+    } catch (const std::exception &e) {
+      // console_log(env, "Error parsing tool calls: " + std::string(e.what()));
+    }
+  }
+  if (tool_calls.Length() > 0) {
+    result.Set("tool_calls", tool_calls);
+  }
 
   auto ctx = _sess->context();
   const auto timings_token = llama_perf_context(ctx);
