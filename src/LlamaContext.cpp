@@ -312,8 +312,7 @@ Napi::Value LlamaContext::GetModelInfo(const Napi::CallbackInfo &info) {
   defaultCaps.Set("parallelToolCalls", _templates.template_default->original_caps().supports_parallel_tool_calls);
   defaultCaps.Set("toolCallId", _templates.template_default->original_caps().supports_tool_call_id);
   minja.Set("defaultCaps", defaultCaps);
-  Napi::Object toolUse = Napi::Object::New(info.Env());
-  toolUse.Set("toolUse", validateModelChatTemplate(model, true, "tool_use"));
+  minja.Set("toolUse", validateModelChatTemplate(model, true, "tool_use"));
   if (_templates.template_tool_use) {
     Napi::Object toolUseCaps = Napi::Object::New(info.Env());
     toolUseCaps.Set("tools", _templates.template_tool_use->original_caps().supports_tools);
@@ -322,9 +321,8 @@ Napi::Value LlamaContext::GetModelInfo(const Napi::CallbackInfo &info) {
     toolUseCaps.Set("systemRole", _templates.template_tool_use->original_caps().supports_system_role);
     toolUseCaps.Set("parallelToolCalls", _templates.template_tool_use->original_caps().supports_parallel_tool_calls);
     toolUseCaps.Set("toolCallId", _templates.template_tool_use->original_caps().supports_tool_call_id);
-    toolUse.Set("toolUseCaps", toolUseCaps);
+    minja.Set("toolUseCaps", toolUseCaps);
   }
-  minja.Set("toolUse", toolUse);
   chatTemplates.Set("minja", minja);
   details.Set("chatTemplates", chatTemplates);
 

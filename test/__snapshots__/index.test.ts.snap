@@ -24,9 +24,7 @@ exports[`basic completion: model info 1`] = `
         "toolResponses": false,
         "tools": false,
       },
-      "toolUse": {
-        "toolUse": false,
-      },
+      "toolUse": false,
     },
   },
   "desc": "llama ?B F16",
@@ -621,9 +619,7 @@ exports[`works fine with vocab_only: model info 1`] = `
         "toolResponses": false,
         "tools": false,
       },
-      "toolUse": {
-        "toolUse": false,
-      },
+      "toolUse": false,
     },
   },
   "desc": "",
