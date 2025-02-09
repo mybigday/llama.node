@@ -9,11 +9,42 @@ export interface LlamaModelOptionsExtended extends LlamaModelOptions {
 
 const mods: { [key: string]: Module } = {}
 
+const logListeners: Array<(level: string, text: string) => void> = []
+
+const logCallback = (level: string, text: string) => {
+  logListeners.forEach((listener) => listener(level, text))
+}
+
+let logEnabled = false
+
+const refreshNativeLogSetup = () => {
+  Object.entries(mods).forEach(([, mod]) => {
+    mod.LlamaContext.toggleNativeLog(logEnabled, logCallback)
+  })
+}
+
+export const toggleNativeLog = async (enable: boolean) => {
+  logEnabled = enable
+  refreshNativeLogSetup()
+}
+
+export function addNativeLogListener(
+  listener: (level: string, text: string) => void,
+): { remove: () => void } {
+  logListeners.push(listener)
+  return {
+    remove: () => {
+      logListeners.splice(logListeners.indexOf(listener), 1)
+    },
+  }
+}
+
 export const loadModel = async (
   options: LlamaModelOptionsExtended,
 ): Promise<LlamaContext> => {
   const variant = options.lib_variant ?? 'default'
   mods[variant] ??= await loadModule(options.lib_variant)
+  refreshNativeLogSetup()
   return new mods[variant].LlamaContext(options)
 }
 
@@ -30,33 +61,6 @@ const modelInfoSkip = [
 export const loadLlamaModelInfo = async (path: string): Promise<Object> => {
   const variant = 'default'
   mods[variant] ??= await loadModule(variant)
+  refreshNativeLogSetup()
   return mods[variant].LlamaContext.loadModelInfo(path, modelInfoSkip)
-}
-
-const logListeners: Array<(level: string, text: string) => void> = []
-
-const logCallback = (level: string, text: string) => {
-  logListeners.forEach((listener) => listener(level, text))
-}
-
-export const toggleNativeLog = async (
-  enable: boolean,
-  options?: {
-    variant?: LibVariant
-  },
-) => {
-  const v = options?.variant ?? 'default'
-  mods[v] ??= await loadModule(v)
-  return mods[v].LlamaContext.toggleNativeLog(enable, logCallback)
-}
-
-export function addNativeLogListener(
-  listener: (level: string, text: string) => void,
-): { remove: () => void } {
-  logListeners.push(listener)
-  return {
-    remove: () => {
-      logListeners.splice(logListeners.indexOf(listener), 1)
-    },
-  }
 }
