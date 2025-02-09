@@ -1,8 +1,8 @@
 {
-  "name": "@fugood/llama.node",
+  "name": "llama.node",
   "access": "public",
   "version": "0.3.10",
-  "description": "Llama.cpp for Node.js",
+  "description": "An another Node binding of llama.cpp",
   "main": "lib/index.js",
   "scripts": {
     "test": "jest",
@@ -22,7 +22,9 @@
     "llama",
     "llm",
     "ai",
-    "genai"
+    "genai",
+    "Local LLM",
+    "llama.cpp"
   ],
   "author": "Hans <hans.chen@bricks.tools>",
   "license": "MIT",

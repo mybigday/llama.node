@@ -39,3 +39,10 @@ jobs:
         uses: JS-DevTools/npm-publish@v3
         with:
           token: ${{secrets.NPM_TOKEN}}
+      - name: Rename package to alias
+        run: |
+          sed -i 's/"name": "llama.node"/"name": "@fugood\/llama.node"/' package.json
+      - name: Publish alias to NPM
+        uses: JS-DevTools/npm-publish@v3
+        with:
+          token: ${{secrets.NPM_TOKEN}}
