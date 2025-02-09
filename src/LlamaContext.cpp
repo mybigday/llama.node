@@ -370,6 +370,9 @@ Napi::Value LlamaContext::GetModelInfo(const Napi::CallbackInfo &info) {
   details.Set("chatTemplates", chatTemplates);
 
   details.Set("metadata", metadata);
+
+  // Deprecated: use chatTemplates.llamaChat instead
+  details.Set("isChatTemplateSupported", validateModelChatTemplate(_sess->model(), false, ""));
   return details;
 }
 
