@@ -1,7 +1,7 @@
 # llama.node
 
 [![CI](https://github.com/mybigday/llama.node/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mybigday/llama.node/actions/workflows/ci.yml)
-[![NPM Version](https://img.shields.io/npm/v/%40fugood%2Fllama.node)](https://www.npmjs.com/package/llama.node)
+[![NPM Version](https://img.shields.io/npm/v/%40fugood%2Fllama.node)](https://www.npmjs.com/package/@fugood/llama.node)
 ![NPM Downloads](https://img.shields.io/npm/dw/%40fugood%2Fllama.node)
 
 An another Node binding of [llama.cpp](https://github.com/ggerganov/llama.cpp) to make same API with [llama.rn](https://github.com/mybigday/llama.rn) as much as possible.
@@ -25,13 +25,13 @@ An another Node binding of [llama.cpp](https://github.com/ggerganov/llama.cpp) t
 ## Installation
 
 ```sh
-npm install llama.node
+npm install @fugood/llama.node
 ```
 
 ## Usage
 
 ```js
-import { loadModel } from 'llama.node'
+import { loadModel } from '@fugood/llama.node'
 
 // Initial a Llama context with the model (may take a while)
 const context = await loadModel({

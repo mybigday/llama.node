@@ -1,5 +1,5 @@
 {
-  "name": "llama.node",
+  "name": "@fugood/llama.node",
   "access": "public",
   "version": "0.3.11",
   "description": "An another Node binding of llama.cpp",
