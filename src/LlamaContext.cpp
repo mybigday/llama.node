@@ -120,6 +120,9 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
            "release", static_cast<napi_property_attributes>(napi_enumerable)),
        StaticMethod<&LlamaContext::ModelInfo>(
            "loadModelInfo",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       StaticMethod<&LlamaContext::ToggleNativeLog>(
+           "toggleNativeLog",
            static_cast<napi_property_attributes>(napi_enumerable))});
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
@@ -276,6 +279,46 @@ bool validateModelChatTemplate(const struct llama_model * model, const bool use_
     return false;
   }
   return common_chat_verify_template(tmpl, use_jinja);
+}
+
+static Napi::FunctionReference _log_callback;
+
+// toggleNativeLog(enable: boolean, callback: (log: string) => void): void
+void LlamaContext::ToggleNativeLog(const Napi::CallbackInfo &info) {
+  bool enable = info[0].ToBoolean().Value();
+  if (enable) {
+    _log_callback.Reset(info[1].As<Napi::Function>());
+    
+    llama_log_set([](ggml_log_level level, const char * text, void * user_data) {
+      llama_log_callback_default(level, text, user_data);
+
+      std::string level_str = "";
+      if (level == GGML_LOG_LEVEL_ERROR) {
+        level_str = "error";
+      } else if (level == GGML_LOG_LEVEL_INFO) {
+        level_str = "info";
+      } else if (level == GGML_LOG_LEVEL_WARN) {
+        level_str = "warn";
+      }
+
+      if (_log_callback.IsEmpty()) {
+        return;
+      }
+      try {
+        Napi::Env env = _log_callback.Env();
+        Napi::HandleScope scope(env);
+        _log_callback.Call({
+          Napi::String::New(env, level_str),
+          Napi::String::New(env, text)
+        });
+      } catch (const std::exception &e) {
+        // printf("Error calling log callback: %s\n", e.what());
+      }
+    }, nullptr);
+  } else {
+    _log_callback.Reset();
+    llama_log_set(llama_log_callback_default, nullptr);
+  }
 }
 
 // getModelInfo(): object

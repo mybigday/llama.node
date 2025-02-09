@@ -1,6 +1,6 @@
 import path from 'path'
 import waitForExpect from 'wait-for-expect'
-import { loadModel, loadLlamaModelInfo } from '../lib'
+import { loadModel, loadLlamaModelInfo, toggleNativeLog, addNativeLogListener } from '../lib'
 
 const filterCompletionResult = (result: any) => {
   return {
@@ -216,4 +216,20 @@ test('loadModelInfo', async () => {
     path.resolve(__dirname, './tiny-random-llama.gguf'),
   )
   expect(result).toMatchSnapshot()
+})
+
+test('toggleNativeLog', async () => {
+  const logs: string[] = []
+  await toggleNativeLog(true)
+  const listener = addNativeLogListener((level, text) => {
+    logs.push(`${level}: ${text}`)
+  })
+  const model = await loadModel({
+    model: path.resolve(__dirname, './tiny-random-llama.gguf'),
+    n_gpu_layers: 0,
+  })
+  await model.release()
+  listener.remove()
+  expect(logs.length > 10).toBe(true)
+  await toggleNativeLog(false)
 })

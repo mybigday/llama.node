@@ -32,3 +32,31 @@ export const loadLlamaModelInfo = async (path: string): Promise<Object> => {
   mods[variant] ??= await loadModule(variant)
   return mods[variant].LlamaContext.loadModelInfo(path, modelInfoSkip)
 }
+
+const logListeners: Array<(level: string, text: string) => void> = []
+
+const logCallback = (level: string, text: string) => {
+  logListeners.forEach((listener) => listener(level, text))
+}
+
+export const toggleNativeLog = async (
+  enable: boolean,
+  options?: {
+    variant?: LibVariant
+  },
+) => {
+  const v = options?.variant ?? 'default'
+  mods[v] ??= await loadModule(v)
+  return mods[v].LlamaContext.toggleNativeLog(enable, logCallback)
+}
+
+export function addNativeLogListener(
+  listener: (level: string, text: string) => void,
+): { remove: () => void } {
+  logListeners.push(listener)
+  return {
+    remove: () => {
+      logListeners.splice(logListeners.indexOf(listener), 1)
+    },
+  }
+}

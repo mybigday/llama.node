@@ -150,6 +150,7 @@ export interface LlamaContext {
   getLoadedLoraAdapters(): { path: string; scaled: number }[]
   // static
   loadModelInfo(path: string, skip: string[]): Promise<Object>
+  toggleNativeLog(enable: boolean, callback: (level: string, text: string) => void): void
 }
 
 export interface Module {
