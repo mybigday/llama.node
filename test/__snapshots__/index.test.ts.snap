@@ -28,6 +28,7 @@ exports[`basic completion: model info 1`] = `
     },
   },
   "desc": "llama ?B F16",
+  "isChatTemplateSupported": false,
   "metadata": {
     "general.architecture": "llama",
     "general.file_type": "1",
@@ -623,6 +624,7 @@ exports[`works fine with vocab_only: model info 1`] = `
     },
   },
   "desc": "",
+  "isChatTemplateSupported": false,
   "metadata": {
     "general.architecture": "llama",
     "general.file_type": "1",
