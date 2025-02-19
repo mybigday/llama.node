@@ -685,6 +685,7 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   params.sampling.dry_base = get_option<float>(options, "dry_base", 2);
   params.sampling.dry_allowed_length = get_option<float>(options, "dry_allowed_length", -1);
   params.sampling.dry_penalty_last_n = get_option<float>(options, "dry_penalty_last_n", 0);
+  params.sampling.top_n_sigma = get_option<float>(options, "top_n_sigma", -1.0f);
   params.sampling.ignore_eos = get_option<bool>(options, "ignore_eos", false);
   params.n_keep = get_option<int32_t>(options, "n_keep", 0);
   params.sampling.seed = get_option<int32_t>(options, "seed", LLAMA_DEFAULT_SEED);
