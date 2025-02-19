@@ -5,6 +5,7 @@ import { loadModel, loadLlamaModelInfo, toggleNativeLog, addNativeLogListener } 
 const filterCompletionResult = (result: any) => {
   return {
     ...result,
+    content: '<removed>',
     timings: `Timings: (${Object.keys(result.timings).length}) keys`,
   }
 }
