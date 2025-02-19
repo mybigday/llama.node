@@ -77,7 +77,7 @@ exports[`completion with tools 1`] = `
 {
   "text": "{"tool_call":{"na",
   "timings": "Timings: (8) keys",
-  "tokens_evaluated": 326,
+  "tokens_evaluated": 328,
   "tokens_predicted": 10,
   "truncated": false,
 }
@@ -577,6 +577,8 @@ Example tool call syntax:
     }
   ]
 }<|im_end|>
+
+
 <|im_end|>
 <|im_start|>user
 Hello<|im_end|>
