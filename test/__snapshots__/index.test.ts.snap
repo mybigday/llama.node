@@ -2,7 +2,7 @@
 
 exports[`basic completion 1`] = `
 {
-  "content": " swochadoorter scientific WindowsCa occupiedrå alta",
+  "content": "<removed>",
   "text": " swochadoorter scientific WindowsCa occupiedrå alta",
   "timings": "Timings: (8) keys",
   "tokens_evaluated": 18,
@@ -55,7 +55,7 @@ exports[`basic completion: model info 1`] = `
 
 exports[`completion with response_format: json_object 1`] = `
 {
-  "content": "{"\` También player et",
+  "content": "<removed>",
   "text": "{"\` También player et",
   "timings": "Timings: (8) keys",
   "tokens_evaluated": 5,
@@ -66,8 +66,7 @@ exports[`completion with response_format: json_object 1`] = `
 
 exports[`completion with response_format: json_schema 1`] = `
 {
-  "content": "{
-"name"",
+  "content": "<removed>",
   "text": "{
 "name"",
   "timings": "Timings: (8) keys",
@@ -79,6 +78,7 @@ exports[`completion with response_format: json_schema 1`] = `
 
 exports[`completion with tools 1`] = `
 {
+  "content": "<removed>",
   "text": "{"tool_call":{"na",
   "timings": "Timings: (8) keys",
   "tokens_evaluated": 328,
