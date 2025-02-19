@@ -8,6 +8,7 @@ export type ChatMessage = {
 export type LlamaModelOptions = {
   model: string
   chat_template?: string
+  reasoning_format?: string
   embedding?: boolean
   embd_normalize?: number
   pooling_type?: 'none' | 'mean' | 'cls' | 'last' | 'rank'

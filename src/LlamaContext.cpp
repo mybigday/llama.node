@@ -185,6 +185,13 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
 
   params.chat_template = get_option<std::string>(options, "chat_template", "");
 
+  std::string reasoning_format = get_option<std::string>(options, "reasoning_format", "none");
+  if (reasoning_format == "deepseek") {
+    params.reasoning_format = COMMON_REASONING_FORMAT_DEEPSEEK;
+  } else {
+    params.reasoning_format = COMMON_REASONING_FORMAT_NONE;
+  }
+
   params.n_ctx = get_option<int32_t>(options, "n_ctx", 512);
   params.n_batch = get_option<int32_t>(options, "n_batch", 2048);
   params.n_ubatch = get_option<int32_t>(options, "n_ubatch", 512);
@@ -377,7 +384,7 @@ Napi::Value LlamaContext::GetModelInfo(const Napi::CallbackInfo &info) {
 }
 
 common_chat_params getFormattedChatWithJinja(
-  const struct llama_model * model,
+  const std::shared_ptr<LlamaSession> &sess,
   const common_chat_templates &templates,
   const std::string &messages,
   const std::string &chat_template,
@@ -399,11 +406,12 @@ common_chat_params getFormattedChatWithJinja(
   if (!json_schema.empty()) {
       inputs.json_schema = json::parse(json_schema);
   }
+  inputs.extract_reasoning = sess->params().reasoning_format != COMMON_REASONING_FORMAT_NONE;
   inputs.stream = true;
 
   // If chat_template is provided, create new one and use it (probably slow)
   if (!chat_template.empty()) {
-      auto tmp = common_chat_templates_from_model(model, chat_template);
+      auto tmp = common_chat_templates_from_model(sess->model(), chat_template);
       const common_chat_template* template_ptr = useTools && tmp.template_tool_use ? tmp.template_tool_use.get() : tmp.template_default.get();
       if (inputs.parallel_tool_calls && !template_ptr->original_caps().supports_parallel_tool_calls) {
           inputs.parallel_tool_calls = false;
@@ -493,7 +501,7 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
     auto parallel_tool_calls = get_option<bool>(params, "parallel_tool_calls", false);
     auto tool_choice = get_option<std::string>(params, "tool_choice", "");
 
-    auto chatParams = getFormattedChatWithJinja(_sess->model(), _templates, messages, chat_template, json_schema_str, tools_str, parallel_tool_calls, tool_choice);
+    auto chatParams = getFormattedChatWithJinja(_sess, _templates, messages, chat_template, json_schema_str, tools_str, parallel_tool_calls, tool_choice);
     
     Napi::Object result = Napi::Object::New(env);
     result.Set("prompt", chatParams.prompt.get<std::string>());
@@ -598,7 +606,7 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
       auto tool_choice = get_option<std::string>(options, "tool_choice", "none");
 
       auto chatParams = getFormattedChatWithJinja(
-        _sess->model(),
+        _sess,
         _templates,
         json_stringify(messages),
         chat_template,
