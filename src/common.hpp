@@ -2,8 +2,7 @@
 
 #include "common/common.h"
 #include "common/sampling.h"
-#include "chat.hpp"
-#include "chat-template.hpp"
+#include "chat.h"
 #include "llama.h"
 #include <memory>
 #include <mutex>
