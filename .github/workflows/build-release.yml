@@ -28,16 +28,16 @@ jobs:
         with:
           submodules: "true"
       - name: node_modules cache
-        uses: actions/cache@v4.0.2
+        uses: actions/cache@v4
         with:
           path: node_modules
           key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
       - name: externals cache
-        uses: actions/cache@v4.0.2
+        uses: actions/cache@v4
         with:
           path: externals
           key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
-      - uses: actions/setup-node@v4.0.2
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
       - name: Install yarn
@@ -66,16 +66,16 @@ jobs:
         with:
           submodules: "true"
       - name: node_modules cache
-        uses: actions/cache@v4.0.2
+        uses: actions/cache@v4
         with:
           path: node_modules
           key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
       - name: externals cache
-        uses: actions/cache@v4.0.2
+        uses: actions/cache@v4
         with:
           path: externals
           key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
-      - uses: actions/setup-node@v4.0.2
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
       - name: Install yarn
@@ -104,16 +104,16 @@ jobs:
         with:
           submodules: "true"
       - name: node_modules cache
-        uses: actions/cache@v4.0.2
+        uses: actions/cache@v4
         with:
           path: node_modules
           key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
       - name: externals cache
-        uses: actions/cache@v4.0.2
+        uses: actions/cache@v4
         with:
           path: externals
           key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
-      - uses: actions/setup-node@v4.0.2
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: "yarn"
@@ -136,16 +136,16 @@ jobs:
         with:
           submodules: "true"
       - name: node_modules cache
-        uses: actions/cache@v4.0.2
+        uses: actions/cache@v4
         with:
           path: node_modules
           key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
       - name: externals cache
-        uses: actions/cache@v4.0.2
+        uses: actions/cache@v4
         with:
           path: externals
           key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.ps1') }}
-      - uses: actions/setup-node@v4.0.2
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: "yarn"
