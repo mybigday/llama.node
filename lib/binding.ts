@@ -87,7 +87,7 @@ export type LlamaCompletionOptions = {
   stop?: string[]
   grammar?: string
   grammar_lazy?: boolean
-  grammar_triggers?: { word: string; at_start: boolean }[]
+  grammar_triggers?: { type: number; word: string; at_start: boolean }[]
   preserved_tokens?: string[]
 }
 
