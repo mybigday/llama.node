@@ -537,7 +537,7 @@ alternative-1 ::= "{" space alternative-1-response-kv "}" space
 alternative-1-response-kv ::= "\\"response\\"" space ":" space string
 char ::= [^"\\\\\\x7F\\x00-\\x1F] | [\\\\] (["\\\\bfnrt] | "u" [0-9a-fA-F]{4})
 root ::= alternative-0 | alternative-1
-space ::= | " " | "\\n" [ \\t]{0,20}
+space ::= | " " | "\\n"{1,2} [ \\t]{0,20}
 string ::= "\\"" char* "\\"" space
 ",
   "grammar_triggers": [],
