@@ -272,7 +272,7 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   _sess = sess;
   _info = common_params_get_system_info(params);
 
-  _templates = common_chat_templates_from_model(model, params.chat_template);
+  _templates = common_chat_templates_init(model, params.chat_template);
 }
 
 // getSystemInfo(): string
@@ -355,22 +355,22 @@ Napi::Value LlamaContext::GetModelInfo(const Napi::CallbackInfo &info) {
   Napi::Object minja = Napi::Object::New(info.Env());
   minja.Set("default", validateModelChatTemplate(model, true, ""));
   Napi::Object defaultCaps = Napi::Object::New(info.Env());
-  defaultCaps.Set("tools", _templates.template_default->original_caps().supports_tools);
-  defaultCaps.Set("toolCalls", _templates.template_default->original_caps().supports_tool_calls);
-  defaultCaps.Set("toolResponses", _templates.template_default->original_caps().supports_tool_responses);
-  defaultCaps.Set("systemRole", _templates.template_default->original_caps().supports_system_role);
-  defaultCaps.Set("parallelToolCalls", _templates.template_default->original_caps().supports_parallel_tool_calls);
-  defaultCaps.Set("toolCallId", _templates.template_default->original_caps().supports_tool_call_id);
+  defaultCaps.Set("tools", _templates.get()->template_default->original_caps().supports_tools);
+  defaultCaps.Set("toolCalls", _templates.get()->template_default->original_caps().supports_tool_calls);
+  defaultCaps.Set("toolResponses", _templates.get()->template_default->original_caps().supports_tool_responses);
+  defaultCaps.Set("systemRole", _templates.get()->template_default->original_caps().supports_system_role);
+  defaultCaps.Set("parallelToolCalls", _templates.get()->template_default->original_caps().supports_parallel_tool_calls);
+  defaultCaps.Set("toolCallId", _templates.get()->template_default->original_caps().supports_tool_call_id);
   minja.Set("defaultCaps", defaultCaps);
   minja.Set("toolUse", validateModelChatTemplate(model, true, "tool_use"));
-  if (_templates.template_tool_use) {
+  if (_templates.get()->template_tool_use) {
     Napi::Object toolUseCaps = Napi::Object::New(info.Env());
-    toolUseCaps.Set("tools", _templates.template_tool_use->original_caps().supports_tools);
-    toolUseCaps.Set("toolCalls", _templates.template_tool_use->original_caps().supports_tool_calls);
-    toolUseCaps.Set("toolResponses", _templates.template_tool_use->original_caps().supports_tool_responses);
-    toolUseCaps.Set("systemRole", _templates.template_tool_use->original_caps().supports_system_role);
-    toolUseCaps.Set("parallelToolCalls", _templates.template_tool_use->original_caps().supports_parallel_tool_calls);
-    toolUseCaps.Set("toolCallId", _templates.template_tool_use->original_caps().supports_tool_call_id);
+    toolUseCaps.Set("tools", _templates.get()->template_tool_use->original_caps().supports_tools);
+    toolUseCaps.Set("toolCalls", _templates.get()->template_tool_use->original_caps().supports_tool_calls);
+    toolUseCaps.Set("toolResponses", _templates.get()->template_tool_use->original_caps().supports_tool_responses);
+    toolUseCaps.Set("systemRole", _templates.get()->template_tool_use->original_caps().supports_system_role);
+    toolUseCaps.Set("parallelToolCalls", _templates.get()->template_tool_use->original_caps().supports_parallel_tool_calls);
+    toolUseCaps.Set("toolCallId", _templates.get()->template_tool_use->original_caps().supports_tool_call_id);
     minja.Set("toolUseCaps", toolUseCaps);
   }
   chatTemplates.Set("minja", minja);
@@ -385,7 +385,7 @@ Napi::Value LlamaContext::GetModelInfo(const Napi::CallbackInfo &info) {
 
 common_chat_params getFormattedChatWithJinja(
   const std::shared_ptr<LlamaSession> &sess,
-  const common_chat_templates &templates,
+  const common_chat_templates_ptr &templates,
   const std::string &messages,
   const std::string &chat_template,
   const std::string &json_schema,
@@ -393,72 +393,46 @@ common_chat_params getFormattedChatWithJinja(
   const bool &parallel_tool_calls,
   const std::string &tool_choice
 ) {
-  common_chat_inputs inputs;
-  inputs.messages = json::parse(messages);
+  common_chat_templates_inputs inputs;
+  inputs.messages = common_chat_msgs_parse_oaicompat(json::parse(messages));
   auto useTools = !tools.empty();
   if (useTools) {
-      inputs.tools = json::parse(tools);
+    inputs.tools = common_chat_tools_parse_oaicompat(json::parse(tools));
   }
   inputs.parallel_tool_calls = parallel_tool_calls;
   if (!tool_choice.empty()) {
-      inputs.tool_choice = tool_choice;
+    inputs.tool_choice = common_chat_tool_choice_parse_oaicompat(tool_choice);
   }
   if (!json_schema.empty()) {
-      inputs.json_schema = json::parse(json_schema);
+    inputs.json_schema = json::parse(json_schema);
   }
   inputs.extract_reasoning = sess->params().reasoning_format != COMMON_REASONING_FORMAT_NONE;
-  inputs.stream = true;
 
   // If chat_template is provided, create new one and use it (probably slow)
   if (!chat_template.empty()) {
-      auto tmp = common_chat_templates_from_model(sess->model(), chat_template);
-      const common_chat_template* template_ptr = useTools && tmp.template_tool_use ? tmp.template_tool_use.get() : tmp.template_default.get();
-      if (inputs.parallel_tool_calls && !template_ptr->original_caps().supports_parallel_tool_calls) {
-          inputs.parallel_tool_calls = false;
-      }
-      return common_chat_params_init(*template_ptr, inputs);
+      auto tmps = common_chat_templates_init(sess->model(), chat_template);
+      return common_chat_templates_apply(tmps.get(), inputs);
   } else {
-      const common_chat_template* template_ptr = useTools && templates.template_tool_use ? templates.template_tool_use.get() : templates.template_default.get();
-      if (inputs.parallel_tool_calls && !template_ptr->original_caps().supports_parallel_tool_calls) {
-          inputs.parallel_tool_calls = false;
-      }
-      return common_chat_params_init(*template_ptr, inputs);
+      return common_chat_templates_apply(templates.get(), inputs);
   }
 }
 
 std::string getFormattedChat(
   const struct llama_model * model,
-  const common_chat_templates &templates,
+  const common_chat_templates_ptr &templates,
   const std::string &messages,
   const std::string &chat_template
 ) {
-  auto chat_json = json::parse(messages);
-
-  // Handle regular chat without tools
-  std::vector<common_chat_msg> chat_msgs;
-  for (const auto &msg : chat_json) {
-      chat_msgs.push_back({
-          msg["role"].get<std::string>(),
-          msg["content"].get<std::string>()
-      });
-  }
+  common_chat_templates_inputs inputs;
+  inputs.messages = common_chat_msgs_parse_oaicompat(json::parse(messages));
+  inputs.use_jinja = false;
 
   // If chat_template is provided, create new one and use it (probably slow)
   if (!chat_template.empty()) {
-      auto tmp = common_chat_templates_from_model(model, chat_template);
-      return common_chat_apply_template(
-          *tmp.template_default,
-          chat_msgs,
-          true,
-          false
-      );
+    auto tmps = common_chat_templates_init(model, chat_template);
+    return common_chat_templates_apply(tmps.get(), inputs).prompt;
   } else {
-      return common_chat_apply_template(
-          *templates.template_default,
-          chat_msgs,
-          true,
-          false
-      );
+    return common_chat_templates_apply(templates.get(), inputs).prompt;
   }
 }
 
@@ -504,20 +478,21 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
     auto chatParams = getFormattedChatWithJinja(_sess, _templates, messages, chat_template, json_schema_str, tools_str, parallel_tool_calls, tool_choice);
     
     Napi::Object result = Napi::Object::New(env);
-    result.Set("prompt", chatParams.prompt.get<std::string>());
+    result.Set("prompt", chatParams.prompt);
     // chat_format: int
     result.Set("chat_format", static_cast<int>(chatParams.format));
     // grammar: string
     result.Set("grammar", chatParams.grammar);
     // grammar_lazy: boolean
     result.Set("grammea_lazy", chatParams.grammar_lazy);
-    // grammar_triggers: [{ word: string, at_start: boolean }]
+    // grammar_triggers: [{ value: string, token: number }]
     Napi::Array grammar_triggers = Napi::Array::New(env);
     for (size_t i = 0; i < chatParams.grammar_triggers.size(); i++) {
         const auto & trigger = chatParams.grammar_triggers[i];
         Napi::Object triggerObj = Napi::Object::New(env);
-        triggerObj.Set("word", Napi::String::New(env, trigger.word.c_str()));
-        triggerObj.Set("at_start", Napi::Boolean::New(env, trigger.at_start));
+        triggerObj.Set("type", Napi::Number::New(env, trigger.type));
+        triggerObj.Set("value", Napi::String::New(env, trigger.value));
+        triggerObj.Set("token", Napi::Number::New(env, trigger.token));
         grammar_triggers.Set(i, triggerObj);
     }
     result.Set("grammar_triggers", grammar_triggers);
@@ -594,6 +569,60 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
     }
   }
 
+  // Handle preserved_tokens from options
+  if (options.Has("preserved_tokens")) {
+    auto preserved_tokens = options.Get("preserved_tokens").As<Napi::Array>();
+    for (size_t i = 0; i < preserved_tokens.Length(); i++) {
+      auto token = preserved_tokens.Get(i).ToString().Utf8Value();
+      auto ids = common_tokenize(_sess->context(), token, /* add_special= */ false, /* parse_special= */ true);
+      if (ids.size() == 1) {
+        params.sampling.preserved_tokens.insert(ids[0]);
+      }
+    }
+  }
+
+  // Handle grammar_triggers from options
+  if (options.Has("grammar_triggers")) {
+    auto grammar_triggers = options.Get("grammar_triggers").As<Napi::Array>();
+    for (size_t i = 0; i < grammar_triggers.Length(); i++) {
+      auto trigger_obj = grammar_triggers.Get(i).As<Napi::Object>();
+
+      auto type = static_cast<common_grammar_trigger_type>(trigger_obj.Get("type").ToNumber().Int32Value());
+      auto word = trigger_obj.Get("value").ToString().Utf8Value();
+
+      if (type == COMMON_GRAMMAR_TRIGGER_TYPE_WORD) {
+        auto ids = common_tokenize(_sess->context(), word, /* add_special= */ false, /* parse_special= */ true);
+        if (ids.size() == 1) {
+          auto token = ids[0];
+          if (std::find(params.sampling.preserved_tokens.begin(), params.sampling.preserved_tokens.end(), (llama_token) token) == params.sampling.preserved_tokens.end()) {
+            throw std::runtime_error("Grammar trigger word should be marked as preserved token");
+          }
+          common_grammar_trigger trigger;
+          trigger.type = COMMON_GRAMMAR_TRIGGER_TYPE_TOKEN;
+          trigger.value = word;
+          trigger.token = token;
+          params.sampling.grammar_triggers.push_back(std::move(trigger));
+        } else {
+          params.sampling.grammar_triggers.push_back({COMMON_GRAMMAR_TRIGGER_TYPE_WORD, word});
+        }
+      } else {
+        common_grammar_trigger trigger;
+        trigger.type = type;
+        trigger.value = word;
+        if (type == COMMON_GRAMMAR_TRIGGER_TYPE_TOKEN) {
+          auto token = (llama_token) trigger_obj.Get("token").ToNumber().Int32Value();
+          trigger.token = token;
+        }
+        params.sampling.grammar_triggers.push_back(std::move(trigger));
+      }
+    }
+  }
+
+  // Handle grammar_lazy from options
+  if (options.Has("grammar_lazy")) {
+    params.sampling.grammar_lazy = options.Get("grammar_lazy").ToBoolean().Value();
+  }
+
   if (options.Has("messages") && options.Get("messages").IsArray()) {
     auto messages = options.Get("messages").As<Napi::Array>();
     auto chat_template = get_option<std::string>(options, "chat_template", "");
@@ -616,32 +645,25 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
         tool_choice
       );  
       
-      params.prompt = chatParams.prompt.get<std::string>();
+      params.prompt = chatParams.prompt;
 
       chat_format = chatParams.format;
-
-      if (!has_grammar_set) {
-        // grammar param always wins jinja template & json_schema
-        params.sampling.grammar = chatParams.grammar;
-        params.sampling.grammar_lazy = chatParams.grammar_lazy;
-        
-        for (const auto & trigger : chatParams.grammar_triggers) {
-          auto ids = common_tokenize(_sess->context(), trigger.word, /* add_special= */ false, /* parse_special= */ true);
-          if (ids.size() == 1) {
-            params.sampling.grammar_trigger_tokens.push_back(ids[0]);
-            params.sampling.preserved_tokens.insert(ids[0]);
-            continue;
-          }
-          params.sampling.grammar_trigger_words.push_back(trigger);
-        }
-        has_grammar_set = true;
-      }
 
       for (const auto & token : chatParams.preserved_tokens) {
         auto ids = common_tokenize(_sess->context(), token, /* add_special= */ false, /* parse_special= */ true);
         if (ids.size() == 1) {
           params.sampling.preserved_tokens.insert(ids[0]);
         }
+      }
+
+      if (!has_grammar_set) {
+        // grammar param always wins jinja template & json_schema
+        params.sampling.grammar = chatParams.grammar;
+        params.sampling.grammar_lazy = chatParams.grammar_lazy;
+        for (const auto & trigger : chatParams.grammar_triggers) {
+          params.sampling.grammar_triggers.push_back(trigger);
+        }
+        has_grammar_set = true;
       }
       
       for (const auto & stop : chatParams.additional_stops) {
