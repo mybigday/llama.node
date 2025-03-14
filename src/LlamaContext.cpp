@@ -361,7 +361,7 @@ Napi::Value LlamaContext::GetModelInfo(const Napi::CallbackInfo &info) {
   defaultCaps.Set("systemRole", _templates.get()->template_default->original_caps().supports_system_role);
   defaultCaps.Set("parallelToolCalls", _templates.get()->template_default->original_caps().supports_parallel_tool_calls);
   defaultCaps.Set("toolCallId", _templates.get()->template_default->original_caps().supports_tool_call_id);
-  minja.Set("default", defaultCaps);
+  minja.Set("defaultCaps", defaultCaps);
   minja.Set("toolUse", validateModelChatTemplate(model, true, "tool_use"));
   if (_templates.get()->template_tool_use) {
     Napi::Object toolUseCaps = Napi::Object::New(info.Env());
