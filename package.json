@@ -1,7 +1,7 @@
 {
   "name": "@fugood/llama.node",
   "access": "public",
-  "version": "0.3.15",
+  "version": "0.3.16",
   "description": "An another Node binding of llama.cpp",
   "main": "lib/index.js",
   "scripts": {
