@@ -173,8 +173,8 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   auto options = info[0].As<Napi::Object>();
 
   common_params params;
-  params.model = get_option<std::string>(options, "model", "");
-  if (params.model.empty()) {
+  params.model.path = get_option<std::string>(options, "model", "");
+  if (params.model.path.empty()) {
     Napi::TypeError::New(env, "Model is required").ThrowAsJavaScriptException();
   }
 
