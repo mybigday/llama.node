@@ -90,6 +90,12 @@ void LlamaCompletionWorker::Execute() {
   for (int i = 0; i < max_len || _stop; i++) {
     // check if we need to remove some tokens
     if (embd->size() >= _params.n_ctx) {
+      if (!_params.ctx_shift) {
+        // Context is full and ctx_shift is disabled, so we need to stop
+        _result.context_full = true;
+        break;
+      }
+      
       const int n_left = n_cur - n_keep - 1;
       const int n_discard = n_left / 2;
 
@@ -161,6 +167,8 @@ void LlamaCompletionWorker::OnOK() {
                                                    _result.tokens_predicted));
   result.Set("truncated",
              Napi::Boolean::New(env, _result.truncated));
+  result.Set("context_full",
+             Napi::Boolean::New(env, _result.context_full));
   result.Set("text",
              Napi::String::New(env, _result.text.c_str()));
 

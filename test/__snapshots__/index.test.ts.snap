@@ -3,6 +3,7 @@
 exports[`basic completion 1`] = `
 {
   "content": "<removed>",
+  "context_full": false,
   "text": " swochadoorter scientific WindowsCa occupiedrå alta",
   "timings": "Timings: (8) keys",
   "tokens_evaluated": 18,
@@ -56,6 +57,7 @@ exports[`basic completion: model info 1`] = `
 exports[`completion with response_format: json_object 1`] = `
 {
   "content": "<removed>",
+  "context_full": false,
   "text": "{"\` También player et",
   "timings": "Timings: (8) keys",
   "tokens_evaluated": 5,
@@ -67,6 +69,7 @@ exports[`completion with response_format: json_object 1`] = `
 exports[`completion with response_format: json_schema 1`] = `
 {
   "content": "<removed>",
+  "context_full": false,
   "text": "{
 "name"",
   "timings": "Timings: (8) keys",
@@ -79,6 +82,7 @@ exports[`completion with response_format: json_schema 1`] = `
 exports[`completion with tools 1`] = `
 {
   "content": "<removed>",
+  "context_full": false,
   "text": "{"tool_call":{"na",
   "timings": "Timings: (8) keys",
   "tokens_evaluated": 328,
@@ -419,7 +423,7 @@ exports[`embedding: Embedding (normalized) 1`] = `
   0.005492,
   -0.020676,
   -0.005159,
-  0.039505,
+  0.039504,
   0.061394,
   0.015951,
   -0.045812,
@@ -595,6 +599,7 @@ Hi<|im_end|>
 
 exports[`works fine with vocab_only: empty result 1`] = `
 {
+  "context_full": false,
   "text": "",
   "timings": {
     "predicted_ms": 0,
