@@ -206,7 +206,7 @@ test('embedding', async () => {
   const normalized: number[] = []
   for (let i = 0; i < result.embedding.length; i++) {
     // normalize float to the same between Linux & macOS
-    normalized[i] = Math.round(result.embedding[i] * 1000000) / 1000000
+    normalized[i] = Math.round(result.embedding[i] * 100000) / 100000
   }
   expect(normalized).toMatchSnapshot('Embedding (normalized)')
   await model.release()
