@@ -69,12 +69,15 @@ endif()
 
 set(LLAMA_BUILD_COMMON ON CACHE BOOL "Build common")
 
+set(LLAMA_CURL OFF CACHE BOOL "Build curl")
+
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
 add_subdirectory("src/llama.cpp")
 
 include_directories(
   ${CMAKE_JS_INC}
   "src/llama.cpp"
+  "src/llama.cpp/src"
 )
 
 file(
