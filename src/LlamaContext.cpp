@@ -211,6 +211,7 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   params.flash_attn = get_option<bool>(options, "flash_attn", false);
   params.cache_type_k = kv_cache_type_from_str(get_option<std::string>(options, "cache_type_k", "f16").c_str());
   params.cache_type_v = kv_cache_type_from_str(get_option<std::string>(options, "cache_type_v", "f16").c_str());
+  params.ctx_shift = get_option<bool>(options, "ctx_shift", true);
 
   params.use_mlock = get_option<bool>(options, "use_mlock", false);
   params.use_mmap = get_option<bool>(options, "use_mmap", true);

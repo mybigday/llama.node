@@ -36,6 +36,10 @@ export type LlamaModelOptions = {
     | 'iq4_nl'
     | 'q5_0'
     | 'q5_1'
+  /**
+   * Enable context shifting to handle prompts larger than context size
+   */
+  ctx_shift?: boolean
   use_mlock?: boolean
   use_mmap?: boolean
   vocab_only?: boolean
@@ -96,6 +100,7 @@ export type LlamaCompletionResult = {
   tokens_predicted: number
   tokens_evaluated: number
   truncated: boolean
+  context_full: boolean
   timings: {
     prompt_n: number
     prompt_ms: number

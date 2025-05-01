@@ -4,6 +4,7 @@
 struct CompletionResult {
   std::string text = "";
   bool truncated = false;
+  bool context_full = false;
   size_t tokens_predicted = 0;
   size_t tokens_evaluated = 0;
 };

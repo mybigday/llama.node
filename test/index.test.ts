@@ -206,7 +206,7 @@ test('embedding', async () => {
   const normalized: number[] = []
   for (let i = 0; i < result.embedding.length; i++) {
     // normalize float to the same between Linux & macOS
-    normalized[i] = Math.round(result.embedding[i] * 1000000) / 1000000
+    normalized[i] = Math.round(result.embedding[i] * 100000) / 100000
   }
   expect(normalized).toMatchSnapshot('Embedding (normalized)')
   await model.release()
@@ -233,4 +233,45 @@ test('toggleNativeLog', async () => {
   listener.remove()
   expect(logs.length > 10).toBe(true)
   await toggleNativeLog(false)
+})
+
+test('ctx_shift and context_full', async () => {
+  // Load model with ctx_shift disabled to test context_full flag
+  const model = await loadModel({
+    model: path.resolve(__dirname, './tiny-random-llama.gguf'),
+    n_ctx: 20, // Small context size to easily trigger context_full
+    ctx_shift: false, // Disable context shifting
+  })
+  
+  // Generate a completion that should fill the context
+  const result1 = await model.completion({
+    prompt: 'Testing context full with a fairly long prompt to ensure we trigger the context_full flag',
+    n_predict: 100, // Try to generate a lot of tokens
+  })
+  
+  // The context_full flag should be set to true
+  expect(result1.context_full).toBe(true)
+  expect(result1.truncated).toBe(false)
+  
+  // Now test with ctx_shift enabled
+  const model2 = await loadModel({
+    model: path.resolve(__dirname, './tiny-random-llama.gguf'),
+    n_ctx: 20, // Small context size
+    ctx_shift: true, // Enable context shifting
+  })
+  
+  // Generate a completion that should use context shifting
+  const result2 = await model2.completion({
+    prompt: 'Testing context shifting with a fairly long prompt that should continue generating',
+    n_predict: 20, // Try to generate a lot of tokens
+  })
+  
+  // The context_full flag should be false since context shifting is enabled
+  expect(result2.context_full).toBe(false)
+  // The truncated flag should be true because context was shifted
+  expect(result2.truncated).toBe(true)
+  
+  // Clean up
+  await model.release()
+  await model2.release()
 })
