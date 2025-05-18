@@ -88,10 +88,11 @@ size_t common_part(const std::vector<llama_token> &a,
 bool processImage(
   const mtmd_context* mtmd_ctx,
   llama_context* ctx,
+  LlamaSessionPtr sess,
   const std::vector<std::string>& image_paths,
-  const std::string& prompt,
+  const common_params& params,
   std::vector<llama_token>& text_tokens,
-  llama_pos& n_past
+  llama_pos * n_past
 ) {
   if (mtmd_ctx == nullptr) {
     fprintf(stderr, "[DEBUG] Multimodal context not initialized\n");
@@ -99,14 +100,14 @@ bool processImage(
   }
 
   // Multimodal path
-  std::string full_prompt = prompt;
+  std::string full_prompt = params.prompt;
   // Add image marker if it doesn't already exist
   if (full_prompt.find("<__image__>") == std::string::npos) {
     full_prompt += " <__image__>";
   }
 
   fprintf(stdout, "[DEBUG] Processing message with role=user, content=%s\n", full_prompt.c_str());
-  fprintf(stdout, "[DEBUG] Processing %zu images with prompt: %s\n", image_paths.size(), prompt.c_str());
+  fprintf(stdout, "[DEBUG] Processing %zu images with prompt: %s\n", image_paths.size(), full_prompt.c_str());
 
   // Prepare bitmaps array for all images
   mtmd::bitmaps bitmaps;
@@ -288,17 +289,17 @@ bool processImage(
     }
   }
 
-  llama_pos new_n_past = n_past;
+  llama_pos new_n_past = *n_past;
 
   // Evaluate the chunks in the model's context
   // This is the critical step that makes the model aware of the image
-  fprintf(stdout, "[DEBUG] Evaluating chunks: n_past=%d\n", n_past);
+  fprintf(stdout, "[DEBUG] Evaluating chunks: n_past=%d\n", new_n_past);
 
   for (size_t i = 0; i < chunk_pos.size(); i++) {
-    fprintf(stdout, "[DEBUG] Evaluating chunk %zu: n_past=%d, chunk_pos=%zu\n", i, n_past, chunk_pos[i]);
+    fprintf(stdout, "[DEBUG] Evaluating chunk %zu: n_past=%d, chunk_pos=%zu\n", i, *n_past, chunk_pos[i]);
 
     // Process chunk only if it's after the current n_past
-    if (chunk_pos[i] >= n_past) {
+    if (chunk_pos[i] >= new_n_past) {
       bool chunk_logits_last = (i == num_chunks - 1);
       auto chunk = mtmd_input_chunks_get(chunks, i);
 
@@ -307,9 +308,9 @@ bool processImage(
         const_cast<mtmd_context*>(mtmd_ctx),
         ctx,
         chunk,
-        n_past,
+        *n_past,
         0,
-        128, // batch size
+        params.n_batch, // batch size
         chunk_logits_last,
         &new_n_past
       );
@@ -320,27 +321,23 @@ bool processImage(
         bitmaps.entries.clear();
         return false;
       }
-      n_past = new_n_past;
+      *n_past = new_n_past;
     }
   }
 
-  if (n_past == total_token_count) {
+  if (*n_past == total_token_count) {
     // we have to evaluate at least 1 token to generate logits.
-    n_past--;
+    *n_past = *n_past - 1;
   }
 
   // Update sampling context to process token sequences
-  // Use llama_model_get_vocab instead of llama_get_vocab
-  auto* vocab = llama_model_get_vocab(llama_get_model(ctx));
   for (auto & token : all_tokens) {
     if (token == LLAMA_TOKEN_NULL) {
       continue;
     }
-    // Add token to the text_tokens if it's not already there
-    if (std::find(text_tokens.begin(), text_tokens.end(), token) == text_tokens.end()) {
-      text_tokens.push_back(token);
-    }
   }
+  // Set the tokens
+  sess->set_tokens(std::move(all_tokens));
 
   // Clean up image resources
   fprintf(stdout, "[DEBUG] Cleaning up resources\n");
@@ -425,10 +422,11 @@ void LlamaCompletionWorker::Execute() {
       bool success = processImage(
         mtmd_ctx,
         ctx,
+        _sess,
         _image_paths,
-        _params.prompt,
+        _params,
         prompt_tokens,
-        n_past
+        &n_past
       );
       
       if (!success) {
@@ -441,7 +439,14 @@ void LlamaCompletionWorker::Execute() {
       fprintf(stdout, "[DEBUG] Image processing successful, n_past=%d, tokens=%zu\n", 
                        n_past, prompt_tokens.size());
       
-      n_input = 0;  // Since we've handled tokenization in processImage
+      // TODO: common_part
+      n_cur = n_past;
+      n_input = _sess->tokens_ptr()->size();
+      if (n_cur == n_input) {
+        --n_cur;
+      }
+      n_input -= n_cur;
+      llama_kv_self_seq_rm(ctx, 0, n_cur, -1);
     } else {
       fprintf(stderr, "[DEBUG] Multimodal context not initialized\n");
       SetError("Multimodal context not initialized");
@@ -461,10 +466,9 @@ void LlamaCompletionWorker::Execute() {
       n_input -= n_cur;
       llama_kv_self_seq_rm(ctx, 0, n_cur, -1);
     }
+    // Set the tokens
+    _sess->set_tokens(std::move(prompt_tokens));
   }
-  
-  // Set the tokens
-  _sess->set_tokens(std::move(prompt_tokens));
 
   const int max_len = _params.n_predict < 0 ? 0 : _params.n_predict;
   _sess->tokens_ptr()->reserve(_sess->tokens_ptr()->size() + max_len);
