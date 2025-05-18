@@ -1,5 +1,11 @@
+#pragma once
+
 #include "common.hpp"
+#include <atomic>
 #include <functional>
+#include <napi.h>
+#include "tools/mtmd/mtmd.h"
+#include "tools/mtmd/clip.h"
 
 struct CompletionResult {
   std::string text = "";
@@ -14,28 +20,42 @@ class LlamaCompletionWorker : public Napi::AsyncWorker,
 public:
   LlamaCompletionWorker(const Napi::CallbackInfo &info, LlamaSessionPtr &sess,
                         Napi::Function callback, common_params params,
-                        std::vector<std::string> stop_words = {},
-                        int32_t chat_format = 0);
+                        std::vector<std::string> stop_words,
+                        int32_t chat_format,
+                        std::vector<std::string> image_paths = {});
 
   ~LlamaCompletionWorker();
 
-  inline void Stop() { _stop = true; }
+  Napi::Promise GetPromise() { return Napi::Promise::Deferred::Promise(); }
 
-  inline void onComplete(std::function<void()> cb) { _onComplete = cb; }
+  void OnComplete(std::function<void()> cb) {
+    _onComplete = cb;
+  }
+
+  void SetStop() {
+    _stop = true;
+  }
 
 protected:
-  void Execute();
-  void OnOK();
-  void OnError(const Napi::Error &err);
+  void Execute() override;
+  void OnOK() override;
+  void OnError(const Napi::Error &err) override;
 
 private:
   LlamaSessionPtr _sess;
   common_params _params;
   std::vector<std::string> _stop_words;
   int32_t _chat_format;
-  Napi::ThreadSafeFunction _tsfn;
+  std::vector<std::string> _image_paths;
+  std::function<void()> _onComplete;
   bool _has_callback = false;
   bool _stop = false;
-  std::function<void()> _onComplete;
-  CompletionResult _result;
+  Napi::ThreadSafeFunction _tsfn;
+  struct {
+    size_t tokens_evaluated = 0;
+    size_t tokens_predicted = 0;
+    bool truncated = false;
+    bool context_full = false;
+    std::string text;
+  } _result;
 };

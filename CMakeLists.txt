@@ -78,6 +78,7 @@ include_directories(
   ${CMAKE_JS_INC}
   "src/llama.cpp"
   "src/llama.cpp/src"
+  "src/tools/mtmd"
 )
 
 file(
