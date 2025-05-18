@@ -79,7 +79,7 @@ void LlamaCompletionWorker::Execute() {
       --n_cur;
     }
     n_input -= n_cur;
-    llama_kv_cache_seq_rm(ctx, 0, n_cur, -1);
+    llama_kv_self_seq_rm(ctx, 0, n_cur, -1);
   }
   _sess->set_tokens(std::move(prompt_tokens));
 
@@ -99,8 +99,8 @@ void LlamaCompletionWorker::Execute() {
       const int n_left = n_cur - n_keep - 1;
       const int n_discard = n_left / 2;
 
-      llama_kv_cache_seq_rm(ctx, 0, n_keep + 1, n_keep + n_discard + 1);
-      llama_kv_cache_seq_add(ctx, 0, n_keep + 1 + n_discard, n_cur, -n_discard);
+      llama_kv_self_seq_rm(ctx, 0, n_keep + 1, n_keep + n_discard + 1);
+      llama_kv_self_seq_add(ctx, 0, n_keep + 1 + n_discard, n_cur, -n_discard);
 
       // shift the tokens
       embd->insert(embd->begin() + n_keep + 1,
