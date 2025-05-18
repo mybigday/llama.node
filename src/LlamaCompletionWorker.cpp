@@ -318,7 +318,7 @@ bool processImage(
         fprintf(stderr, "[DEBUG] Failed to evaluate chunks\n");
         mtmd_input_chunks_free(chunks);
         bitmaps.entries.clear();
-        return res;
+        return false;
       }
       n_past = new_n_past;
     }
