@@ -1,8 +1,8 @@
 diff --git a/src/llama.cpp/common/chat.cpp b/src/llama.cpp/common/chat.cpp
-index bbc5f087..b70bda55 100644
+index f138c7bc..e177fe92 100644
 --- a/src/llama.cpp/common/chat.cpp
 +++ b/src/llama.cpp/common/chat.cpp
-@@ -1,19 +1,9 @@
+@@ -1,8 +1,6 @@
  #include "chat.h"
  #include "json-schema-to-grammar.h"
  #include "log.h"
@@ -10,6 +10,10 @@ index bbc5f087..b70bda55 100644
 -#include "minja/minja.hpp"
  
  #include <optional>
+ 
+@@ -15,14 +13,6 @@ static std::string format_time(const std::chrono::system_clock::time_point & now
+     return res;
+ }
  
 -typedef minja::chat_template common_chat_template;
 -
@@ -23,11 +27,11 @@ index bbc5f087..b70bda55 100644
      json messages;
      json tools;
 diff --git a/src/llama.cpp/common/chat.h b/src/llama.cpp/common/chat.h
-index 9aad84e8..d9f25578 100644
+index d26a09c2..cb92721a 100644
 --- a/src/llama.cpp/common/chat.h
 +++ b/src/llama.cpp/common/chat.h
-@@ -5,8 +5,16 @@
- #include "common.h"
+@@ -6,8 +6,16 @@
+ #include <chrono>
  #include <string>
  #include <vector>
 +#include "minja/chat-template.hpp"
