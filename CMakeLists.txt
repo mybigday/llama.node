@@ -73,6 +73,7 @@ set(LLAMA_CURL OFF CACHE BOOL "Build curl")
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
 add_subdirectory("src/llama.cpp")
+add_subdirectory("src/llama.cpp/tools/mtmd")
 
 include_directories(
   ${CMAKE_JS_INC}
@@ -105,7 +106,7 @@ file(
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES} ${CMAKE_JS_SRC})
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
-target_link_libraries(${PROJECT_NAME} ${CMAKE_JS_LIB} llama ggml common)
+target_link_libraries(${PROJECT_NAME} ${CMAKE_JS_LIB} llama ggml common mtmd ${CMAKE_THREAD_LIBS_INIT})
 
 add_custom_target(copy_assets ALL DEPENDS ${PROJECT_NAME})
 
