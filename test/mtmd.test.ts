@@ -22,15 +22,27 @@ test('multimodal with images', async () => {
   const result = await model.completion({
     messages: [
       {
+        role: 'system',
+        content: 'You are a helpful assistant that can answer questions and help with tasks.',
+      },
+      {
         role: 'user',
         content: 'What is the content of this image? <__image__>',
+      },
+      {
+        role: 'assistant',
+        content: "A newspaper with the headline 'men walk on moon' has pictures of astronauts and a flag.",
+      },
+      {
+        role: 'user',
+        content: 'What is the content of this next image? <__image__>',
       },
     ],
     temperature: 0.2,
     max_length: 1024,
     n_predict: 150,
     seed: 42,
-    image_paths: [path.resolve(__dirname, './test-1.jpeg')],
+    image_paths: [path.resolve(__dirname, './test-1.jpeg'), path.resolve(__dirname, './test-1.jpeg')],
   })
 
   expect(result.text.length).toBeGreaterThan(0)

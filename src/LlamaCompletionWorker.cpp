@@ -85,14 +85,13 @@ size_t common_part(const std::vector<llama_token> &a,
 }
 
 // Process images and add them to the tokenized input
-bool processImage(
+llama_pos processImage(
   const mtmd_context* mtmd_ctx,
   llama_context* ctx,
   LlamaSessionPtr sess,
   const std::vector<std::string>& image_paths,
   const common_params& params,
-  std::vector<llama_token>& text_tokens,
-  llama_pos * n_past
+  std::vector<llama_token>& text_tokens
 ) {
   if (mtmd_ctx == nullptr) {
     fprintf(stderr, "[DEBUG] Multimodal context not initialized\n");
@@ -215,11 +214,9 @@ bool processImage(
   }
 
   // Create input text
-  fprintf(stdout, "[DEBUG] Setting up input text with add_special=%d, parse_special=%d\n",
-           n_past == 0 ? 1 : 0, 1);
   mtmd_input_text input_text;
   input_text.text = full_prompt.c_str(); // Use the full prompt with image marker
-  input_text.add_special = n_past == 0;  // Add BOS token if this is the first message
+  input_text.add_special = true;  // Add BOS token if this is the first message
   input_text.parse_special = true;       // Parse special tokens like <__image__>
 
   // Tokenize the text and images
@@ -289,14 +286,18 @@ bool processImage(
     }
   }
 
-  llama_pos new_n_past = *n_past;
+  llama_pos n_past = common_part(*sess->tokens_ptr(), all_tokens);
+
+  fprintf(stdout, "[DEBUG] n_past: %d\n", n_past);
+
+  llama_pos new_n_past = n_past;
 
   // Evaluate the chunks in the model's context
   // This is the critical step that makes the model aware of the image
   fprintf(stdout, "[DEBUG] Evaluating chunks: n_past=%d\n", new_n_past);
 
   for (size_t i = 0; i < chunk_pos.size(); i++) {
-    fprintf(stdout, "[DEBUG] Evaluating chunk %zu: n_past=%d, chunk_pos=%zu\n", i, *n_past, chunk_pos[i]);
+    fprintf(stdout, "[DEBUG] Evaluating chunk %zu: n_past=%d, chunk_pos=%zu\n", i, n_past, chunk_pos[i]);
 
     // Process chunk only if it's after the current n_past
     if (chunk_pos[i] >= new_n_past) {
@@ -308,7 +309,7 @@ bool processImage(
         const_cast<mtmd_context*>(mtmd_ctx),
         ctx,
         chunk,
-        *n_past,
+        n_past,
         0,
         params.n_batch, // batch size
         chunk_logits_last,
@@ -321,13 +322,13 @@ bool processImage(
         bitmaps.entries.clear();
         return false;
       }
-      *n_past = new_n_past;
+      n_past = new_n_past;
     }
   }
 
-  if (*n_past == total_token_count) {
+  if (n_past == total_token_count) {
     // we have to evaluate at least 1 token to generate logits.
-    *n_past = *n_past - 1;
+    n_past--;
   }
 
   // Update sampling context to process token sequences
@@ -343,7 +344,7 @@ bool processImage(
   fprintf(stdout, "[DEBUG] Cleaning up resources\n");
   mtmd_input_chunks_free(chunks);
   bitmaps.entries.clear();
-  return true;
+  return n_past;
 }
 
 size_t findStoppingStrings(const std::string &text,
@@ -408,7 +409,6 @@ void LlamaCompletionWorker::Execute() {
   LlamaCppSampling sampling{common_sampler_init(model, _params.sampling),
                             common_sampler_free};
 
-  llama_pos n_past = 0;
   std::vector<llama_token> prompt_tokens;
 
   // Process images if any are provided
@@ -419,28 +419,25 @@ void LlamaCompletionWorker::Execute() {
       fprintf(stdout, "[DEBUG] Processing %zu images\n", _image_paths.size());
       
       // Process the images and get the tokens
-      bool success = processImage(
+      n_cur = processImage(
         mtmd_ctx,
         ctx,
         _sess,
         _image_paths,
         _params,
-        prompt_tokens,
-        &n_past
+        prompt_tokens
       );
       
-      if (!success) {
+      if (n_cur <= 0) {
         fprintf(stderr, "[DEBUG] Failed to process images\n");
         SetError("Failed to process images");
         _sess->get_mutex().unlock();
         return;
       }
 
-      fprintf(stdout, "[DEBUG] Image processing successful, n_past=%d, tokens=%zu\n", 
-                       n_past, prompt_tokens.size());
-      
-      // TODO: common_part
-      n_cur = n_past;
+      fprintf(stdout, "[DEBUG] Image processing successful, n_cur=%zu, tokens=%zu\n", 
+                       n_cur, _sess->tokens_ptr()->size());
+
       n_input = _sess->tokens_ptr()->size();
       if (n_cur == n_input) {
         --n_cur;
@@ -510,7 +507,7 @@ void LlamaCompletionWorker::Execute() {
     }
     
     // Log the current token generation state
-    fprintf(stdout, "[DEBUG] Sampling next token: n_cur=%zu, n_past=%d\n", n_cur, n_past);
+    fprintf(stdout, "[DEBUG] Sampling next token: n_cur=%zu\n", n_cur);
     
     // sample the next token
     const llama_token new_token_id =
