@@ -5,7 +5,7 @@
   "description": "An another Node binding of llama.cpp",
   "main": "lib/index.js",
   "scripts": {
-    "postinstall": "node scripts/bootstrap.js",
+    "pretest": "node scripts/download-test-models.js",
     "test": "jest",
     "build": "tsc",
     "prepack": "yarn build",
