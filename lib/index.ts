@@ -102,7 +102,6 @@ class LlamaContextWrapper {
             // Handle multimodal content
             if (part.type === 'image_url') {
               let path = part.image_url?.url || ''
-              if (path?.startsWith('file://')) path = path.slice(7)
               imagePaths.push(path)
               return {
                 type: 'text',
