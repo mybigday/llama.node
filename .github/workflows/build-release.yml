@@ -32,6 +32,11 @@ jobs:
         with:
           path: node_modules
           key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
+      - name: gguf models cache
+        uses: actions/cache@v4
+        with:
+          path: test/*.gguf
+          key: ${{ runner.os }}-gguf-models-${{ hashFiles('test/*.gguf') }}
       - name: externals cache
         uses: actions/cache@v4
         with:

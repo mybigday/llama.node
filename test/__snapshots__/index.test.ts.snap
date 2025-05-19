@@ -517,83 +517,30 @@ exports[`tokeneize & detokenize & getFormattedChat 1`] = `
 exports[`tokeneize & detokenize & getFormattedChat 2`] = `"xxx"`;
 
 exports[`tokeneize & detokenize & getFormattedChat 3`] = `
-"<|im_start|>user
+{
+  "has_image": false,
+  "image_paths": [],
+  "prompt": "<|im_start|>user
 Hello<|im_end|>
 <|im_start|>bot
 Hi<|im_end|>
 <|im_start|>assistant
-"
+",
+  "type": "llama-chat",
+}
 `;
 
 exports[`tokeneize & detokenize & getFormattedChat 4`] = `
 {
-  "additional_stops": [],
-  "chat_format": 1,
-  "grammar": "alternative-0 ::= "{" space alternative-0-tool-call-kv "}" space
-alternative-0-tool-call ::= "{" space alternative-0-tool-call-name-kv "," space alternative-0-tool-call-arguments-kv "}" space
-alternative-0-tool-call-arguments ::= "{" space alternative-0-tool-call-arguments-code-kv "}" space
-alternative-0-tool-call-arguments-code-kv ::= "\\"code\\"" space ":" space string
-alternative-0-tool-call-arguments-kv ::= "\\"arguments\\"" space ":" space alternative-0-tool-call-arguments
-alternative-0-tool-call-kv ::= "\\"tool_call\\"" space ":" space alternative-0-tool-call
-alternative-0-tool-call-name ::= "\\"ipython\\"" space
-alternative-0-tool-call-name-kv ::= "\\"name\\"" space ":" space alternative-0-tool-call-name
-alternative-1 ::= "{" space alternative-1-response-kv "}" space
-alternative-1-response-kv ::= "\\"response\\"" space ":" space string
-char ::= [^"\\\\\\x7F\\x00-\\x1F] | [\\\\] (["\\\\bfnrt] | "u" [0-9a-fA-F]{4})
-root ::= alternative-0 | alternative-1
-space ::= | " " | "\\n"{1,2} [ \\t]{0,20}
-string ::= "\\"" char* "\\"" space
-",
-  "grammar_triggers": [],
-  "grammea_lazy": false,
-  "preserved_tokens": [],
-  "prompt": "<|im_start|>system
-Respond in JSON format, either with \`tool_call\` (a request to call tools) or with \`response\` reply to the user's request
-
-You can call any of the following tools to satisfy the user's requests: [
-  {
-    "type": "function",
-    "function": {
-      "name": "ipython",
-      "description": "Runs code in an ipython interpreter and returns the result of the execution after 60 seconds.",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "description": "The code to run in the ipython interpreter."
-          }
-        },
-        "required": [
-          "code"
-        ]
-      }
-    }
-  }
-]
-
-Example tool call syntax:
-
-{
-  "tool_calls": [
-    {
-      "name": "tool_name",
-      "arguments": {
-        "arg1": "some_value"
-      },
-      "id": "call_1___"
-    }
-  ]
-}<|im_end|>
-
-
-<|im_end|>
-<|im_start|>user
+  "has_image": false,
+  "image_paths": [],
+  "prompt": "<|im_start|>user
 Hello<|im_end|>
 <|im_start|>bot
 Hi<|im_end|>
 <|im_start|>assistant
 ",
+  "type": "llama-chat",
 }
 `;
 

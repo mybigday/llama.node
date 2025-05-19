@@ -12,6 +12,91 @@
 #include "SaveSessionWorker.h"
 #include "TokenizeWorker.h"
 
+// Helper function for formatted strings (for console logs)
+template<typename ... Args>
+static std::string format_string(const std::string& format, Args ... args) {
+    int size_s = std::snprintf(nullptr, 0, format.c_str(), args ...) + 1; // +1 for null terminator
+    if (size_s <= 0) { return "Error formatting string"; }
+    auto size = static_cast<size_t>(size_s);
+    std::unique_ptr<char[]> buf(new char[size]);
+    std::snprintf(buf.get(), size, format.c_str(), args ...);
+    return std::string(buf.get(), buf.get() + size - 1); // -1 to exclude null terminator
+}
+
+// Computes FNV-1a hash of the data
+static std::string fnv_hash(const uint8_t* data, size_t len) {
+  const uint64_t fnv_prime = 0x100000001b3ULL;
+  uint64_t hash = 0xcbf29ce484222325ULL;
+
+  for (size_t i = 0; i < len; ++i) {
+    hash ^= data[i];
+    hash *= fnv_prime;
+  }
+  return std::to_string(hash);
+}
+
+static const std::string base64_chars =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+  "abcdefghijklmnopqrstuvwxyz"
+  "0123456789+/";
+
+// Base64 decoding function
+static std::vector<uint8_t> base64_decode(const std::string &encoded_string) {
+  std::vector<uint8_t> decoded;
+  int in_len = encoded_string.size();
+  int i = 0;
+  int j = 0;
+  int in_ = 0;
+  unsigned char char_array_4[4], char_array_3[3];
+
+  while (in_len-- && (encoded_string[in_] != '=')) {
+    if (isspace(encoded_string[in_])) {
+      in_++;
+      continue;
+    }
+
+    if (encoded_string[in_] == '=' || base64_chars.find(encoded_string[in_]) == std::string::npos) {
+      break;
+    }
+
+    char_array_4[i++] = encoded_string[in_]; in_++;
+    if (i == 4) {
+      for (i = 0; i < 4; i++) {
+        char_array_4[i] = base64_chars.find(char_array_4[i]);
+      }
+
+      char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
+      char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
+      char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
+
+      for (i = 0; i < 3; i++) {
+        decoded.push_back(char_array_3[i]);
+      }
+      i = 0;
+    }
+  }
+
+  if (i) {
+    for (j = i; j < 4; j++) {
+      char_array_4[j] = 0;
+    }
+
+    for (j = 0; j < 4; j++) {
+      char_array_4[j] = base64_chars.find(char_array_4[j]);
+    }
+
+    char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
+    char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
+    char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
+
+    for (j = 0; j < i - 1; j++) {
+      decoded.push_back(char_array_3[j]);
+    }
+  }
+
+  return decoded;
+}
+
 using json = nlohmann::ordered_json;
 
 // loadModelInfo(path: string): object
@@ -115,6 +200,15 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
            static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::GetLoadedLoraAdapters>(
            "getLoadedLoraAdapters",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::InitMultimodal>(
+           "initMultimodal",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::IsMultimodalEnabled>(
+           "isMultimodalEnabled",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::ReleaseMultimodal>(
+           "releaseMultimodal",
            static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::Release>(
            "release", static_cast<napi_property_attributes>(napi_enumerable)),
@@ -448,7 +542,6 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
     Napi::TypeError::New(env, "Array expected").ThrowAsJavaScriptException();
   }
   auto messages = json_stringify(info[0].As<Napi::Array>());
-  printf("messages: %s\n", messages.c_str());
   auto chat_template = info[1].IsString() ? info[1].ToString().Utf8Value() : "";
 
   auto has_params = info.Length() >= 2;
@@ -543,6 +636,25 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
     for (size_t i = 0; i < stop_words_array.Length(); i++) {
       stop_words.push_back(stop_words_array.Get(i).ToString().Utf8Value());
     }
+  }
+
+  // Process image_paths parameter
+  std::vector<std::string> image_paths;
+  if (options.Has("image_paths")) {
+    if (options.Get("image_paths").IsArray()) {
+      auto image_paths_array = options.Get("image_paths").As<Napi::Array>();
+      for (size_t i = 0; i < image_paths_array.Length(); i++) {
+        image_paths.push_back(image_paths_array.Get(i).ToString().Utf8Value());
+      }
+    } else if (options.Get("image_paths").IsString()) {
+      image_paths.push_back(options.Get("image_paths").ToString().Utf8Value());
+    }
+  }
+
+  // Check if multimodal is enabled when image_paths are provided
+  if (!image_paths.empty() && !(_has_multimodal && _mtmd_ctx != nullptr)) {
+    Napi::Error::New(env, "Multimodal support must be enabled via initMultimodal to use image_paths").ThrowAsJavaScriptException();
+    return env.Undefined();
   }
 
   int32_t chat_format = get_option<int32_t>(options, "chat_format", 0);
@@ -727,17 +839,17 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   }
 
   auto *worker =
-      new LlamaCompletionWorker(info, _sess, callback, params, stop_words, chat_format);
+      new LlamaCompletionWorker(info, _sess, callback, params, stop_words, chat_format, image_paths);
   worker->Queue();
   _wip = worker;
-  worker->onComplete([this]() { _wip = nullptr; });
+  worker->OnComplete([this]() { _wip = nullptr; });
   return worker->Promise();
 }
 
 // stopCompletion(): void
 void LlamaContext::StopCompletion(const Napi::CallbackInfo &info) {
   if (_wip != nullptr) {
-    _wip->Stop();
+    _wip->SetStop();
   }
 }
 
@@ -890,14 +1002,110 @@ Napi::Value LlamaContext::GetLoadedLoraAdapters(const Napi::CallbackInfo &info) 
 Napi::Value LlamaContext::Release(const Napi::CallbackInfo &info) {
   auto env = info.Env();
   if (_wip != nullptr) {
-    _wip->Stop();
+    _wip->SetStop();
   }
   if (_sess == nullptr) {
     auto promise = Napi::Promise::Deferred(env);
     promise.Resolve(env.Undefined());
     return promise.Promise();
   }
+  
+  // Clear the mtmd context reference in the session
+  if (_mtmd_ctx != nullptr) {
+    _sess->set_mtmd_ctx(nullptr);
+  }
+  
   auto *worker = new DisposeWorker(info, std::move(_sess));
   worker->Queue();
   return worker->Promise();
+}
+
+LlamaContext::~LlamaContext() {
+  if (_mtmd_ctx != nullptr) {
+    mtmd_free(_mtmd_ctx);
+    _mtmd_ctx = nullptr;
+    _has_multimodal = false;
+  }
+}
+
+// initMultimodal(options: { path: string, use_gpu?: boolean }): boolean
+Napi::Value LlamaContext::InitMultimodal(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+
+  if (info.Length() < 1 || !info[0].IsObject()) {
+    Napi::TypeError::New(env, "Object expected for mmproj path").ThrowAsJavaScriptException();
+  }
+
+  auto options = info[0].As<Napi::Object>();
+  auto mmproj_path = options.Get("path").ToString().Utf8Value();
+  auto use_gpu = options.Get("use_gpu").ToBoolean().Value();
+
+  if (mmproj_path.empty()) {
+    Napi::TypeError::New(env, "mmproj path is required").ThrowAsJavaScriptException();
+  }
+
+  console_log(env, "Initializing multimodal with mmproj path: " + mmproj_path);
+
+  auto model = _sess->model();
+  auto ctx = _sess->context();
+  if (model == nullptr) {
+    Napi::Error::New(env, "Model not loaded").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(env, false);
+  }
+
+  if (_mtmd_ctx != nullptr) {
+    mtmd_free(_mtmd_ctx);
+    _mtmd_ctx = nullptr;
+    _has_multimodal = false;
+  }
+
+  // Initialize mtmd context
+  mtmd_context_params mtmd_params = mtmd_context_params_default();
+  mtmd_params.use_gpu = use_gpu;
+  mtmd_params.print_timings = false;
+  mtmd_params.n_threads = _sess->params().cpuparams.n_threads;
+  mtmd_params.verbosity = (ggml_log_level)GGML_LOG_LEVEL_INFO;
+
+  console_log(env, format_string("Initializing mtmd context with threads=%d, use_gpu=%d", 
+                   mtmd_params.n_threads, mtmd_params.use_gpu ? 1 : 0));
+
+  _mtmd_ctx = mtmd_init_from_file(mmproj_path.c_str(), model, mtmd_params);
+  if (_mtmd_ctx == nullptr) {
+    Napi::Error::New(env, "Failed to initialize multimodal context").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(env, false);
+  }
+
+  _has_multimodal = true;
+  
+  // Share the mtmd context with the session
+  _sess->set_mtmd_ctx(_mtmd_ctx);
+
+  // Check if the model uses M-RoPE or non-causal attention
+  bool uses_mrope = mtmd_decode_use_mrope(_mtmd_ctx);
+  bool uses_non_causal = mtmd_decode_use_non_causal(_mtmd_ctx);
+  console_log(env, format_string("Model multimodal properties: uses_mrope=%d, uses_non_causal=%d",
+             uses_mrope ? 1 : 0, uses_non_causal ? 1 : 0));
+
+  console_log(env, "Multimodal context initialized successfully with mmproj: " + mmproj_path);
+  return Napi::Boolean::New(env, true);
+}
+
+// isMultimodalEnabled(): boolean
+Napi::Value LlamaContext::IsMultimodalEnabled(const Napi::CallbackInfo &info) {
+  return Napi::Boolean::New(info.Env(), _has_multimodal && _mtmd_ctx != nullptr);
+}
+
+// releaseMultimodal(): void
+void LlamaContext::ReleaseMultimodal(const Napi::CallbackInfo &info) {
+  if (_mtmd_ctx != nullptr) {
+    // Clear the mtmd context reference in the session
+    if (_sess != nullptr) {
+      _sess->set_mtmd_ctx(nullptr);
+    }
+    
+    // Free the mtmd context
+    mtmd_free(_mtmd_ctx);
+    _mtmd_ctx = nullptr;
+    _has_multimodal = false;
+  }
 }

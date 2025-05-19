@@ -4,6 +4,7 @@
 #include "common/sampling.h"
 #include "chat.h"
 #include "llama.h"
+#include "tools/mtmd/mtmd.h"
 #include <memory>
 #include <mutex>
 #include <napi.h>
@@ -82,10 +83,23 @@ public:
   inline const common_params &params() const { return params_; }
 
   inline std::mutex &get_mutex() { return mutex; }
+  
+  // Getter for the multimodal context
+  inline const mtmd_context* get_mtmd_ctx() const { 
+    return _mtmd_ctx; 
+  }
+  
+  // Setter for the multimodal context
+  inline void set_mtmd_ctx(mtmd_context* ctx) {
+    _mtmd_ctx = ctx;
+  }
 
   void dispose() {
     std::lock_guard<std::mutex> lock(mutex);
     tokens_.clear();
+    
+    // mtmd_ctx is owned by LlamaContext, so we don't free it here
+    _mtmd_ctx = nullptr;
   }
 
 private:
@@ -93,6 +107,7 @@ private:
   const common_params params_;
   std::vector<llama_token> tokens_{};
   std::mutex mutex;
+  mtmd_context* _mtmd_ctx = nullptr;
 };
 
 typedef std::shared_ptr<LlamaSession> LlamaSessionPtr;

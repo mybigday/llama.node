@@ -1,0 +1,103 @@
+#!/usr/bin/env node
+
+const fs = require('fs')
+const path = require('path')
+const https = require('https')
+const { createWriteStream } = require('fs')
+const { mkdir } = require('fs/promises')
+
+// Ensure test directory exists
+const ensureDir = async (dir) => {
+  try {
+    await mkdir(dir, { recursive: true })
+  } catch (error) {
+    if (error.code !== 'EEXIST') throw error
+  }
+}
+
+// Download file function
+const downloadFile = (url, outputPath) => {
+  return new Promise((resolve, reject) => {
+    const requestUrl = (currentUrl) => {
+      https
+        .get(currentUrl, (response) => {
+          // Handle redirects (301, 302, 303, 307, 308)
+          if ([301, 302, 303, 307, 308].includes(response.statusCode)) {
+            const location = response.headers.location
+            if (!location) {
+              reject(
+                new Error(
+                  `Redirect (${response.statusCode}) without Location header`,
+                ),
+              )
+              return
+            }
+            console.log(`Following redirect to: ${location}`)
+            requestUrl(location)
+            return
+          }
+
+          if (response.statusCode !== 200) {
+            reject(new Error(`Failed to download: ${response.statusCode}`))
+            return
+          }
+
+          const file = createWriteStream(outputPath)
+          response.pipe(file)
+
+          file.on('finish', () => {
+            file.close()
+            console.log(`Downloaded: ${path.basename(outputPath)}`)
+            resolve()
+          })
+
+          file.on('error', (err) => {
+            fs.unlink(outputPath, () => {})
+            reject(err)
+          })
+        })
+        .on('error', (err) => {
+          reject(err)
+        })
+    }
+
+    requestUrl(url)
+  })
+}
+
+// Main function
+async function main() {
+  const testDir = path.join(__dirname, '../test')
+  await ensureDir(testDir)
+
+  const files = [
+    {
+      path: path.join(testDir, 'SmolVLM-256M-Instruct-Q8_0.gguf'),
+      url: 'https://huggingface.co/ggml-org/SmolVLM-256M-Instruct-GGUF/resolve/main/SmolVLM-256M-Instruct-Q8_0.gguf?download=true',
+    },
+    {
+      path: path.join(testDir, 'mmproj-SmolVLM-256M-Instruct-Q8_0.gguf'),
+      url: 'https://huggingface.co/ggml-org/SmolVLM-256M-Instruct-GGUF/resolve/main/mmproj-SmolVLM-256M-Instruct-Q8_0.gguf?download=true',
+    },
+  ]
+
+  for (const file of files) {
+    if (!fs.existsSync(file.path)) {
+      console.log(`Downloading ${path.basename(file.path)}...`)
+      try {
+        await downloadFile(file.url, file.path)
+      } catch (error) {
+        console.error(
+          `Error downloading ${path.basename(file.path)}:`,
+          error.message,
+        )
+        process.exit(1)
+      }
+    } else {
+      console.log(`File already exists: ${path.basename(file.path)}`)
+    }
+  }
+  process.exit(0)
+}
+
+main().catch(console.error)
