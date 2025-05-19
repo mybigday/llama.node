@@ -207,6 +207,9 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
        InstanceMethod<&LlamaContext::IsMultimodalEnabled>(
            "isMultimodalEnabled",
            static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::ReleaseMultimodal>(
+           "releaseMultimodal",
+           static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::Release>(
            "release", static_cast<napi_property_attributes>(napi_enumerable)),
        StaticMethod<&LlamaContext::ModelInfo>(
@@ -1026,14 +1029,23 @@ LlamaContext::~LlamaContext() {
   }
 }
 
-// initMultimodal(mmproj_path: string): boolean
+// initMultimodal(options: { path: string, use_gpu?: boolean }): boolean
 Napi::Value LlamaContext::InitMultimodal(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
-  if (info.Length() < 1 || !info[0].IsString()) {
-    Napi::TypeError::New(env, "String expected for mmproj path").ThrowAsJavaScriptException();
+
+  if (info.Length() < 1 || !info[0].IsObject()) {
+    Napi::TypeError::New(env, "Object expected for mmproj path").ThrowAsJavaScriptException();
   }
 
-  console_log(env, "Initializing multimodal with mmproj path: " + info[0].ToString().Utf8Value());
+  auto options = info[0].As<Napi::Object>();
+  auto mmproj_path = options.Get("path").ToString().Utf8Value();
+  auto use_gpu = options.Get("use_gpu").ToBoolean().Value();
+
+  if (mmproj_path.empty()) {
+    Napi::TypeError::New(env, "mmproj path is required").ThrowAsJavaScriptException();
+  }
+
+  console_log(env, "Initializing multimodal with mmproj path: " + mmproj_path);
 
   auto model = _sess->model();
   auto ctx = _sess->context();
@@ -1050,7 +1062,7 @@ Napi::Value LlamaContext::InitMultimodal(const Napi::CallbackInfo &info) {
 
   // Initialize mtmd context
   mtmd_context_params mtmd_params = mtmd_context_params_default();
-  mtmd_params.use_gpu = get_option<bool>(info[1].IsObject() ? info[1].As<Napi::Object>() : Napi::Object::New(env), "use_gpu", true);
+  mtmd_params.use_gpu = use_gpu;
   mtmd_params.print_timings = false;
   mtmd_params.n_threads = _sess->params().cpuparams.n_threads;
   mtmd_params.verbosity = (ggml_log_level)GGML_LOG_LEVEL_INFO;
@@ -1058,7 +1070,6 @@ Napi::Value LlamaContext::InitMultimodal(const Napi::CallbackInfo &info) {
   console_log(env, format_string("Initializing mtmd context with threads=%d, use_gpu=%d", 
                    mtmd_params.n_threads, mtmd_params.use_gpu ? 1 : 0));
 
-  std::string mmproj_path = info[0].ToString().Utf8Value();
   _mtmd_ctx = mtmd_init_from_file(mmproj_path.c_str(), model, mtmd_params);
   if (_mtmd_ctx == nullptr) {
     Napi::Error::New(env, "Failed to initialize multimodal context").ThrowAsJavaScriptException();
@@ -1083,4 +1094,19 @@ Napi::Value LlamaContext::InitMultimodal(const Napi::CallbackInfo &info) {
 // isMultimodalEnabled(): boolean
 Napi::Value LlamaContext::IsMultimodalEnabled(const Napi::CallbackInfo &info) {
   return Napi::Boolean::New(info.Env(), _has_multimodal && _mtmd_ctx != nullptr);
+}
+
+// releaseMultimodal(): void
+void LlamaContext::ReleaseMultimodal(const Napi::CallbackInfo &info) {
+  if (_mtmd_ctx != nullptr) {
+    // Clear the mtmd context reference in the session
+    if (_sess != nullptr) {
+      _sess->set_mtmd_ctx(nullptr);
+    }
+    
+    // Free the mtmd context
+    mtmd_free(_mtmd_ctx);
+    _mtmd_ctx = nullptr;
+    _has_multimodal = false;
+  }
 }

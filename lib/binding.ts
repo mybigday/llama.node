@@ -46,10 +46,6 @@ export type LlamaModelOptions = {
   lora?: string
   lora_scaled?: number
   lora_list?: { path: string; scaled: number }[]
-  /** Path to the multimodal projector (mmproj) file for image processing */
-  mmproj?: string
-  /** Enable GPU acceleration for multimodal processing (default: true) */
-  mmproj_use_gpu?: boolean
 }
 
 export type CompletionResponseFormat = {
@@ -97,7 +93,7 @@ export type LlamaCompletionOptions = {
   grammar_lazy?: boolean
   grammar_triggers?: { type: number; word: string; at_start: boolean }[]
   preserved_tokens?: string[]
-  /** 
+  /**
    * Path(s) to image file(s) to process before generating text.
    * When provided, the image(s) will be processed and added to the context.
    * Requires multimodal support to be enabled via initMultimodal.
@@ -165,21 +161,30 @@ export interface LlamaContext {
   applyLoraAdapters(adapters: { path: string; scaled: number }[]): void
   removeLoraAdapters(adapters: { path: string }[]): void
   getLoadedLoraAdapters(): { path: string; scaled: number }[]
-  /** 
+  /**
    * Initialize multimodal support with a mmproj file
    * @param mmproj_path Path to the multimodal projector file
    * @returns Promise resolving to true if initialization was successful
    */
-  initMultimodal(mmproj_path: string): Promise<boolean>
-  
+  initMultimodal(options: { path: string; use_gpu?: boolean }): Promise<boolean>
+
   /**
    * Check if multimodal support is enabled
    * @returns Promise resolving to true if multimodal is enabled
    */
   isMultimodalEnabled(): Promise<boolean>
+
+  /**
+   * Release multimodal support
+   */
+  releaseMultimodal(): Promise<void>
+
   // static
   loadModelInfo(path: string, skip: string[]): Promise<Object>
-  toggleNativeLog(enable: boolean, callback: (level: string, text: string) => void): void
+  toggleNativeLog(
+    enable: boolean,
+    callback: (level: string, text: string) => void,
+  ): void
 }
 
 export interface Module {

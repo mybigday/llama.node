@@ -16,7 +16,7 @@ test('multimodal with images', async () => {
     './mmproj-SmolVLM-256M-Instruct-Q8_0.gguf',
   )
   // const mmproj_path = path.resolve(__dirname, './ggml-org_gemma-3-4b-it-GGUF_mmproj-model-f16.gguf')
-  await model.initMultimodal(mmproj_path)
+  await model.initMultimodal({ path: mmproj_path, use_gpu: false })
 
   // Test with multiple images
   const result = await model.completion({
@@ -39,6 +39,10 @@ test('multimodal with images', async () => {
     tokens_evaluated: expect.any(Number),
     text: " A newspaper with the headline 'men walk on moon' has pictures of astronauts and a flag.<end_of_utterance>",
   })
+
+  expect(await model.isMultimodalEnabled()).toBe(true)
+  await model.releaseMultimodal()
+  expect(await model.isMultimodalEnabled()).toBe(false)
 
   await model.release()
 })

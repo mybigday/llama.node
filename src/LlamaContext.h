@@ -31,6 +31,7 @@ private:
   // Multimodal methods
   Napi::Value InitMultimodal(const Napi::CallbackInfo &info);
   Napi::Value IsMultimodalEnabled(const Napi::CallbackInfo &info);
+  void ReleaseMultimodal(const Napi::CallbackInfo &info);
 
   std::string _info;
   Napi::Object _meta;
