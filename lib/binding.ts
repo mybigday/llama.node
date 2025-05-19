@@ -1,8 +1,17 @@
 import * as path from 'path'
 
+
+export type MessagePart = {
+  type: string,
+  text?: string,
+  image_url?: {
+    url?: string
+  }
+}
+
 export type ChatMessage = {
   role: string
-  content: string
+  content?: string | MessagePart[]
 }
 
 export type LlamaModelOptions = {

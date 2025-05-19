@@ -542,7 +542,6 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
     Napi::TypeError::New(env, "Array expected").ThrowAsJavaScriptException();
   }
   auto messages = json_stringify(info[0].As<Napi::Array>());
-  printf("messages: %s\n", messages.c_str());
   auto chat_template = info[1].IsString() ? info[1].ToString().Utf8Value() : "";
 
   auto has_params = info.Length() >= 2;
