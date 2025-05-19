@@ -171,7 +171,7 @@ llama_pos processImage(
 
       // Create bitmap directly
       mtmd::bitmap bmp(mtmd_helper_bitmap_init_from_file(image_path.c_str()));
-        fprintf(stderr, "[DEBUG] Failed to load image\n");
+      if (!bmp.ptr) {
         bitmaps.entries.clear();
         return false;
       }

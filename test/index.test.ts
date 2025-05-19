@@ -21,7 +21,6 @@ test('basic completion', async () => {
     {
       prompt: 'My name is Merve and my favorite',
       temperature: 0,
-      max_length: 100,
       n_predict: 10,
       seed: 0,
     },
