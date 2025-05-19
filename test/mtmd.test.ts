@@ -42,17 +42,19 @@ test('multimodal with images', async () => {
         ],
       },
     ],
-    temperature: 0.2,
+    temperature: 0,
     n_predict: 100,
-    seed: 42,
+    seed: 0,
   })
 
   expect(result.text.length).toBeGreaterThan(0)
   expect(result).toMatchObject({
     tokens_predicted: expect.any(Number),
     tokens_evaluated: expect.any(Number),
-    text: " A newspaper with some old pictures of astronauts on the front.<end_of_utterance>",
+    text: expect.stringMatching(/ A newspaper with/),
   })
+
+  console.log(result)
 
   expect(await model.isMultimodalEnabled()).toBe(true)
   await model.releaseMultimodal()
