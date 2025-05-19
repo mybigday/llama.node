@@ -94,7 +94,6 @@ llama_pos processImage(
   std::vector<llama_token>& text_tokens
 ) {
   if (mtmd_ctx == nullptr) {
-    fprintf(stderr, "[DEBUG] Multimodal context not initialized\n");
     return false;
   }
 
@@ -104,9 +103,6 @@ llama_pos processImage(
   if (full_prompt.find("<__image__>") == std::string::npos) {
     full_prompt += " <__image__>";
   }
-
-  fprintf(stdout, "[DEBUG] Processing message with role=user, content=%s\n", full_prompt.c_str());
-  fprintf(stdout, "[DEBUG] Processing %zu images with prompt: %s\n", image_paths.size(), full_prompt.c_str());
 
   // Prepare bitmaps array for all images
   mtmd::bitmaps bitmaps;
@@ -118,13 +114,11 @@ llama_pos processImage(
 
     // Check if it's a base64 image
     if (image_path.compare(0, 11, "data:image/") == 0) {
-      fprintf(stdout, "[DEBUG] Detected base64 encoded image\n");
 
       // Parse base64 data
       std::vector<std::string> parts;
       size_t comma_pos = image_path.find(',');
       if (comma_pos == std::string::npos) {
-        fprintf(stderr, "[DEBUG] Invalid base64 image format, missing comma separator\n");
         bitmaps.entries.clear();
         return false;
       }
@@ -133,7 +127,6 @@ llama_pos processImage(
       std::string base64_data = image_path.substr(comma_pos + 1);
 
       if (header.find("base64") == std::string::npos) {
-        fprintf(stderr, "[DEBUG] Image must be base64 encoded\n");
         bitmaps.entries.clear();
         return false;
       }
@@ -142,12 +135,10 @@ llama_pos processImage(
       try {
         // Decode base64 to binary
         std::vector<uint8_t> image_data = base64_decode(base64_data);
-        fprintf(stdout, "[DEBUG] Base64 decoded, size: %zu bytes\n", image_data.size());
 
         // Load bitmap from memory buffer using direct initialization
         mtmd::bitmap bmp(mtmd_helper_bitmap_init_from_buf(image_data.data(), image_data.size()));
         if (!bmp.ptr) {
-          fprintf(stderr, "[DEBUG] Failed to load base64 image\n");
           bitmaps.entries.clear();
           return false;
         }
@@ -155,28 +146,19 @@ llama_pos processImage(
         // Calculate bitmap hash (for KV caching)
         std::string hash = fnv_hash(bmp.data(), bmp.nx()*bmp.ny()*3);
         bmp.set_id(hash.c_str());
-        fprintf(stdout, "[DEBUG] Bitmap hash: %s\n", hash.c_str());
         bitmaps.entries.push_back(std::move(bmp));
       } catch (const std::exception& e) {
-        fprintf(stderr, "[DEBUG] Failed to decode base64 image: %s\n", e.what());
         bitmaps.entries.clear();
         return false;
       }
     } else if (image_path.compare(0, 7, "http://") == 0 || image_path.compare(0, 8, "https://") == 0) {
       // HTTP URLs are not supported yet
-      fprintf(stderr, "[DEBUG] HTTP/HTTPS URLs are not supported yet: %s\n", image_path.c_str());
       bitmaps.entries.clear();
       return false;
     } else {
-      // Regular file path
-      fprintf(stdout, "[DEBUG] Loading image from file\n");
-
       // Check if file exists
       FILE* file = fopen(image_path.c_str(), "rb");
       if (file == nullptr) {
-        fprintf(stderr, "[DEBUG] File does not exist or cannot be opened: %s (errno: %d, %s)\n",
-                 image_path.c_str(), errno, strerror(errno));
-
         bitmaps.entries.clear();
         return false;
       }
@@ -185,12 +167,10 @@ llama_pos processImage(
       fseek(file, 0, SEEK_END);
       long file_size = ftell(file);
       fseek(file, 0, SEEK_SET);
-      fprintf(stdout, "[DEBUG] File exists and size is %ld bytes\n", file_size);
       fclose(file);
 
       // Create bitmap directly
       mtmd::bitmap bmp(mtmd_helper_bitmap_init_from_file(image_path.c_str()));
-      if (!bmp.ptr) {
         fprintf(stderr, "[DEBUG] Failed to load image\n");
         bitmaps.entries.clear();
         return false;
@@ -199,16 +179,12 @@ llama_pos processImage(
       // Calculate bitmap hash (for KV caching)
       std::string hash = fnv_hash(bmp.data(), bmp.nx()*bmp.ny()*3);
       bmp.set_id(hash.c_str());
-      fprintf(stdout, "[DEBUG] Bitmap hash: %s\n", hash.c_str());
       bitmaps.entries.push_back(std::move(bmp));
     }
   }
 
-  // Create input chunks
-  fprintf(stdout, "[DEBUG] Initializing input chunks\n");
   mtmd_input_chunks* chunks = mtmd_input_chunks_init();
   if (chunks == nullptr) {
-    fprintf(stderr, "[DEBUG] Failed to initialize input chunks\n");
     bitmaps.entries.clear();
     return false;
   }
@@ -233,7 +209,6 @@ llama_pos processImage(
   );
   
   if (res != 0) {
-    fprintf(stderr, "[DEBUG] Failed to tokenize images and text: %d\n", res);
     mtmd_input_chunks_free(chunks);
     bitmaps.entries.clear();
     return false;
@@ -263,7 +238,6 @@ llama_pos processImage(
     if (chunk_type == MTMD_INPUT_CHUNK_TYPE_TEXT) {
       size_t n_tokens;
       const llama_token* tokens = mtmd_input_chunk_get_tokens_text(chunk, &n_tokens);
-      fprintf(stdout, "[DEBUG] Chunk %zu: type=TEXT, n_tokens=%zu\n", i, n_tokens);
 
       // Add text tokens
       text_tokens.insert(text_tokens.end(), tokens, tokens + n_tokens);
@@ -273,14 +247,9 @@ llama_pos processImage(
       const mtmd_image_tokens* img_tokens = mtmd_input_chunk_get_tokens_image(chunk);
       size_t n_tokens = mtmd_image_tokens_get_n_tokens(img_tokens);
       size_t n_pos = mtmd_image_tokens_get_n_pos(img_tokens);
-      fprintf(stdout, "[DEBUG] Chunk %zu: type=IMAGE, n_tokens=%zu, n_pos=%zu\n",
-               i, n_tokens, n_pos);
 
-      // For image tokens, we need to create placeholder tokens
-      // These won't be used for decoding, but they ensure size matches n_past
       for (size_t j = 0; j < n_pos; j++) {
-        // Use a special token ID that won't be confused with real tokens
-        all_tokens.push_back(LLAMA_TOKEN_NULL); // Placeholder token
+        all_tokens.push_back(LLAMA_TOKEN_NULL);
       }
       total_token_count += n_pos;
     }
@@ -288,13 +257,7 @@ llama_pos processImage(
 
   llama_pos n_past = common_part(*sess->tokens_ptr(), all_tokens);
 
-  fprintf(stdout, "[DEBUG] n_past: %d\n", n_past);
-
   llama_pos new_n_past = n_past;
-
-  // Evaluate the chunks in the model's context
-  // This is the critical step that makes the model aware of the image
-  fprintf(stdout, "[DEBUG] Evaluating chunks: n_past=%d\n", new_n_past);
 
   for (size_t i = 0; i < chunk_pos.size(); i++) {
     fprintf(stdout, "[DEBUG] Evaluating chunk %zu: n_past=%d, chunk_pos=%zu\n", i, n_past, chunk_pos[i]);
@@ -317,7 +280,6 @@ llama_pos processImage(
       );
       
       if (res != 0) {
-        fprintf(stderr, "[DEBUG] Failed to evaluate chunks\n");
         mtmd_input_chunks_free(chunks);
         bitmaps.entries.clear();
         return false;
@@ -341,7 +303,6 @@ llama_pos processImage(
   sess->set_tokens(std::move(all_tokens));
 
   // Clean up image resources
-  fprintf(stdout, "[DEBUG] Cleaning up resources\n");
   mtmd_input_chunks_free(chunks);
   bitmaps.entries.clear();
   return n_past;
@@ -416,8 +377,6 @@ void LlamaCompletionWorker::Execute() {
     const auto* mtmd_ctx = _sess->get_mtmd_ctx();
     
     if (mtmd_ctx != nullptr) {
-      fprintf(stdout, "[DEBUG] Processing %zu images\n", _image_paths.size());
-      
       // Process the images and get the tokens
       n_cur = processImage(
         mtmd_ctx,
@@ -429,7 +388,6 @@ void LlamaCompletionWorker::Execute() {
       );
       
       if (n_cur <= 0) {
-        fprintf(stderr, "[DEBUG] Failed to process images\n");
         SetError("Failed to process images");
         _sess->get_mutex().unlock();
         return;
@@ -445,7 +403,6 @@ void LlamaCompletionWorker::Execute() {
       n_input -= n_cur;
       llama_kv_self_seq_rm(ctx, 0, n_cur, -1);
     } else {
-      fprintf(stderr, "[DEBUG] Multimodal context not initialized\n");
       SetError("Multimodal context not initialized");
       _sess->get_mutex().unlock();
       return;
@@ -505,9 +462,6 @@ void LlamaCompletionWorker::Execute() {
         break;
       }
     }
-    
-    // Log the current token generation state
-    fprintf(stdout, "[DEBUG] Sampling next token: n_cur=%zu\n", n_cur);
     
     // sample the next token
     const llama_token new_token_id =
