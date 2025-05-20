@@ -30,6 +30,10 @@ else
     exit 0
   fi
 
+  if [ $(uname -m) != "aarch64" ]; then
+    EXTRA_CMAKE_FLAGS="--CDCMAKE_TOOLCHAIN_FILE=$(realpath 'cmake/aarch64-clang-toolchain.cmake')"
+  fi
+
   yarn clean && yarn build-native -C -a aarch64 --CDGGML_NATIVE=OFF --CDVARIANT=${VARIANT_PREFIX%"-"} $EXTRA_CMAKE_FLAGS
 
   if [ -z "$VARIANT_PREFIX" ]; then
