@@ -47,6 +47,10 @@ message(STATUS "Platform: ${PLATFORM}")
 message(STATUS "Architecture: ${ARCH}")
 message(STATUS "PLATFORM_BINARY_DIR: ${PLATFORM_BINARY_DIR}")
 
+if (PLATFORM STREQUAL "linux")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++ -static-libgcc")
+endif()
+
 # set strip flags
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   if(UNIX OR MINGW)
