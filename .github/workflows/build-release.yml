@@ -65,8 +65,8 @@ jobs:
     runs-on: ubuntu-22.04-arm
     container: nvidia/cuda:12.6.2-devel-ubuntu22.04
     steps:
-      - name: Upgrade git
-        run: apt-get update && apt-get install -y git
+      - name: Install git and curl
+        run: apt-get update && apt-get install -y git curl
       - uses: actions/checkout@v4
         with:
           submodules: "true"
@@ -85,7 +85,6 @@ jobs:
           node-version: 20
       - name: Setup obggcc toolchain
         run: |
-          sudo apt-get install -y curl
           curl -sL https://github.com/AmanoTeam/obggcc/releases/download/2.4/aarch64-unknown-linux-gnu.tar.xz | tar -xJ
           export PATH="$PWD/obggcc/bin:$PATH"
           echo "PATH=$PATH" >> $GITHUB_ENV
