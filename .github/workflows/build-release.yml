@@ -85,7 +85,7 @@ jobs:
           node-version: 20
       - name: Setup obggcc toolchain
         run: |
-          curl -sL https://github.com/AmanoTeam/obggcc/releases/download/2.4/aarch64-unknown-linux-gnu.tar.xz | tar -xJ
+          wget -qO- https://github.com/AmanoTeam/obggcc/releases/download/2.4/aarch64-unknown-linux-gnu.tar.xz | tar -xJ
           export PATH="$PWD/obggcc/bin:$PATH"
           echo "PATH=$PATH" >> $GITHUB_ENV
       - name: Install yarn
