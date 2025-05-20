@@ -48,7 +48,13 @@ message(STATUS "Architecture: ${ARCH}")
 message(STATUS "PLATFORM_BINARY_DIR: ${PLATFORM_BINARY_DIR}")
 
 if (PLATFORM STREQUAL "linux")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++ -static-libgcc")
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -stdlib=libc++")
+  else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++ -static-libgcc")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -static-libstdc++ -static-libgcc")
+  endif()
 endif()
 
 # set strip flags
