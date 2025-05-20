@@ -80,6 +80,14 @@ public:
     tokens_ = std::move(tokens);
   }
 
+  inline std::vector<std::string> *mtmd_bitmap_past_hashes_ptr() {
+    return &mtmd_bitmap_past_hashes_;
+  }
+
+  inline void set_mtmd_bitmap_past_hashes(std::vector<std::string> hashes) {
+    mtmd_bitmap_past_hashes_ = std::move(hashes);
+  }
+
   inline const common_params &params() const { return params_; }
 
   inline std::mutex &get_mutex() { return mutex; }
@@ -106,6 +114,7 @@ private:
   common_init_result llama_init_;
   const common_params params_;
   std::vector<llama_token> tokens_{};
+  std::vector<std::string> mtmd_bitmap_past_hashes_{};
   std::mutex mutex;
   mtmd_context* _mtmd_ctx = nullptr;
 };

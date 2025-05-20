@@ -107,6 +107,8 @@ llama_pos processImage(
   // Prepare bitmaps array for all images
   mtmd::bitmaps bitmaps;
 
+  std::vector<std::string> bitmap_hashes;
+
   // Load all images
   for (const auto& image_path : image_paths) {
     fprintf(stdout, "[DEBUG] Loading image: %s\n",
@@ -147,6 +149,7 @@ llama_pos processImage(
         std::string hash = fnv_hash(bmp.data(), bmp.nx()*bmp.ny()*3);
         bmp.set_id(hash.c_str());
         bitmaps.entries.push_back(std::move(bmp));
+        bitmap_hashes.push_back(hash.c_str());
       } catch (const std::exception& e) {
         bitmaps.entries.clear();
         return false;
@@ -180,6 +183,7 @@ llama_pos processImage(
       std::string hash = fnv_hash(bmp.data(), bmp.nx()*bmp.ny()*3);
       bmp.set_id(hash.c_str());
       bitmaps.entries.push_back(std::move(bmp));
+      bitmap_hashes.push_back(hash.c_str());
     }
   }
 
@@ -229,6 +233,7 @@ llama_pos processImage(
 
   // chunk pos
   std::vector<size_t> chunk_pos;
+  std::vector<size_t> chunk_pos_images;
   for (size_t i = 0; i < num_chunks; i++) {
     chunk_pos.push_back(total_token_count);
 
@@ -244,6 +249,8 @@ llama_pos processImage(
       all_tokens.insert(all_tokens.end(), tokens, tokens + n_tokens);
       total_token_count += n_tokens;
     } else if (chunk_type == MTMD_INPUT_CHUNK_TYPE_IMAGE) {
+      chunk_pos_images.push_back(total_token_count);
+
       const mtmd_image_tokens* img_tokens = mtmd_input_chunk_get_tokens_image(chunk);
       size_t n_tokens = mtmd_image_tokens_get_n_tokens(img_tokens);
       size_t n_pos = mtmd_image_tokens_get_n_pos(img_tokens);
@@ -258,6 +265,28 @@ llama_pos processImage(
   llama_pos n_past = common_part(*sess->tokens_ptr(), all_tokens);
 
   llama_pos new_n_past = n_past;
+
+  // Compare bitmap hashes, if they are not the same, backtrack n_past to the position of the first mismatch
+  auto mtmd_bitmap_past_hashes = sess->mtmd_bitmap_past_hashes_ptr();
+  if (mtmd_bitmap_past_hashes->size() > 0) {
+    for (size_t i = 0; i < bitmap_hashes.size(); i++) {
+      auto pos = chunk_pos_images[i];
+      if (n_past < pos) {
+        break;
+      }
+      if (i >= mtmd_bitmap_past_hashes->size()) {
+        break;
+      }
+      if (bitmap_hashes[i] != (*mtmd_bitmap_past_hashes)[i]) {
+        n_past = chunk_pos_images[i];
+        new_n_past = n_past;
+        break;
+      }
+    }
+  }
+
+  // Clear all KV cache entries after position n_past
+  llama_kv_self_seq_rm(ctx, 0, n_past, -1);
 
   for (size_t i = 0; i < chunk_pos.size(); i++) {
     fprintf(stdout, "[DEBUG] Evaluating chunk %zu: n_past=%d, chunk_pos=%zu\n", i, n_past, chunk_pos[i]);
@@ -288,7 +317,7 @@ llama_pos processImage(
     }
   }
 
-  if (n_past == total_token_count) {
+  if (n_past == total_token_count && n_past > 0 && all_tokens[n_past - 1] != LLAMA_TOKEN_NULL) {
     // we have to evaluate at least 1 token to generate logits.
     n_past--;
   }
@@ -301,6 +330,8 @@ llama_pos processImage(
   }
   // Set the tokens
   sess->set_tokens(std::move(all_tokens));
+
+  sess->set_mtmd_bitmap_past_hashes(bitmap_hashes);
 
   // Clean up image resources
   mtmd_input_chunks_free(chunks);
