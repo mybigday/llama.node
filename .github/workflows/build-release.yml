@@ -83,17 +83,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Setup obggcc toolchain
-        run: |
-          curl -sL https://github.com/AmanoTeam/obggcc/releases/download/2.4/aarch64-unknown-linux-gnu.tar.xz | tar -xJ
-          export PATH="$PWD/obggcc/bin:$PATH"
-          echo "PATH=$PATH" >> $GITHUB_ENV
       - name: Install yarn
         run: npm install -g yarn
       - name: Install dependencies
         run: yarn install
       - name: Prepare & build
         run: |
+          curl -sL https://github.com/AmanoTeam/obggcc/releases/download/2.4/aarch64-unknown-linux-gnu.tar.xz | tar -xJ
+          export PATH="$PWD/obggcc/bin:$PATH"
           bash ./scripts/prepare-linux.sh
           bash ./scripts/build-linux.sh
       - name: Upload build artifacts
