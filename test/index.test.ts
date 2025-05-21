@@ -230,6 +230,7 @@ test('toggleNativeLog', async () => {
     n_gpu_layers: 0,
   })
   await model.release()
+  await new Promise((resolve) => setTimeout(resolve, 10))
   listener.remove()
   expect(logs.length > 10).toBe(true)
   await toggleNativeLog(false)
