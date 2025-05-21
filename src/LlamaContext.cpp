@@ -12,6 +12,10 @@
 #include "SaveSessionWorker.h"
 #include "TokenizeWorker.h"
 
+#include <mutex>
+#include <queue>
+#include <atomic>
+
 // Helper function for formatted strings (for console logs)
 template<typename ... Args>
 static std::string format_string(const std::string& format, Args ... args) {
@@ -383,17 +387,60 @@ bool validateModelChatTemplate(const struct llama_model * model, const bool use_
   return common_chat_verify_template(tmpl, use_jinja);
 }
 
-static Napi::FunctionReference _log_callback;
+// Store log messages for processing
+struct LogMessage {
+  std::string level;
+  std::string text;
+};
+
+// Global variables for logging
+static Napi::ThreadSafeFunction g_tsfn;
+static std::atomic<bool> g_logging_enabled{false};
+static std::mutex g_mutex;
+static std::queue<LogMessage> g_message_queue;
+
+// Forward declaration of the cleanup function
+extern "C" void cleanup_logging();
 
 // toggleNativeLog(enable: boolean, callback: (log: string) => void): void
 void LlamaContext::ToggleNativeLog(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
   bool enable = info[0].ToBoolean().Value();
+  
   if (enable) {
-    _log_callback.Reset(info[1].As<Napi::Function>());
+    if (!info[1].IsFunction()) {
+      Napi::TypeError::New(env, "Callback function required").ThrowAsJavaScriptException();
+      return;
+    }
     
-    llama_log_set([](ggml_log_level level, const char * text, void * user_data) {
+    // First clean up existing thread-safe function if any
+    if (g_logging_enabled) {
+      g_tsfn.Release();
+      g_logging_enabled = false;
+    }
+    
+    // Create thread-safe function that can be called from any thread
+    g_tsfn = Napi::ThreadSafeFunction::New(
+      env,
+      info[1].As<Napi::Function>(),
+      "LLAMA Logger",
+      0,
+      1,
+      [](Napi::Env) {
+        // Finalizer callback - nothing needed here
+      }
+    );
+
+    g_logging_enabled = true;
+    
+    // Set up log callback
+    llama_log_set([](ggml_log_level level, const char* text, void* user_data) {
+      // First call the default logger
       llama_log_callback_default(level, text, user_data);
 
+      if (!g_logging_enabled) return;
+
+      // Determine log level string
       std::string level_str = "";
       if (level == GGML_LOG_LEVEL_ERROR) {
         level_str = "error";
@@ -402,24 +449,32 @@ void LlamaContext::ToggleNativeLog(const Napi::CallbackInfo &info) {
       } else if (level == GGML_LOG_LEVEL_WARN) {
         level_str = "warn";
       }
+      
+      // Create a heap-allocated copy of the data
+      auto* data = new LogMessage{level_str, text};
 
-      if (_log_callback.IsEmpty()) {
-        return;
-      }
-      try {
-        Napi::Env env = _log_callback.Env();
-        Napi::HandleScope scope(env);
-        _log_callback.Call({
-          Napi::String::New(env, level_str),
-          Napi::String::New(env, text)
+      // Queue callback to be executed on the JavaScript thread
+      auto status = g_tsfn.BlockingCall(data, [](Napi::Env env, Napi::Function jsCallback, LogMessage* data) {
+        // This code runs on the JavaScript thread
+        jsCallback.Call({
+          Napi::String::New(env, data->level),
+          Napi::String::New(env, data->text)
         });
-      } catch (const std::exception &e) {
-        // printf("Error calling log callback: %s\n", e.what());
+        delete data;
+      });
+
+      // If the call failed (e.g., runtime is shutting down), clean up the data
+      if (status != napi_ok) {
+        delete data;
       }
     }, nullptr);
   } else {
-    _log_callback.Reset();
-    llama_log_set(llama_log_callback_default, nullptr);
+    // Disable logging
+    if (g_logging_enabled) {
+      g_logging_enabled = false;
+      g_tsfn.Release();
+      llama_log_set(llama_log_callback_default, nullptr);
+    }
   }
 }
 
@@ -1004,6 +1059,10 @@ Napi::Value LlamaContext::Release(const Napi::CallbackInfo &info) {
   if (_wip != nullptr) {
     _wip->SetStop();
   }
+  
+  // Ensure logging is cleaned up
+  cleanup_logging();
+  
   if (_sess == nullptr) {
     auto promise = Napi::Promise::Deferred(env);
     promise.Resolve(env.Undefined());
@@ -1018,6 +1077,15 @@ Napi::Value LlamaContext::Release(const Napi::CallbackInfo &info) {
   auto *worker = new DisposeWorker(info, std::move(_sess));
   worker->Queue();
   return worker->Promise();
+}
+
+// Cleanup function for the logging system
+// This is exposed externally for module cleanup
+extern "C" void cleanup_logging() {
+  if (g_logging_enabled) {
+    g_logging_enabled = false;
+    g_tsfn.Release();
+  }
 }
 
 LlamaContext::~LlamaContext() {
