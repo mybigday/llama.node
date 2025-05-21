@@ -113,6 +113,8 @@ export type LlamaCompletionOptions = {
 
 export type LlamaCompletionResult = {
   text: string
+  reasoning_content?: string
+  content?: string
   tokens_predicted: number
   tokens_evaluated: number
   truncated: boolean

@@ -32,6 +32,7 @@ test('basic completion', async () => {
   expect(filterCompletionResult(result)).toMatchSnapshot()
   await waitForExpect(() => {
     expect(tokens).toBe(result.text)
+    expect(result.content).toBe(result.text)
   })
   await model.saveSession(path.resolve(__dirname, './tmp.sess'))
   await model.loadSession(path.resolve(__dirname, './tmp.sess'))

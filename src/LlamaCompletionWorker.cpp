@@ -551,16 +551,16 @@ void LlamaCompletionWorker::OnOK() {
              Napi::String::New(env, _result.text.c_str()));
 
   Napi::Array tool_calls = Napi::Array::New(Napi::AsyncWorker::Env());
-  std::string * reasoning_content = nullptr;
-  std::string * content = nullptr;
+  std::string reasoning_content = "";
+  std::string content;
   if (!_stop) {
     try {
       common_chat_msg message = common_chat_parse(_result.text, static_cast<common_chat_format>(_chat_format));
       if (!message.reasoning_content.empty()) {
-        reasoning_content = &message.reasoning_content;
+        reasoning_content = message.reasoning_content;
       }
       if (!message.content.empty()) {
-        content = &message.content;
+        content = message.content;
       }
       for (size_t i = 0; i < message.tool_calls.size(); i++) {
         const auto &tc = message.tool_calls[i];
@@ -582,11 +582,11 @@ void LlamaCompletionWorker::OnOK() {
   if (tool_calls.Length() > 0) {
     result.Set("tool_calls", tool_calls);
   }
-  if (reasoning_content) {
-    result.Set("reasoning_content", Napi::String::New(env, reasoning_content->c_str()));
+  if (!reasoning_content.empty()) {
+    result.Set("reasoning_content", Napi::String::New(env, reasoning_content.c_str()));
   }
-  if (content) {
-    result.Set("content", Napi::String::New(env, content->c_str()));
+  if (!content.empty()) {
+    result.Set("content", Napi::String::New(env, content.c_str()));
   }
 
   auto ctx = _sess->context();

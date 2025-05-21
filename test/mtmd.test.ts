@@ -48,6 +48,7 @@ test('multimodal with images', async () => {
   })
 
   expect(result.text.length).toBeGreaterThan(0)
+  expect(result.content).toBe(result.text)
   expect(result).toMatchObject({
     tokens_predicted: expect.any(Number),
     tokens_evaluated: expect.any(Number),
