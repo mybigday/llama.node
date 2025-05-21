@@ -1060,9 +1060,6 @@ Napi::Value LlamaContext::Release(const Napi::CallbackInfo &info) {
     _wip->SetStop();
   }
   
-  // Ensure logging is cleaned up
-  cleanup_logging();
-  
   if (_sess == nullptr) {
     auto promise = Napi::Promise::Deferred(env);
     promise.Resolve(env.Undefined());
