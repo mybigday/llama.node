@@ -17,11 +17,6 @@ void SaveSessionWorker::Execute() {
     tokens_to_save.resize(std::distance(tokens_to_save.begin(), null_token_iter));
   }
 
-  fprintf(stdout, "[DEBUG] tokens_to_save size=%zu\n", tokens_to_save.size());
-  for (auto token : tokens_to_save) {
-    fprintf(stdout, "[DEBUG] token=%d\n", token);
-  }
-
   if (!llama_state_save_file(_sess->context(), _path.c_str(), tokens_to_save.data(),
                              tokens_to_save.size())) {
     SetError("Failed to save session");
