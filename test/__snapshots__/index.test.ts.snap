@@ -4,6 +4,10 @@ exports[`basic completion 1`] = `
 {
   "content": "<removed>",
   "context_full": false,
+  "stopped_eos": false,
+  "stopped_limited": true,
+  "stopped_words": false,
+  "stopping_word": "",
   "text": " swochadoorter scientific WindowsCa occupiedrå alta",
   "timings": "Timings: (8) keys",
   "tokens_evaluated": 18,
@@ -58,6 +62,10 @@ exports[`completion with response_format: json_object 1`] = `
 {
   "content": "<removed>",
   "context_full": false,
+  "stopped_eos": false,
+  "stopped_limited": true,
+  "stopped_words": false,
+  "stopping_word": "",
   "text": "{"\` También player et",
   "timings": "Timings: (8) keys",
   "tokens_evaluated": 5,
@@ -70,6 +78,10 @@ exports[`completion with response_format: json_schema 1`] = `
 {
   "content": "<removed>",
   "context_full": false,
+  "stopped_eos": false,
+  "stopped_limited": true,
+  "stopped_words": false,
+  "stopping_word": "",
   "text": "{
 "name"",
   "timings": "Timings: (8) keys",
@@ -83,6 +95,10 @@ exports[`completion with tools 1`] = `
 {
   "content": "<removed>",
   "context_full": false,
+  "stopped_eos": false,
+  "stopped_limited": true,
+  "stopped_words": false,
+  "stopping_word": "",
   "text": "{"tool_call":{"na",
   "timings": "Timings: (8) keys",
   "tokens_evaluated": 328,
@@ -547,6 +563,10 @@ Hi<|im_end|>
 exports[`works fine with vocab_only: empty result 1`] = `
 {
   "context_full": false,
+  "stopped_eos": false,
+  "stopped_limited": true,
+  "stopped_words": false,
+  "stopping_word": "",
   "text": "",
   "timings": {
     "predicted_ms": 0,

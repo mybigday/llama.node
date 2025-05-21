@@ -57,5 +57,9 @@ private:
     bool truncated = false;
     bool context_full = false;
     std::string text;
+    bool stopped_eos = false;
+    bool stopped_words = false;
+    std::string stopping_word;
+    bool stopped_limited = false;
   } _result;
 };

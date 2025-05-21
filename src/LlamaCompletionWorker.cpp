@@ -507,6 +507,8 @@ void LlamaCompletionWorker::Execute() {
     _result.tokens_predicted += 1;
     n_input = 1;
     if (_has_callback) {
+      // TODO: When we got possible stop words (startsWith)
+      // we should avoid calling the callback, wait for the next token
       const char *c_token = strdup(token.c_str());
       _tsfn.BlockingCall(c_token, [](Napi::Env env, Napi::Function jsCallback,
                                      const char *value) {
@@ -518,6 +520,8 @@ void LlamaCompletionWorker::Execute() {
     }
     // is it an end of generation?
     if (llama_vocab_is_eog(vocab, new_token_id)) {
+      _result.stopped_eos = true;
+      // TODO: EOS token should be cut
       break;
     }
     // check for stop words
@@ -525,9 +529,15 @@ void LlamaCompletionWorker::Execute() {
       const size_t stop_pos =
           findStoppingStrings(_result.text, token.size(), _stop_words);
       if (stop_pos != std::string::npos) {
+        _result.stopped_words = true;
+        _result.stopping_word = _result.text.substr(stop_pos, token.size());
+        _result.text = _result.text.substr(0, stop_pos - 1);
         break;
       }
     }
+  }
+  if (!_result.stopped_eos && !_result.stopped_words) {
+    _result.stopped_limited = true;
   }
   const auto t_main_end = ggml_time_us();
   _sess->get_mutex().unlock();
@@ -549,6 +559,14 @@ void LlamaCompletionWorker::OnOK() {
              Napi::Boolean::New(env, _result.context_full));
   result.Set("text",
              Napi::String::New(env, _result.text.c_str()));
+  result.Set("stopped_eos",
+             Napi::Boolean::New(env, _result.stopped_eos));
+  result.Set("stopped_words",
+             Napi::Boolean::New(env, _result.stopped_words));
+  result.Set("stopping_word",
+             Napi::String::New(env, _result.stopping_word.c_str()));
+  result.Set("stopped_limited",
+             Napi::Boolean::New(env, _result.stopped_limited));
 
   Napi::Array tool_calls = Napi::Array::New(Napi::AsyncWorker::Env());
   std::string reasoning_content = "";
