@@ -93,7 +93,7 @@ llama_pos processImage(
   const std::vector<std::string>& image_paths
 ) {
   if (mtmd_ctx == nullptr) {
-    return false;
+    throw std::runtime_error("Multimodal context is not initialized");
   }
 
   // Multimodal path
@@ -129,7 +129,7 @@ llama_pos processImage(
 
       if (header.find("base64") == std::string::npos) {
         bitmaps.entries.clear();
-        return false;
+        throw std::runtime_error("Invalid base64 image");
       }
 
       // Decode base64
@@ -141,7 +141,7 @@ llama_pos processImage(
         mtmd::bitmap bmp(mtmd_helper_bitmap_init_from_buf(image_data.data(), image_data.size()));
         if (!bmp.ptr) {
           bitmaps.entries.clear();
-          return false;
+          throw std::runtime_error("Failed to decode base64 image");
         }
 
         // Calculate bitmap hash (for KV caching)
@@ -151,18 +151,18 @@ llama_pos processImage(
         bitmap_hashes.push_back(hash.c_str());
       } catch (const std::exception& e) {
         bitmaps.entries.clear();
-        return false;
+        throw std::runtime_error("Failed to decode base64 image");
       }
     } else if (image_path.compare(0, 7, "http://") == 0 || image_path.compare(0, 8, "https://") == 0) {
       // HTTP URLs are not supported yet
       bitmaps.entries.clear();
-      return false;
+      throw std::runtime_error("HTTP URLs are not supported yet");
     } else {
       // Check if file exists
       FILE* file = fopen(image_path.c_str(), "rb");
       if (file == nullptr) {
         bitmaps.entries.clear();
-        return false;
+        throw std::runtime_error("Failed to open image file");
       }
 
       // Get file size
@@ -175,7 +175,7 @@ llama_pos processImage(
       mtmd::bitmap bmp(mtmd_helper_bitmap_init_from_file(image_path.c_str()));
       if (!bmp.ptr) {
         bitmaps.entries.clear();
-        return false;
+        throw std::runtime_error("Failed to create bitmap from image file");
       }
 
       // Calculate bitmap hash (for KV caching)
@@ -189,7 +189,7 @@ llama_pos processImage(
   mtmd_input_chunks* chunks = mtmd_input_chunks_init();
   if (chunks == nullptr) {
     bitmaps.entries.clear();
-    return false;
+    throw std::runtime_error("Failed to initialize input chunks");
   }
 
   // Create input text
@@ -214,7 +214,7 @@ llama_pos processImage(
   if (res != 0) {
     mtmd_input_chunks_free(chunks);
     bitmaps.entries.clear();
-    return false;
+    throw std::runtime_error("Failed to tokenize text and images");
   }
 
   // Log chunk information
@@ -425,13 +425,19 @@ void LlamaCompletionWorker::Execute() {
     
     if (mtmd_ctx != nullptr) {
       // Process the images and get the tokens
-      n_cur = processImage(
-        ctx,
-        mtmd_ctx,
-        _sess,
-        _params,
-        _image_paths
-      );
+      try {
+        n_cur = processImage(
+          ctx,
+          mtmd_ctx,
+          _sess,
+          _params,
+          _image_paths
+        );
+      } catch (const std::exception& e) {
+        SetError(e.what());
+        _sess->get_mutex().unlock();
+        return;
+      }
       
       if (n_cur <= 0) {
         SetError("Failed to process images");
