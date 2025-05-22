@@ -4,8 +4,6 @@
 #include <atomic>
 #include <functional>
 #include <napi.h>
-#include "tools/mtmd/mtmd.h"
-#include "tools/mtmd/clip.h"
 
 struct CompletionResult {
   std::string text = "";
