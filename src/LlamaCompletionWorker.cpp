@@ -86,12 +86,11 @@ size_t common_part(const std::vector<llama_token> &a,
 
 // Process images and add them to the tokenized input
 llama_pos processImage(
-  const mtmd_context* mtmd_ctx,
   llama_context* ctx,
+  const mtmd_context* mtmd_ctx,
   LlamaSessionPtr sess,
-  const std::vector<std::string>& image_paths,
-  const common_params& params,
-  std::vector<llama_token>& text_tokens
+  const common_params& params,  
+  const std::vector<std::string>& image_paths
 ) {
   if (mtmd_ctx == nullptr) {
     return false;
@@ -222,9 +221,6 @@ llama_pos processImage(
   size_t num_chunks = mtmd_input_chunks_size(chunks);
   fprintf(stdout, "[DEBUG] Tokenization successful: num_chunks=%zu\n", num_chunks);
 
-  // Clear text_tokens before adding new tokens
-  text_tokens.clear();
-
   // Create a vector to store all tokens (both text and image)
   std::vector<llama_token> all_tokens;
 
@@ -244,8 +240,6 @@ llama_pos processImage(
       size_t n_tokens;
       const llama_token* tokens = mtmd_input_chunk_get_tokens_text(chunk, &n_tokens);
 
-      // Add text tokens
-      text_tokens.insert(text_tokens.end(), tokens, tokens + n_tokens);
       all_tokens.insert(all_tokens.end(), tokens, tokens + n_tokens);
       total_token_count += n_tokens;
     } else if (chunk_type == MTMD_INPUT_CHUNK_TYPE_IMAGE) {
@@ -425,8 +419,6 @@ void LlamaCompletionWorker::Execute() {
   LlamaCppSampling sampling{common_sampler_init(model, _params.sampling),
                             common_sampler_free};
 
-  std::vector<llama_token> prompt_tokens;
-
   // Process images if any are provided
   if (!_image_paths.empty()) {
     const auto* mtmd_ctx = _sess->get_mtmd_ctx();
@@ -434,12 +426,11 @@ void LlamaCompletionWorker::Execute() {
     if (mtmd_ctx != nullptr) {
       // Process the images and get the tokens
       n_cur = processImage(
-        mtmd_ctx,
         ctx,
+        mtmd_ctx,
         _sess,
-        _image_paths,
         _params,
-        prompt_tokens
+        _image_paths
       );
       
       if (n_cur <= 0) {
@@ -456,7 +447,6 @@ void LlamaCompletionWorker::Execute() {
         --n_cur;
       }
       n_input -= n_cur;
-      llama_kv_self_seq_rm(ctx, 0, n_cur, -1);
     } else {
       SetError("Multimodal context not initialized");
       _sess->get_mutex().unlock();
@@ -464,7 +454,7 @@ void LlamaCompletionWorker::Execute() {
     }
   } else {
     // Text-only path
-    prompt_tokens = ::common_tokenize(ctx, _params.prompt, add_bos);
+    std::vector<llama_token> prompt_tokens = ::common_tokenize(ctx, _params.prompt, add_bos);
     n_input = prompt_tokens.size();
     
     if (_sess->tokens_ptr()->size() > 0) {
