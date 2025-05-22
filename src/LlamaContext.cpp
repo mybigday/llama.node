@@ -79,18 +79,6 @@ Napi::Value LlamaContext::ModelInfo(const Napi::CallbackInfo& info) {
   return metadata;
 }
 
-std::vector<common_chat_msg> get_messages(Napi::Array messages) {
-  std::vector<common_chat_msg> chat;
-  for (size_t i = 0; i < messages.Length(); i++) {
-    auto message = messages.Get(i).As<Napi::Object>();
-    chat.push_back({
-      get_option<std::string>(message, "role", ""),
-      get_option<std::string>(message, "content", ""),
-    });
-  }
-  return std::move(chat);
-}
-
 void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
   Napi::Function func = DefineClass(
       env, "LlamaContext",
@@ -845,7 +833,14 @@ Napi::Value LlamaContext::Tokenize(const Napi::CallbackInfo &info) {
         .ThrowAsJavaScriptException();
   }
   auto text = info[0].ToString().Utf8Value();
-  auto *worker = new TokenizeWorker(info, _sess, text);
+  std::vector<std::string> image_paths;
+  if (info.Length() >= 2 && info[1].IsArray()) {
+    auto image_paths_array = info[1].As<Napi::Array>();
+    for (size_t i = 0; i < image_paths_array.Length(); i++) {
+      image_paths.push_back(image_paths_array.Get(i).ToString().Utf8Value());
+    }
+  }
+  auto *worker = new TokenizeWorker(info, _sess, text, image_paths);
   worker->Queue();
   return worker->Promise();
 }

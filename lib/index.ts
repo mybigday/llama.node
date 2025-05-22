@@ -60,6 +60,13 @@ const getJsonSchema = (responseFormat?: CompletionResponseFormat) => {
   return null
 }
 
+export type FormattedChatResult = {
+  type: 'jinja' | 'llama-chat'
+  prompt: string
+  has_image: boolean
+  image_paths?: Array<string>
+}
+
 class LlamaContextWrapper {
   ctx: any
 
@@ -133,7 +140,7 @@ class LlamaContextWrapper {
       parallel_tool_calls?: object
       tool_choice?: string
     },
-  ): object {
+  ): FormattedChatResult {
     const {
       messages: chat,
       has_image,
@@ -185,8 +192,8 @@ class LlamaContextWrapper {
     return this.ctx.stopCompletion()
   }
 
-  tokenize(text: string): Promise<TokenizeResult> {
-    return this.ctx.tokenize(text)
+  tokenize(text: string, { image_paths }: { image_paths?: string[] } = {}): Promise<TokenizeResult> {
+    return this.ctx.tokenize(text, image_paths)
   }
 
   detokenize(tokens: number[]): Promise<string> {

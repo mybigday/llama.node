@@ -137,6 +137,10 @@ export type LlamaCompletionToken = {
 
 export type TokenizeResult = {
   tokens: Int32Array
+  has_image: boolean
+  bitmap_hashes: string[]
+  chunk_pos: number[]
+  chunk_pos_images: number[]
 }
 
 export type EmbeddingResult = {
@@ -163,7 +167,7 @@ export interface LlamaContext {
     callback?: (token: LlamaCompletionToken) => void,
   ): Promise<LlamaCompletionResult>
   stopCompletion(): void
-  tokenize(text: string): Promise<TokenizeResult>
+  tokenize(text: string, image_paths?: string[]): Promise<TokenizeResult>
   detokenize(tokens: number[]): Promise<string>
   embedding(text: string): Promise<EmbeddingResult>
   saveSession(path: string): Promise<void>

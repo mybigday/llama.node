@@ -19,18 +19,18 @@ test('multimodal with images', async () => {
   // const mmproj_path = path.resolve(__dirname, './ggml-org_gemma-3-4b-it-GGUF_mmproj-model-f16.gguf')
   await model.initMultimodal({ path: mmproj_path, use_gpu: false })
 
-  // Test with multiple images
-  const result = await model.completion({
-    messages: [
+  const formatted = model.getFormattedChat(
+    [
       {
         role: 'system',
-        content: 'You are a helpful assistant that can answer questions and help with tasks.',
+        content:
+          'You are a helpful assistant that can answer questions and help with tasks.',
       },
       {
         role: 'user',
         content: [
           {
-            type: 'text', 
+            type: 'text',
             text: 'What is the content of this image?',
           },
           {
@@ -42,6 +42,21 @@ test('multimodal with images', async () => {
         ],
       },
     ],
+    undefined,
+    { jinja: false },
+  )
+
+  expect(
+    await model.tokenize(formatted.prompt, {
+      image_paths: formatted.image_paths,
+    }),
+  ).toMatchSnapshot()
+
+  expect(formatted).toMatchSnapshot()
+
+  // Test with multiple images
+  const result = await model.completion({
+    ...formatted,
     temperature: 0,
     n_predict: 100,
     seed: 0,

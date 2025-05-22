@@ -206,29 +206,29 @@ static std::vector<uint8_t> base64_decode(const std::string &encoded_string) {
   return decoded;
 }
 
-// Process images and add them to the tokenized input
-static llama_pos process_image_prompt(
-  llama_context* ctx,
+struct TokenizeResult {
+  std::vector<llama_token> tokens;
+
+  bool has_image = false;
+  std::vector<std::string> bitmap_hashes;
+  std::vector<size_t> chunk_pos; // both text and image
+  std::vector<size_t> chunk_pos_images; // image only
+  mtmd_input_chunks* chunks = nullptr;
+};
+
+static TokenizeResult tokenizeWithImages(
   const mtmd_context* mtmd_ctx,
-  LlamaSessionPtr sess,
-  const common_params& params,  
-  const std::vector<std::string>& image_paths
+  const std::string &prompt,
+  const std::vector<std::string> &image_paths
 ) {
   if (mtmd_ctx == nullptr) {
     throw std::runtime_error("Multimodal context is not initialized");
   }
 
-  // Multimodal path
-  std::string full_prompt = params.prompt;
-  // Add image marker if it doesn't already exist
-  if (full_prompt.find("<__image__>") == std::string::npos) {
-    full_prompt += " <__image__>";
-  }
+  TokenizeResult result;
+  result.has_image = !image_paths.empty();
 
-  // Prepare bitmaps array for all images
   mtmd::bitmaps bitmaps;
-
-  std::vector<std::string> bitmap_hashes;
 
   // Load all images
   for (const auto& image_path : image_paths) {
@@ -242,15 +242,15 @@ static llama_pos process_image_prompt(
       std::vector<std::string> parts;
       size_t comma_pos = image_path.find(',');
       if (comma_pos == std::string::npos) {
-        bitmaps.entries.clear();
-        return false;
+        result.bitmap_hashes.clear();
+        throw std::runtime_error("Invalid base64 image");
       }
 
       std::string header = image_path.substr(0, comma_pos);
       std::string base64_data = image_path.substr(comma_pos + 1);
 
       if (header.find("base64") == std::string::npos) {
-        bitmaps.entries.clear();
+        result.bitmap_hashes.clear();
         throw std::runtime_error("Invalid base64 image");
       }
 
@@ -270,7 +270,7 @@ static llama_pos process_image_prompt(
         std::string hash = fnv_hash(bmp.data(), bmp.nx()*bmp.ny()*3);
         bmp.set_id(hash.c_str());
         bitmaps.entries.push_back(std::move(bmp));
-        bitmap_hashes.push_back(hash.c_str());
+        result.bitmap_hashes.push_back(hash.c_str());
       } catch (const std::exception& e) {
         bitmaps.entries.clear();
         throw std::runtime_error("Failed to decode base64 image");
@@ -304,19 +304,19 @@ static llama_pos process_image_prompt(
       std::string hash = fnv_hash(bmp.data(), bmp.nx()*bmp.ny()*3);
       bmp.set_id(hash.c_str());
       bitmaps.entries.push_back(std::move(bmp));
-      bitmap_hashes.push_back(hash.c_str());
+      result.bitmap_hashes.push_back(hash.c_str());
     }
   }
 
-  mtmd_input_chunks* chunks = mtmd_input_chunks_init();
-  if (chunks == nullptr) {
+  result.chunks = mtmd_input_chunks_init();
+  if (result.chunks == nullptr) {
     bitmaps.entries.clear();
     throw std::runtime_error("Failed to initialize input chunks");
   }
-
+  
   // Create input text
   mtmd_input_text input_text;
-  input_text.text = full_prompt.c_str(); // Use the full prompt with image marker
+  input_text.text = prompt.c_str(); // Use the full prompt with image marker
   input_text.add_special = true;  // Add BOS token if this is the first message
   input_text.parse_special = true;       // Parse special tokens like <__image__>
 
@@ -327,56 +327,85 @@ static llama_pos process_image_prompt(
   // Cast away const for mtmd_tokenize
   int32_t res = mtmd_tokenize(
     const_cast<mtmd_context*>(mtmd_ctx), 
-    chunks, 
+    result.chunks, 
     &input_text, 
     bitmaps_c_ptr.data(), 
     bitmaps_c_ptr.size()
   );
   
   if (res != 0) {
-    mtmd_input_chunks_free(chunks);
+    mtmd_input_chunks_free(result.chunks);
     bitmaps.entries.clear();
     throw std::runtime_error("Failed to tokenize text and images");
   }
 
   // Log chunk information
-  size_t num_chunks = mtmd_input_chunks_size(chunks);
+  size_t num_chunks = mtmd_input_chunks_size(result.chunks);
   fprintf(stdout, "[DEBUG] Tokenization successful: num_chunks=%zu\n", num_chunks);
-
-  // Create a vector to store all tokens (both text and image)
-  std::vector<llama_token> all_tokens;
 
   // Track the total number of tokens (both text and image)
   size_t total_token_count = 0;
 
   // chunk pos
-  std::vector<size_t> chunk_pos;
-  std::vector<size_t> chunk_pos_images;
   for (size_t i = 0; i < num_chunks; i++) {
-    chunk_pos.push_back(total_token_count);
+    result.chunk_pos.push_back(total_token_count);
 
-    const mtmd_input_chunk* chunk = mtmd_input_chunks_get(chunks, i);
+    const mtmd_input_chunk* chunk = mtmd_input_chunks_get(result.chunks, i);
     mtmd_input_chunk_type chunk_type = mtmd_input_chunk_get_type(chunk);
 
     if (chunk_type == MTMD_INPUT_CHUNK_TYPE_TEXT) {
       size_t n_tokens;
       const llama_token* tokens = mtmd_input_chunk_get_tokens_text(chunk, &n_tokens);
 
-      all_tokens.insert(all_tokens.end(), tokens, tokens + n_tokens);
+      result.tokens.insert(result.tokens.end(), tokens, tokens + n_tokens);
       total_token_count += n_tokens;
     } else if (chunk_type == MTMD_INPUT_CHUNK_TYPE_IMAGE) {
-      chunk_pos_images.push_back(total_token_count);
+      result.chunk_pos_images.push_back(total_token_count);
 
       const mtmd_image_tokens* img_tokens = mtmd_input_chunk_get_tokens_image(chunk);
       size_t n_tokens = mtmd_image_tokens_get_n_tokens(img_tokens);
       size_t n_pos = mtmd_image_tokens_get_n_pos(img_tokens);
 
       for (size_t j = 0; j < n_pos; j++) {
-        all_tokens.push_back(LLAMA_TOKEN_NULL);
+        result.tokens.push_back(LLAMA_TOKEN_NULL);
       }
       total_token_count += n_pos;
     }
   }
+
+  bitmaps.entries.clear();
+  
+  return result;
+}
+
+// Process images and add them to the tokenized input
+static llama_pos process_image_prompt(
+  llama_context* ctx,
+  const mtmd_context* mtmd_ctx,
+  LlamaSessionPtr sess,
+  const common_params& params,  
+  const std::vector<std::string>& image_paths
+) {
+  if (mtmd_ctx == nullptr) {
+    throw std::runtime_error("Multimodal context is not initialized");
+  }
+
+  // Multimodal path
+  std::string full_prompt = params.prompt;
+  // Add image marker if it doesn't already exist
+  if (full_prompt.find("<__image__>") == std::string::npos) {
+    for (const auto& image_path : image_paths) {
+      full_prompt += " <__image__>";
+    }
+  }
+
+  auto result = tokenizeWithImages(mtmd_ctx, full_prompt, image_paths);
+
+  auto all_tokens = result.tokens;
+  auto chunks = result.chunks;
+  auto chunk_pos = result.chunk_pos;
+  auto chunk_pos_images = result.chunk_pos_images;
+  auto bitmap_hashes = result.bitmap_hashes;
 
   llama_pos n_past = common_tokens_part(*sess->tokens_ptr(), all_tokens);
 
@@ -428,6 +457,8 @@ static llama_pos process_image_prompt(
   // Clear all KV cache entries after position n_past
   llama_kv_self_seq_rm(ctx, 0, n_past, -1);
 
+  size_t num_chunks = mtmd_input_chunks_size(chunks);
+
   for (size_t i = 0; i < chunk_pos.size(); i++) {
     fprintf(stdout, "[DEBUG] Evaluating chunk %zu: n_past=%d, chunk_pos=%zu\n", i, n_past, chunk_pos[i]);
 
@@ -450,14 +481,13 @@ static llama_pos process_image_prompt(
       
       if (res != 0) {
         mtmd_input_chunks_free(chunks);
-        bitmaps.entries.clear();
-        return false;
+        throw std::runtime_error("Failed to process chunk");
       }
       n_past = new_n_past;
     }
   }
 
-  if (n_past == total_token_count && n_past > 0 && all_tokens[n_past - 1] != LLAMA_TOKEN_NULL) {
+  if (n_past == all_tokens.size() && n_past > 0 && all_tokens[n_past - 1] != LLAMA_TOKEN_NULL) {
     // we have to evaluate at least 1 token to generate logits.
     n_past--;
   }
@@ -475,6 +505,5 @@ static llama_pos process_image_prompt(
 
   // Clean up image resources
   mtmd_input_chunks_free(chunks);
-  bitmaps.entries.clear();
   return n_past;
 }

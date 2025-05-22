@@ -1,15 +1,11 @@
 #include "common.hpp"
 #include <vector>
 
-struct TokenizeResult {
-  std::vector<llama_token> tokens;
-};
-
 class TokenizeWorker : public Napi::AsyncWorker,
                        public Napi::Promise::Deferred {
 public:
   TokenizeWorker(const Napi::CallbackInfo &info, LlamaSessionPtr &sess,
-                 std::string text);
+                 std::string text, std::vector<std::string> image_paths);
 
 protected:
   void Execute();
@@ -19,5 +15,6 @@ protected:
 private:
   LlamaSessionPtr _sess;
   std::string _text;
+  std::vector<std::string> _image_paths;
   TokenizeResult _result;
 };
