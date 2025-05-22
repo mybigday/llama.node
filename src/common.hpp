@@ -394,9 +394,7 @@ static llama_pos process_image_prompt(
   std::string full_prompt = params.prompt;
   // Add image marker if it doesn't already exist
   if (full_prompt.find("<__image__>") == std::string::npos) {
-    for (const auto& image_path : image_paths) {
-      full_prompt += " <__image__>";
-    }
+    full_prompt += " <__image__>";
   }
 
   auto result = tokenizeWithImages(mtmd_ctx, full_prompt, image_paths);
