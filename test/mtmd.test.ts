@@ -52,7 +52,11 @@ test('multimodal with images', async () => {
     }),
   ).toMatchSnapshot()
 
-  expect(formatted).toMatchSnapshot()
+  expect(formatted.image_paths).toHaveLength(1)
+  expect({
+    ...formatted,
+    image_paths: ['<img-path>'],
+  }).toMatchSnapshot()
 
   // Test with multiple images
   const result = await model.completion({

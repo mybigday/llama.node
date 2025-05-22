@@ -123,7 +123,7 @@ exports[`multimodal with images 2`] = `
 {
   "has_image": true,
   "image_paths": [
-    "/Users/jhen/workspace/llama.node/test/test-1.jpeg",
+    "<img-path>",
   ],
   "prompt": "<|im_start|>You are a helpful assistant that can answer questions and help with tasks.
 
