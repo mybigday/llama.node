@@ -8,7 +8,11 @@ TokenizeWorker::TokenizeWorker(const Napi::CallbackInfo &info,
 void TokenizeWorker::Execute() {
   auto mtmd_ctx = _sess->get_mtmd_ctx();
   if (!_image_paths.empty()) {
-    _result = tokenizeWithImages(mtmd_ctx, _text, _image_paths);
+    try {
+      _result = tokenizeWithImages(mtmd_ctx, _text, _image_paths);
+    } catch (const std::exception &e) {
+      SetError(e.what());
+    }
   } else {
     const auto tokens = common_tokenize(_sess->context(), _text, false);
     _result.tokens = tokens;
