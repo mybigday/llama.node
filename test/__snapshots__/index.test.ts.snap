@@ -521,6 +521,7 @@ exports[`loadModelInfo 1`] = `
 
 exports[`tokeneize & detokenize & getFormattedChat 1`] = `
 {
+  "has_image": false,
   "tokens": Int32Array [
     9038,
     2501,
@@ -628,6 +629,7 @@ exports[`works fine with vocab_only: model info 1`] = `
 
 exports[`works fine with vocab_only: tokenize 1`] = `
 {
+  "has_image": false,
   "tokens": Int32Array [
     9038,
     2501,

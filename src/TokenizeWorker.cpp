@@ -10,6 +10,7 @@ void TokenizeWorker::Execute() {
   if (!_image_paths.empty()) {
     try {
       _result = tokenizeWithImages(mtmd_ctx, _text, _image_paths);
+      mtmd_input_chunks_free(_result.chunks);
     } catch (const std::exception &e) {
       SetError(e.what());
     }
@@ -28,9 +29,8 @@ void TokenizeWorker::OnOK() {
   memcpy(tokens.Data(), _result.tokens.data(),
          _result.tokens.size() * sizeof(llama_token));
   result.Set("tokens", tokens);
+  result.Set("has_image", _result.has_image);
   if (_result.has_image) {
-    result.Set("has_image", _result.has_image);
-
     auto bitmap_hashes = Napi::Array::New(Napi::AsyncWorker::Env(), _result.bitmap_hashes.size());
     for (size_t i = 0; i < _result.bitmap_hashes.size(); i++) {
       bitmap_hashes.Set(i, _result.bitmap_hashes[i]);
