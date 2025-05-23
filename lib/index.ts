@@ -14,6 +14,8 @@ import type {
 
 export * from './binding'
 
+export const MTMD_DEFAULT_MEDIA_MARKER = '<__media__>'
+
 export interface LlamaModelOptionsExtended extends LlamaModelOptions {
   lib_variant?: LibVariant
 }
@@ -112,7 +114,7 @@ class LlamaContextWrapper {
               imagePaths.push(path)
               return {
                 type: 'text',
-                text: '<__image__>',
+                text: MTMD_DEFAULT_MEDIA_MARKER,
               }
             }
             return part

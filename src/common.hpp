@@ -318,7 +318,7 @@ static TokenizeResult tokenizeWithImages(
   mtmd_input_text input_text;
   input_text.text = prompt.c_str(); // Use the full prompt with image marker
   input_text.add_special = true;  // Add BOS token if this is the first message
-  input_text.parse_special = true;       // Parse special tokens like <__image__>
+  input_text.parse_special = true;       // Parse special tokens like <__media__>
 
   // Tokenize the text and images
   fprintf(stdout, "[DEBUG] Tokenizing text and %zu images\n", bitmaps.entries.size());
@@ -362,9 +362,8 @@ static TokenizeResult tokenizeWithImages(
     } else if (chunk_type == MTMD_INPUT_CHUNK_TYPE_IMAGE) {
       result.chunk_pos_images.push_back(total_token_count);
 
-      const mtmd_image_tokens* img_tokens = mtmd_input_chunk_get_tokens_image(chunk);
-      size_t n_tokens = mtmd_image_tokens_get_n_tokens(img_tokens);
-      size_t n_pos = mtmd_image_tokens_get_n_pos(img_tokens);
+      size_t n_tokens = mtmd_input_chunk_get_n_tokens(chunk);
+      size_t n_pos = mtmd_input_chunk_get_n_pos(chunk);
 
       for (size_t j = 0; j < n_pos; j++) {
         result.tokens.push_back(LLAMA_TOKEN_NULL);
@@ -392,9 +391,11 @@ static llama_pos process_image_prompt(
 
   // Multimodal path
   std::string full_prompt = params.prompt;
+  auto default_media_marker = mtmd_default_marker();
   // Add image marker if it doesn't already exist
-  if (full_prompt.find("<__image__>") == std::string::npos) {
-    full_prompt += " <__image__>";
+  if (full_prompt.find(default_media_marker) == std::string::npos) {
+    full_prompt += " ";
+    full_prompt += default_media_marker;
   }
 
   auto result = tokenizeWithImages(mtmd_ctx, full_prompt, image_paths);
