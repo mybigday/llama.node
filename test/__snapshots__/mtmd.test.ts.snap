@@ -128,7 +128,7 @@ exports[`multimodal with images 2`] = `
   "prompt": "<|im_start|>You are a helpful assistant that can answer questions and help with tasks.
 
 User: What is the content of this image?
-<__image__><end_of_utterance>
+<__media__><end_of_utterance>
 Assistant:",
   "type": "llama-chat",
 }
