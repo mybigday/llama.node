@@ -20,7 +20,7 @@ public:
                         Napi::Function callback, common_params params,
                         std::vector<std::string> stop_words,
                         int32_t chat_format,
-                        std::vector<std::string> image_paths = {});
+                        std::vector<std::string> media_paths = {});
 
   ~LlamaCompletionWorker();
 
@@ -44,7 +44,7 @@ private:
   common_params _params;
   std::vector<std::string> _stop_words;
   int32_t _chat_format;
-  std::vector<std::string> _image_paths;
+  std::vector<std::string> _media_paths;
   std::function<void()> _onComplete;
   bool _has_callback = false;
   bool _stop = false;

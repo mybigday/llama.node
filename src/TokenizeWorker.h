@@ -5,7 +5,7 @@ class TokenizeWorker : public Napi::AsyncWorker,
                        public Napi::Promise::Deferred {
 public:
   TokenizeWorker(const Napi::CallbackInfo &info, LlamaSessionPtr &sess,
-                 std::string text, std::vector<std::string> image_paths);
+                 std::string text, std::vector<std::string> media_paths);
 
 protected:
   void Execute();
@@ -15,6 +15,6 @@ protected:
 private:
   LlamaSessionPtr _sess;
   std::string _text;
-  std::vector<std::string> _image_paths;
+  std::vector<std::string> _media_paths;
   TokenizeResult _result;
 };

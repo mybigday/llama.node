@@ -65,8 +65,8 @@ const getJsonSchema = (responseFormat?: CompletionResponseFormat) => {
 export type FormattedChatResult = {
   type: 'jinja' | 'llama-chat'
   prompt: string
-  has_image: boolean
-  image_paths?: Array<string>
+  has_media: boolean
+  media_paths?: Array<string>
 }
 
 class LlamaContextWrapper {
@@ -93,17 +93,17 @@ class LlamaContextWrapper {
     return !!this.ctx.getModelInfo().chatTemplates.llamaChat
   }
 
-  _formatImageChat(messages: ChatMessage[] | undefined): {
+  _formatMediaChat(messages: ChatMessage[] | undefined): {
     messages: ChatMessage[] | undefined
-    has_image: boolean
-    image_paths?: string[]
+    has_media: boolean
+    media_paths?: string[]
   } {
     if (!messages)
       return {
         messages,
-        has_image: false,
+        has_media: false,
       }
-    const imagePaths: string[] = []
+    const mediaPaths: string[] = []
     return {
       messages: messages.map((msg) => {
         if (Array.isArray(msg.content)) {
@@ -111,7 +111,25 @@ class LlamaContextWrapper {
             // Handle multimodal content
             if (part.type === 'image_url') {
               let path = part.image_url?.url || ''
-              imagePaths.push(path)
+              mediaPaths.push(path)
+              return {
+                type: 'text',
+                text: MTMD_DEFAULT_MEDIA_MARKER,
+              }
+            } else if (part.type === 'input_audio') {
+              const { input_audio: audio } = part
+              if (!audio) throw new Error('input_audio is required')
+
+              const { format } = audio
+              if (format != 'wav' && format != 'mp3') {
+                throw new Error(`Unsupported audio format: ${format}`)
+              }
+              if (audio.url) {
+                const path = audio.url.replace(/file:\/\//, '')
+                mediaPaths.push(path)
+              } else if (audio.data) {
+                mediaPaths.push(audio.data)
+              }
               return {
                 type: 'text',
                 text: MTMD_DEFAULT_MEDIA_MARKER,
@@ -127,8 +145,8 @@ class LlamaContextWrapper {
         }
         return msg
       }),
-      has_image: imagePaths.length > 0,
-      image_paths: imagePaths,
+      has_media: mediaPaths.length > 0,
+      media_paths: mediaPaths,
     }
   }
 
@@ -145,9 +163,9 @@ class LlamaContextWrapper {
   ): FormattedChatResult {
     const {
       messages: chat,
-      has_image,
-      image_paths,
-    } = this._formatImageChat(messages)
+      has_media,
+      media_paths,
+    } = this._formatMediaChat(messages)
 
     const useJinja = this.isJinjaSupported() && params?.jinja
     let tmpl
@@ -166,14 +184,14 @@ class LlamaContextWrapper {
       return {
         type: 'llama-chat',
         prompt: result as string,
-        has_image,
-        image_paths,
+        has_media,
+        media_paths,
       }
     }
     const jinjaResult = result
     jinjaResult.type = 'jinja'
-    jinjaResult.has_image = has_image
-    jinjaResult.image_paths = image_paths
+    jinjaResult.has_media = has_media
+    jinjaResult.media_paths = media_paths
     return jinjaResult
   }
 
@@ -181,12 +199,12 @@ class LlamaContextWrapper {
     options: LlamaCompletionOptions,
     callback?: (token: LlamaCompletionToken) => void,
   ): Promise<LlamaCompletionResult> {
-    const { messages, image_paths = options.image_paths } =
-      this._formatImageChat(options.messages)
+    const { messages, media_paths = options.media_paths } =
+      this._formatMediaChat(options.messages)
     return this.ctx.completion({
       ...options,
       messages,
-      image_paths: options.image_paths || image_paths,
+      media_paths: options.media_paths || media_paths,
     }, callback || (() => {}))
   }
 
@@ -194,8 +212,8 @@ class LlamaContextWrapper {
     return this.ctx.stopCompletion()
   }
 
-  tokenize(text: string, { image_paths }: { image_paths?: string[] } = {}): Promise<TokenizeResult> {
-    return this.ctx.tokenize(text, image_paths)
+  tokenize(text: string, { media_paths }: { media_paths?: string[] } = {}): Promise<TokenizeResult> {
+    return this.ctx.tokenize(text, media_paths)
   }
 
   detokenize(tokens: number[]): Promise<string> {
@@ -243,6 +261,13 @@ class LlamaContextWrapper {
 
   releaseMultimodal(): Promise<void> {
     return this.ctx.releaseMultimodal()
+  }
+
+  getMultimodalSupport(): Promise<{
+    vision: boolean
+    audio: boolean
+  }> {
+    return this.ctx.getMultimodalSupport()
   }
 }
 

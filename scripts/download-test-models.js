@@ -79,6 +79,15 @@ async function main() {
       path: path.join(testDir, 'mmproj-SmolVLM-256M-Instruct-Q8_0.gguf'),
       url: 'https://huggingface.co/ggml-org/SmolVLM-256M-Instruct-GGUF/resolve/main/mmproj-SmolVLM-256M-Instruct-Q8_0.gguf?download=true',
     },
+    // Uncomment to test with audio
+    // {
+    //   path: path.join(testDir, 'Llama-3.2-1B-Instruct-Q4_K_M.gguf'),
+    //   url: 'https://huggingface.co/ggml-org/ultravox-v0_5-llama-3_2-1b-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf?download=true',
+    // },
+    // {
+    //   path: path.join(testDir, 'mmproj-ultravox-v0_5-llama-3_2-1b-f16.gguf'),
+    //   url: 'https://huggingface.co/ggml-org/ultravox-v0_5-llama-3_2-1b-GGUF/resolve/main/mmproj-ultravox-v0_5-llama-3_2-1b-f16.gguf?download=true'
+    // }
   ]
 
   for (const file of files) {

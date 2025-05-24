@@ -135,6 +135,9 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
            static_cast<napi_property_attributes>(napi_enumerable)),
        StaticMethod<&LlamaContext::ToggleNativeLog>(
            "toggleNativeLog",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::GetMultimodalSupport>(
+           "getMultimodalSupport",
            static_cast<napi_property_attributes>(napi_enumerable))});
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
@@ -607,22 +610,22 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
     }
   }
 
-  // Process image_paths parameter
-  std::vector<std::string> image_paths;
-  if (options.Has("image_paths")) {
-    if (options.Get("image_paths").IsArray()) {
-      auto image_paths_array = options.Get("image_paths").As<Napi::Array>();
-      for (size_t i = 0; i < image_paths_array.Length(); i++) {
-        image_paths.push_back(image_paths_array.Get(i).ToString().Utf8Value());
+  // Process media_paths parameter
+  std::vector<std::string> media_paths;
+  if (options.Has("media_paths")) {
+    if (options.Get("media_paths").IsArray()) {
+      auto media_paths_array = options.Get("media_paths").As<Napi::Array>();
+      for (size_t i = 0; i < media_paths_array.Length(); i++) {
+        media_paths.push_back(media_paths_array.Get(i).ToString().Utf8Value());
       }
-    } else if (options.Get("image_paths").IsString()) {
-      image_paths.push_back(options.Get("image_paths").ToString().Utf8Value());
+    } else if (options.Get("media_paths").IsString()) {
+      media_paths.push_back(options.Get("media_paths").ToString().Utf8Value());
     }
   }
 
-  // Check if multimodal is enabled when image_paths are provided
-  if (!image_paths.empty() && !(_has_multimodal && _mtmd_ctx != nullptr)) {
-    Napi::Error::New(env, "Multimodal support must be enabled via initMultimodal to use image_paths").ThrowAsJavaScriptException();
+  // Check if multimodal is enabled when media_paths are provided
+  if (!media_paths.empty() && !(_has_multimodal && _mtmd_ctx != nullptr)) {
+    Napi::Error::New(env, "Multimodal support must be enabled via initMultimodal to use media_paths").ThrowAsJavaScriptException();
     return env.Undefined();
   }
 
@@ -808,7 +811,7 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   }
 
   auto *worker =
-      new LlamaCompletionWorker(info, _sess, callback, params, stop_words, chat_format, image_paths);
+      new LlamaCompletionWorker(info, _sess, callback, params, stop_words, chat_format, media_paths);
   worker->Queue();
   _wip = worker;
   worker->OnComplete([this]() { _wip = nullptr; });
@@ -833,14 +836,14 @@ Napi::Value LlamaContext::Tokenize(const Napi::CallbackInfo &info) {
         .ThrowAsJavaScriptException();
   }
   auto text = info[0].ToString().Utf8Value();
-  std::vector<std::string> image_paths;
+  std::vector<std::string> media_paths;
   if (info.Length() >= 2 && info[1].IsArray()) {
-    auto image_paths_array = info[1].As<Napi::Array>();
-    for (size_t i = 0; i < image_paths_array.Length(); i++) {
-      image_paths.push_back(image_paths_array.Get(i).ToString().Utf8Value());
+    auto media_paths_array = info[1].As<Napi::Array>();
+    for (size_t i = 0; i < media_paths_array.Length(); i++) {
+      media_paths.push_back(media_paths_array.Get(i).ToString().Utf8Value());
     }
   }
-  auto *worker = new TokenizeWorker(info, _sess, text, image_paths);
+  auto *worker = new TokenizeWorker(info, _sess, text, media_paths);
   worker->Queue();
   return worker->Promise();
 }
@@ -1079,6 +1082,22 @@ Napi::Value LlamaContext::InitMultimodal(const Napi::CallbackInfo &info) {
 // isMultimodalEnabled(): boolean
 Napi::Value LlamaContext::IsMultimodalEnabled(const Napi::CallbackInfo &info) {
   return Napi::Boolean::New(info.Env(), _has_multimodal && _mtmd_ctx != nullptr);
+}
+
+// getMultimodalSupport(): Promise<{ vision: boolean, audio: boolean }>
+Napi::Value LlamaContext::GetMultimodalSupport(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  auto result = Napi::Object::New(env);
+  
+  if (_has_multimodal && _mtmd_ctx != nullptr) {
+    result.Set("vision", Napi::Boolean::New(env, mtmd_support_vision(_mtmd_ctx)));
+    result.Set("audio", Napi::Boolean::New(env, mtmd_support_audio(_mtmd_ctx)));
+  } else {
+    result.Set("vision", Napi::Boolean::New(env, false));
+    result.Set("audio", Napi::Boolean::New(env, false));
+  }
+  
+  return result;
 }
 
 // releaseMultimodal(): void

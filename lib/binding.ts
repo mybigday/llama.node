@@ -6,6 +6,11 @@ export type MessagePart = {
   text?: string,
   image_url?: {
     url?: string
+  },
+  input_audio?: {
+    format: string
+    data?: string
+    url?: string
   }
 }
 
@@ -103,12 +108,12 @@ export type LlamaCompletionOptions = {
   grammar_triggers?: { type: number; word: string; at_start: boolean }[]
   preserved_tokens?: string[]
   /**
-   * Path(s) to image file(s) to process before generating text.
-   * When provided, the image(s) will be processed and added to the context.
+   * Path(s) to media file(s) to process before generating text.
+   * When provided, the media will be processed and added to the context.
    * Requires multimodal support to be enabled via initMultimodal.
    * Supports both file paths and base64 data URLs.
    */
-  image_paths?: string | string[]
+  media_paths?: string | string[]
 }
 
 export type LlamaCompletionResult = {
@@ -137,10 +142,10 @@ export type LlamaCompletionToken = {
 
 export type TokenizeResult = {
   tokens: Int32Array
-  has_image: boolean
+  has_media: boolean
   bitmap_hashes: string[]
   chunk_pos: number[]
-  chunk_pos_images: number[]
+  chunk_pos_media: number[]
 }
 
 export type EmbeddingResult = {
@@ -167,7 +172,7 @@ export interface LlamaContext {
     callback?: (token: LlamaCompletionToken) => void,
   ): Promise<LlamaCompletionResult>
   stopCompletion(): void
-  tokenize(text: string, image_paths?: string[]): Promise<TokenizeResult>
+  tokenize(text: string, media_paths?: string[]): Promise<TokenizeResult>
   detokenize(tokens: number[]): Promise<string>
   embedding(text: string): Promise<EmbeddingResult>
   saveSession(path: string): Promise<void>
@@ -188,6 +193,15 @@ export interface LlamaContext {
    * @returns Promise resolving to true if multimodal is enabled
    */
   isMultimodalEnabled(): Promise<boolean>
+
+  /**
+   * Get multimodal support capabilities
+   * @returns Promise resolving to an object with vision and audio support
+   */
+  getMultimodalSupport(): Promise<{
+    vision: boolean
+    audio: boolean
+  }>
 
   /**
    * Release multimodal support

@@ -521,7 +521,7 @@ exports[`loadModelInfo 1`] = `
 
 exports[`tokeneize & detokenize & getFormattedChat 1`] = `
 {
-  "has_image": false,
+  "has_media": false,
   "tokens": Int32Array [
     9038,
     2501,
@@ -535,8 +535,8 @@ exports[`tokeneize & detokenize & getFormattedChat 2`] = `"xxx"`;
 
 exports[`tokeneize & detokenize & getFormattedChat 3`] = `
 {
-  "has_image": false,
-  "image_paths": [],
+  "has_media": false,
+  "media_paths": [],
   "prompt": "<|im_start|>user
 Hello<|im_end|>
 <|im_start|>bot
@@ -549,8 +549,8 @@ Hi<|im_end|>
 
 exports[`tokeneize & detokenize & getFormattedChat 4`] = `
 {
-  "has_image": false,
-  "image_paths": [],
+  "has_media": false,
+  "media_paths": [],
   "prompt": "<|im_start|>user
 Hello<|im_end|>
 <|im_start|>bot
@@ -629,7 +629,7 @@ exports[`works fine with vocab_only: model info 1`] = `
 
 exports[`works fine with vocab_only: tokenize 1`] = `
 {
-  "has_image": false,
+  "has_media": false,
   "tokens": Int32Array [
     9038,
     2501,

@@ -29,10 +29,10 @@ LlamaCompletionWorker::LlamaCompletionWorker(
     Napi::Function callback, common_params params,
     std::vector<std::string> stop_words,
     int32_t chat_format,
-    std::vector<std::string> image_paths)
+    std::vector<std::string> media_paths)
     : AsyncWorker(info.Env()), Deferred(info.Env()), _sess(sess),
       _params(params), _stop_words(stop_words), _chat_format(chat_format),
-      _image_paths(image_paths) {
+      _media_paths(media_paths) {
   if (!callback.IsEmpty()) {
     _tsfn = Napi::ThreadSafeFunction::New(info.Env(), callback,
                                           "LlamaCompletionCallback", 0, 1);
@@ -64,19 +64,19 @@ void LlamaCompletionWorker::Execute() {
   LlamaCppSampling sampling{common_sampler_init(model, _params.sampling),
                             common_sampler_free};
 
-  // Process images if any are provided
-  if (!_image_paths.empty()) {
+  // Process media if any are provided
+  if (!_media_paths.empty()) {
     const auto* mtmd_ctx = _sess->get_mtmd_ctx();
     
     if (mtmd_ctx != nullptr) {
-      // Process the images and get the tokens
+      // Process the media and get the tokens
       try {
-        n_cur = process_image_prompt(
+        n_cur = processMediaPrompt(
           ctx,
           mtmd_ctx,
           _sess,
           _params,
-          _image_paths
+          _media_paths
         );
       } catch (const std::exception& e) {
         SetError(e.what());
@@ -85,12 +85,12 @@ void LlamaCompletionWorker::Execute() {
       }
       
       if (n_cur <= 0) {
-        SetError("Failed to process images");
+        SetError("Failed to process media");
         _sess->get_mutex().unlock();
         return;
       }
 
-      fprintf(stdout, "[DEBUG] Image processing successful, n_cur=%zu, tokens=%zu\n", 
+      fprintf(stdout, "[DEBUG] Media processing successful, n_cur=%zu, tokens=%zu\n", 
                        n_cur, _sess->tokens_ptr()->size());
 
       n_input = _sess->tokens_ptr()->size();

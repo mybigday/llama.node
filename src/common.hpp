@@ -209,82 +209,83 @@ static std::vector<uint8_t> base64_decode(const std::string &encoded_string) {
 struct TokenizeResult {
   std::vector<llama_token> tokens;
 
-  bool has_image = false;
+  bool has_media = false;
   std::vector<std::string> bitmap_hashes;
-  std::vector<size_t> chunk_pos; // both text and image
-  std::vector<size_t> chunk_pos_images; // image only
+  std::vector<size_t> chunk_pos; // both text and media
+  std::vector<size_t> chunk_pos_media; // media only
   mtmd_input_chunks* chunks = nullptr;
 };
 
-static TokenizeResult tokenizeWithImages(
+static TokenizeResult tokenizeWithMedia(
   const mtmd_context* mtmd_ctx,
   const std::string &prompt,
-  const std::vector<std::string> &image_paths
+  const std::vector<std::string> &media_paths
 ) {
   if (mtmd_ctx == nullptr) {
     throw std::runtime_error("Multimodal context is not initialized");
   }
 
   TokenizeResult result;
-  result.has_image = !image_paths.empty();
+  result.has_media = !media_paths.empty();
 
   mtmd::bitmaps bitmaps;
 
-  // Load all images
-  for (const auto& image_path : image_paths) {
-    fprintf(stdout, "[DEBUG] Loading image: %s\n",
-             image_path.substr(0, 50).c_str()); // Only log part of path for base64
+  // Load all media paths
+  for (const auto& media_path : media_paths) {
+    fprintf(stdout, "[DEBUG] Loading media: %s\n",
+             media_path.substr(0, 50).c_str()); // Only log part of path for base64
 
-    // Check if it's a base64 image
-    if (image_path.compare(0, 11, "data:image/") == 0) {
+    // Check if it's a base64 media
+    if (media_path.compare(0, 11, "data:image/") == 0 || media_path.compare(0, 11, "data:audio/") == 0) {
 
       // Parse base64 data
       std::vector<std::string> parts;
-      size_t comma_pos = image_path.find(',');
+      size_t comma_pos = media_path.find(',');
       if (comma_pos == std::string::npos) {
         result.bitmap_hashes.clear();
-        throw std::runtime_error("Invalid base64 image");
+        throw std::runtime_error("Invalid base64 media format, missing comma separator");
       }
 
-      std::string header = image_path.substr(0, comma_pos);
-      std::string base64_data = image_path.substr(comma_pos + 1);
+      std::string header = media_path.substr(0, comma_pos);
+      std::string base64_data = media_path.substr(comma_pos + 1);
 
       if (header.find("base64") == std::string::npos) {
         result.bitmap_hashes.clear();
-        throw std::runtime_error("Invalid base64 image");
+        throw std::runtime_error("Invalid base64 media");
       }
 
       // Decode base64
       try {
         // Decode base64 to binary
-        std::vector<uint8_t> image_data = base64_decode(base64_data);
+        std::vector<uint8_t> media_data = base64_decode(base64_data);
 
         // Load bitmap from memory buffer using direct initialization
-        mtmd::bitmap bmp(mtmd_helper_bitmap_init_from_buf(image_data.data(), image_data.size()));
+        mtmd::bitmap bmp(mtmd_helper_bitmap_init_from_buf(media_data.data(), media_data.size()));
         if (!bmp.ptr) {
           bitmaps.entries.clear();
-          throw std::runtime_error("Failed to decode base64 image");
+          throw std::runtime_error("Failed to load base64 media");
         }
 
         // Calculate bitmap hash (for KV caching)
-        std::string hash = fnv_hash(bmp.data(), bmp.nx()*bmp.ny()*3);
+        std::string hash = fnv_hash(bmp.data(), bmp.n_bytes());
         bmp.set_id(hash.c_str());
         bitmaps.entries.push_back(std::move(bmp));
         result.bitmap_hashes.push_back(hash.c_str());
       } catch (const std::exception& e) {
         bitmaps.entries.clear();
-        throw std::runtime_error("Failed to decode base64 image");
+        throw std::runtime_error("Failed to decode base64 media");
       }
-    } else if (image_path.compare(0, 7, "http://") == 0 || image_path.compare(0, 8, "https://") == 0) {
+    } else if (media_path.compare(0, 7, "http://") == 0 || media_path.compare(0, 8, "https://") == 0) {
       // HTTP URLs are not supported yet
       bitmaps.entries.clear();
-      throw std::runtime_error("HTTP URLs are not supported yet");
+      throw std::runtime_error("HTTP/HTTPS URLs are not supported yet");
     } else {
+      // Regular file path
       // Check if file exists
-      FILE* file = fopen(image_path.c_str(), "rb");
+      FILE* file = fopen(media_path.c_str(), "rb");
       if (file == nullptr) {
         bitmaps.entries.clear();
-        throw std::runtime_error("Failed to open image file");
+        throw std::runtime_error("File does not exist or cannot be opened");
       }
 
       // Get file size
@@ -294,10 +295,10 @@ static TokenizeResult tokenizeWithImages(
       fclose(file);
 
       // Create bitmap directly
-      mtmd::bitmap bmp(mtmd_helper_bitmap_init_from_file(image_path.c_str()));
+      mtmd::bitmap bmp(mtmd_helper_bitmap_init_from_file(media_path.c_str()));
       if (!bmp.ptr) {
         bitmaps.entries.clear();
-        throw std::runtime_error("Failed to create bitmap from image file");
+        throw std::runtime_error("Failed to load media");
       }
 
       // Calculate bitmap hash (for KV caching)
@@ -316,12 +317,12 @@ static TokenizeResult tokenizeWithImages(
   
   // Create input text
   mtmd_input_text input_text;
-  input_text.text = prompt.c_str(); // Use the full prompt with image marker
+  input_text.text = prompt.c_str(); // Use the full prompt with media marker
   input_text.add_special = true;  // Add BOS token if this is the first message
   input_text.parse_special = true;       // Parse special tokens like <__media__>
 
-  // Tokenize the text and images
-  fprintf(stdout, "[DEBUG] Tokenizing text and %zu images\n", bitmaps.entries.size());
+  // Tokenize the text and media
+  fprintf(stdout, "[DEBUG] Tokenizing text and %zu media\n", bitmaps.entries.size());
   auto bitmaps_c_ptr = bitmaps.c_ptr();
   
   // Cast away const for mtmd_tokenize
@@ -336,14 +337,14 @@ static TokenizeResult tokenizeWithImages(
   if (res != 0) {
     mtmd_input_chunks_free(result.chunks);
     bitmaps.entries.clear();
-    throw std::runtime_error("Failed to tokenize text and images");
+    throw std::runtime_error("Failed to tokenize text and media");
   }
 
   // Log chunk information
   size_t num_chunks = mtmd_input_chunks_size(result.chunks);
   fprintf(stdout, "[DEBUG] Tokenization successful: num_chunks=%zu\n", num_chunks);
 
-  // Track the total number of tokens (both text and image)
+  // Track the total number of tokens (both text and media)
   size_t total_token_count = 0;
 
   // chunk pos
@@ -359,11 +360,13 @@ static TokenizeResult tokenizeWithImages(
 
       result.tokens.insert(result.tokens.end(), tokens, tokens + n_tokens);
       total_token_count += n_tokens;
-    } else if (chunk_type == MTMD_INPUT_CHUNK_TYPE_IMAGE) {
-      result.chunk_pos_images.push_back(total_token_count);
+    } else if (chunk_type == MTMD_INPUT_CHUNK_TYPE_IMAGE || chunk_type == MTMD_INPUT_CHUNK_TYPE_AUDIO) {
+      result.chunk_pos_media.push_back(total_token_count);
 
       size_t n_tokens = mtmd_input_chunk_get_n_tokens(chunk);
       size_t n_pos = mtmd_input_chunk_get_n_pos(chunk);
+      fprintf(stdout, "[DEBUG] Chunk %zu: type=%s, n_tokens=%zu, n_pos=%zu\n",
+               i, chunk_type == MTMD_INPUT_CHUNK_TYPE_IMAGE ? "IMAGE" : "AUDIO", n_tokens, n_pos);
 
       for (size_t j = 0; j < n_pos; j++) {
         result.tokens.push_back(LLAMA_TOKEN_NULL);
@@ -377,13 +380,13 @@ static TokenizeResult tokenizeWithImages(
   return result;
 }
 
-// Process images and add them to the tokenized input
-static llama_pos process_image_prompt(
+// Process media and add them to the tokenized input
+static llama_pos processMediaPrompt(
   llama_context* ctx,
   const mtmd_context* mtmd_ctx,
   LlamaSessionPtr sess,
   const common_params& params,  
-  const std::vector<std::string>& image_paths
+  const std::vector<std::string>& media_paths
 ) {
   if (mtmd_ctx == nullptr) {
     throw std::runtime_error("Multimodal context is not initialized");
@@ -392,18 +395,18 @@ static llama_pos process_image_prompt(
   // Multimodal path
   std::string full_prompt = params.prompt;
   auto default_media_marker = mtmd_default_marker();
-  // Add image marker if it doesn't already exist
+  // Add media marker if it doesn't already exist
   if (full_prompt.find(default_media_marker) == std::string::npos) {
     full_prompt += " ";
     full_prompt += default_media_marker;
   }
 
-  auto result = tokenizeWithImages(mtmd_ctx, full_prompt, image_paths);
+  auto result = tokenizeWithMedia(mtmd_ctx, full_prompt, media_paths);
 
   auto all_tokens = result.tokens;
   auto chunks = result.chunks;
   auto chunk_pos = result.chunk_pos;
-  auto chunk_pos_images = result.chunk_pos_images;
+  auto chunk_pos_media = result.chunk_pos_media;
   auto bitmap_hashes = result.bitmap_hashes;
 
   llama_pos n_past = common_tokens_part(*sess->tokens_ptr(), all_tokens);
@@ -438,7 +441,7 @@ static llama_pos process_image_prompt(
   auto mtmd_bitmap_past_hashes = sess->mtmd_bitmap_past_hashes_ptr();
   if (mtmd_bitmap_past_hashes->size() > 0) {
     for (size_t i = 0; i < bitmap_hashes.size(); i++) {
-      auto pos = chunk_pos_images[i];
+      auto pos = chunk_pos_media[i];
       if (n_past < pos) {
         break;
       }
@@ -446,7 +449,7 @@ static llama_pos process_image_prompt(
         break;
       }
       if (bitmap_hashes[i] != (*mtmd_bitmap_past_hashes)[i]) {
-        n_past = chunk_pos_images[i];
+        n_past = chunk_pos_media[i];
         new_n_past = n_past;
         break;
       }
@@ -502,7 +505,7 @@ static llama_pos process_image_prompt(
 
   sess->set_mtmd_bitmap_past_hashes(bitmap_hashes);
 
-  // Clean up image resources
+  // Clean up media resources
   mtmd_input_chunks_free(chunks);
   return n_past;
 }
