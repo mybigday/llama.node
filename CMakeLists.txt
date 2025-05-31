@@ -58,6 +58,18 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
   endif()
 endif()
 
+# Improve speed
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+  if (MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /O2 /Ob2 /Oi /Oa /Ot /Oy /GL")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /O2 /Ob2 /Oi /Oa /Ot /Oy /GL")
+  else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -funroll-loops -flto")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -funroll-loops -flto")
+    set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -flto")
+  endif()
+endif()
+
 # flags: -fPIC
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
