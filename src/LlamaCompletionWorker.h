@@ -20,7 +20,8 @@ public:
                         Napi::Function callback, common_params params,
                         std::vector<std::string> stop_words,
                         int32_t chat_format,
-                        std::vector<std::string> media_paths = {});
+                        const std::vector<std::string> &media_paths = {},
+                        const std::vector<llama_token> &guide_tokens = {});
 
   ~LlamaCompletionWorker();
 
@@ -45,10 +46,12 @@ private:
   std::vector<std::string> _stop_words;
   int32_t _chat_format;
   std::vector<std::string> _media_paths;
+  std::vector<llama_token> _guide_tokens;
   std::function<void()> _onComplete;
   bool _has_callback = false;
   bool _stop = false;
   Napi::ThreadSafeFunction _tsfn;
+  bool _next_token_uses_guide_token = true;
   struct {
     size_t tokens_evaluated = 0;
     size_t tokens_predicted = 0;

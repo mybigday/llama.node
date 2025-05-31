@@ -114,6 +114,11 @@ export type LlamaCompletionOptions = {
    * Supports both file paths and base64 data URLs.
    */
   media_paths?: string | string[]
+  /**
+   * Guide tokens to use for audio completion.
+   * Help prevent hallucinations by forcing the TTS to use the correct words.
+   */
+  guide_tokens?: Int32Array
 }
 
 export type LlamaCompletionResult = {
@@ -207,6 +212,47 @@ export interface LlamaContext {
    * Release multimodal support
    */
   releaseMultimodal(): Promise<void>
+
+  /**
+   * Load a vocoder model
+   * @param path Path to the vocoder model
+   * @returns Promise resolving to true if loading was successful
+   */
+  initVocoder(path: string): Promise<boolean>
+
+  /**
+   * Unload the vocoder model
+   * @returns Promise resolving to true if unloading was successful
+   */
+  releaseVocoder(): Promise<void>
+
+  /**
+   * Check if the vocoder model is enabled
+   * @returns Promise resolving to true if the vocoder model is enabled
+   */
+  isVocoderEnabled(): boolean
+
+  /**
+   * Get the formatted prompt for audio completion
+   * @param speaker Speaker name or null
+   * @param text Text to complete
+   * @returns Formatted audio completion
+   */
+  getFormattedAudioCompletion(speaker: string|null, text: string): string
+
+  /**
+   * Get guide tokens for audio completion
+   * @param text Text to complete
+   * @returns Guide tokens
+   */
+  getAudioCompletionGuideTokens(text: string): Int32Array
+
+  /**
+   * Decode audio tokens to audio data
+   * @param tokens Tokens to decode
+   * @returns Decoded audio tokens
+   */
+  decodeAudioTokens(tokens: Int32Array): Promise<Float32Array>
 
   // static
   loadModelInfo(path: string, skip: string[]): Promise<Object>

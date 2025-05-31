@@ -1,8 +1,15 @@
 #include "common.hpp"
 #include "tools/mtmd/mtmd.h"
 #include "tools/mtmd/clip.h"
+#include "tts_utils.h"
 
 class LlamaCompletionWorker;
+
+struct vocoder_context {
+  common_params params;
+  std::shared_ptr<llama_model> model;
+  std::shared_ptr<llama_context> context;
+};
 
 class LlamaContext : public Napi::ObjectWrap<LlamaContext> {
 public:
@@ -34,6 +41,15 @@ private:
   Napi::Value GetMultimodalSupport(const Napi::CallbackInfo &info);
   void ReleaseMultimodal(const Napi::CallbackInfo &info);
 
+  // TTS methods
+  tts_type getTTSType(Napi::Env env, nlohmann::json speaker = nullptr);
+  Napi::Value InitVocoder(const Napi::CallbackInfo &info);
+  void ReleaseVocoder(const Napi::CallbackInfo &info);
+  Napi::Value IsVocoderEnabled(const Napi::CallbackInfo &info);
+  Napi::Value GetFormattedAudioCompletion(const Napi::CallbackInfo &info);
+  Napi::Value GetAudioCompletionGuideTokens(const Napi::CallbackInfo &info);
+  Napi::Value DecodeAudioTokens(const Napi::CallbackInfo &info);
+
   std::string _info;
   Napi::Object _meta;
   LlamaSessionPtr _sess = nullptr;
@@ -44,4 +60,9 @@ private:
   // Multimodal support
   mtmd_context *_mtmd_ctx = nullptr;
   bool _has_multimodal = false;
+
+  // Vocoder support
+  tts_type _tts_type = UNKNOWN;
+  vocoder_context _vocoder;
+  bool _has_vocoder = false;
 };

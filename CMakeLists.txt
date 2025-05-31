@@ -102,6 +102,10 @@ file(
     "src/LoadSessionWorker.h"
     "src/SaveSessionWorker.cpp"
     "src/SaveSessionWorker.h"
+    "src/DecodeAudioTokenWorker.cpp"
+    "src/DecodeAudioTokenWorker.h"
+    "src/tts_utils.cpp"
+    "src/tts_utils.h"
 )
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES} ${CMAKE_JS_SRC})

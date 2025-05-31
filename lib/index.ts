@@ -269,6 +269,30 @@ class LlamaContextWrapper {
   }> {
     return this.ctx.getMultimodalSupport()
   }
+
+  initVocoder(path: string): Promise<boolean> {
+    return this.ctx.initVocoder(path)
+  }
+
+  releaseVocoder(): Promise<void> {
+    return this.ctx.releaseVocoder()
+  }
+
+  isVocoderEnabled(): boolean {
+    return this.ctx.isVocoderEnabled()
+  }
+
+  getFormattedAudioCompletion(speaker: string|null, text: string): string {
+    return this.ctx.getFormattedAudioCompletion(speaker, text)
+  }
+
+  getAudioCompletionGuideTokens(text: string): Int32Array {
+    return this.ctx.getAudioCompletionGuideTokens(text)
+  }
+
+  decodeAudioTokens(tokens: number[]|Int32Array): Promise<Float32Array> {
+    return this.ctx.decodeAudioTokens(tokens)
+  }
 }
 
 export const loadModel = async (

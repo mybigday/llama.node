@@ -29,10 +29,11 @@ LlamaCompletionWorker::LlamaCompletionWorker(
     Napi::Function callback, common_params params,
     std::vector<std::string> stop_words,
     int32_t chat_format,
-    std::vector<std::string> media_paths)
+    const std::vector<std::string> &media_paths,
+    const std::vector<llama_token> &guide_tokens)
     : AsyncWorker(info.Env()), Deferred(info.Env()), _sess(sess),
       _params(params), _stop_words(stop_words), _chat_format(chat_format),
-      _media_paths(media_paths) {
+      _media_paths(media_paths), _guide_tokens(guide_tokens) {
   if (!callback.IsEmpty()) {
     _tsfn = Napi::ThreadSafeFunction::New(info.Env(), callback,
                                           "LlamaCompletionCallback", 0, 1);
@@ -160,8 +161,13 @@ void LlamaCompletionWorker::Execute() {
     }
     
     // sample the next token
-    const llama_token new_token_id =
+    llama_token new_token_id =
         common_sampler_sample(sampling.get(), ctx, -1);
+    if (_next_token_uses_guide_token && !_guide_tokens.empty() && !llama_vocab_is_control(vocab, new_token_id) && !llama_vocab_is_eog(vocab, new_token_id)) {
+      new_token_id = _guide_tokens[0];
+      _guide_tokens.erase(_guide_tokens.begin());
+    }
+    _next_token_uses_guide_token = (new_token_id == 198);
     common_sampler_accept(sampling.get(), new_token_id, true);
     // prepare the next batch
     embd->emplace_back(new_token_id);

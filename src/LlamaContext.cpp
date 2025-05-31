@@ -11,6 +11,7 @@
 #include "LoadSessionWorker.h"
 #include "SaveSessionWorker.h"
 #include "TokenizeWorker.h"
+#include "DecodeAudioTokenWorker.h"
 
 #include <mutex>
 #include <queue>
@@ -138,6 +139,24 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
            static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::GetMultimodalSupport>(
            "getMultimodalSupport",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::InitVocoder>(
+           "initVocoder",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::ReleaseVocoder>(
+           "releaseVocoder",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::IsVocoderEnabled>(
+           "isVocoderEnabled",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::GetFormattedAudioCompletion>(
+           "getFormattedAudioCompletion",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::GetAudioCompletionGuideTokens>(
+           "getAudioCompletionGuideTokens",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::DecodeAudioTokens>(
+           "decodeAudioTokens",
            static_cast<napi_property_attributes>(napi_enumerable))});
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
@@ -805,13 +824,22 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   params.n_keep = get_option<int32_t>(options, "n_keep", 0);
   params.sampling.seed = get_option<int32_t>(options, "seed", LLAMA_DEFAULT_SEED);
 
+  // guide_tokens
+  std::vector<llama_token> guide_tokens;
+  if (options.Has("guide_tokens")) {
+    auto guide_tokens_array = options.Get("guide_tokens").As<Napi::Array>();
+    for (size_t i = 0; i < guide_tokens_array.Length(); i++) {
+      guide_tokens.push_back(guide_tokens_array.Get(i).ToNumber().Int32Value());
+    }
+  }
+
   Napi::Function callback;
   if (info.Length() >= 2) {
     callback = info[1].As<Napi::Function>();
   }
 
   auto *worker =
-      new LlamaCompletionWorker(info, _sess, callback, params, stop_words, chat_format, media_paths);
+      new LlamaCompletionWorker(info, _sess, callback, params, stop_words, chat_format, media_paths, guide_tokens);
   worker->Queue();
   _wip = worker;
   worker->OnComplete([this]() { _wip = nullptr; });
@@ -1113,4 +1141,172 @@ void LlamaContext::ReleaseMultimodal(const Napi::CallbackInfo &info) {
     _mtmd_ctx = nullptr;
     _has_multimodal = false;
   }
+}
+
+tts_type LlamaContext::getTTSType(Napi::Env env, nlohmann::json speaker) {
+  if (speaker.is_object() && speaker.contains("version")) {
+    std::string version = speaker["version"].get<std::string>();
+    if (version == "0.2") {
+      return OUTETTS_V0_2;
+    } else if (version == "0.3") {
+      return OUTETTS_V0_3;
+    } else {
+      Napi::Error::New(env, format_string("Unsupported speaker version '%s'\n", version.c_str())).ThrowAsJavaScriptException();
+      return UNKNOWN;
+    }
+  }
+  if (_tts_type != UNKNOWN) {
+    return _tts_type;
+  }
+  const char *chat_template = llama_model_chat_template(_sess->model(), nullptr);
+  if (chat_template && std::string(chat_template) == "outetts-0.3") {
+    return OUTETTS_V0_3;
+  }
+  return OUTETTS_V0_2;
+}
+
+// initVocoder(path: string): boolean
+Napi::Value LlamaContext::InitVocoder(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (info.Length() < 1 || !info[0].IsString()) {
+    Napi::TypeError::New(env, "String expected for vocoder path").ThrowAsJavaScriptException();
+  }
+  auto vocoder_path = info[0].ToString().Utf8Value();
+  if (vocoder_path.empty()) {
+    Napi::TypeError::New(env, "vocoder path is required").ThrowAsJavaScriptException();
+  }
+  if (_has_vocoder) {
+    Napi::Error::New(env, "Vocoder already initialized").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(env, false);
+  }
+  _tts_type = getTTSType(env);
+  _vocoder.params = _sess->params();
+  _vocoder.params.warmup = false;
+  _vocoder.params.model.path = vocoder_path;
+  _vocoder.params.embedding = true;
+  _vocoder.params.ctx_shift = false;
+  _vocoder.params.n_ubatch = _vocoder.params.n_batch;
+  common_init_result result = common_init_from_params(_vocoder.params);
+  if (result.model == nullptr || result.context == nullptr) {
+    Napi::Error::New(env, "Failed to initialize vocoder").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(env, false);
+  }
+  _vocoder.model = std::move(result.model);
+  _vocoder.context = std::move(result.context);
+  _has_vocoder = true;
+  return Napi::Boolean::New(env, true);
+}
+
+// releaseVocoder(): void
+void LlamaContext::ReleaseVocoder(const Napi::CallbackInfo &info) {
+  if (_has_vocoder) {
+    _vocoder.model.reset();
+    _vocoder.context.reset();
+    _has_vocoder = false;
+  }
+}
+
+// isVocoderEnabled(): boolean
+Napi::Value LlamaContext::IsVocoderEnabled(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  return Napi::Boolean::New(env, _has_vocoder);
+}
+
+// getFormattedAudioCompletion(speaker: string|null, text: string): string
+Napi::Value LlamaContext::GetFormattedAudioCompletion(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (info.Length() < 2 || !info[1].IsString()) {
+    Napi::TypeError::New(env, "text parameter is required for audio completion").ThrowAsJavaScriptException();
+  }
+  auto text = info[1].ToString().Utf8Value();  
+  auto speaker_json = info[0].IsString() ? info[0].ToString().Utf8Value() : "";
+  nlohmann::json speaker = speaker_json.empty() ? nullptr : nlohmann::json::parse(speaker_json);
+  const tts_type type = getTTSType(env, speaker);
+  std::string audio_text = DEFAULT_AUDIO_TEXT;
+  std::string audio_data = DEFAULT_AUDIO_DATA;
+  if (type == OUTETTS_V0_3) {
+    audio_text = std::regex_replace(audio_text, std::regex(R"(<\|text_sep\|>)"), "<|space|>");
+    audio_data = std::regex_replace(audio_data, std::regex(R"(<\|code_start\|>)"), "");
+    audio_data = std::regex_replace(audio_data, std::regex(R"(<\|code_end\|>)"), "<|space|>");
+  }
+  if (!speaker_json.empty()) {
+    audio_text = audio_text_from_speaker(speaker, type);
+    audio_data = audio_data_from_speaker(speaker, type);
+  }
+  return Napi::String::New(env, "<|im_start|>\n" + audio_text + process_text(text, type) + "<|text_end|>\n" + audio_data + "\n");
+}
+
+// getAudioCompletionGuideTokens(text: string): Int32Array
+Napi::Value LlamaContext::GetAudioCompletionGuideTokens(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (info.Length() < 1 || !info[0].IsString()) {
+    Napi::TypeError::New(env, "String expected for audio completion guide tokens").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+  auto text = info[0].ToString().Utf8Value();
+  const tts_type type = getTTSType(env);
+  auto clean_text = process_text(text, type);
+  const std::string& delimiter = (type == OUTETTS_V0_3 ? "<|space|>" : "<|text_sep|>");
+  const llama_vocab * vocab = llama_model_get_vocab(_sess->model());
+
+  std::vector<int32_t> result;
+  size_t start = 0;
+  size_t end = clean_text.find(delimiter);
+
+  //first token is always a newline, as it was not previously added
+  result.push_back(common_tokenize(vocab, "\n", false, true)[0]);
+
+  while (end != std::string::npos) {
+    std::string current_word = clean_text.substr(start, end - start);
+    auto tmp = common_tokenize(vocab, current_word, false, true);
+    result.push_back(tmp[0]);
+    start = end + delimiter.length();
+    end = clean_text.find(delimiter, start);
+  }
+
+  // Add the last part
+  std::string current_word = clean_text.substr(start);
+  auto tmp = common_tokenize(vocab, current_word, false, true);
+  if (tmp.size() > 0) {
+      result.push_back(tmp[0]);
+  }
+  auto tokens = Napi::Int32Array::New(env, result.size());
+  memcpy(tokens.Data(), result.data(), result.size() * sizeof(int32_t));
+  return tokens;
+}
+
+// decodeAudioTokens(tokens: number[]|Int32Array): Float32Array
+Napi::Value LlamaContext::DecodeAudioTokens(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (info.Length() < 1) {
+    Napi::TypeError::New(env, "Tokens parameter is required").ThrowAsJavaScriptException();
+  }
+  std::vector<int32_t> tokens;
+  if (info[0].IsTypedArray()) {
+    auto js_tokens = info[0].As<Napi::Int32Array>();
+    tokens.resize(js_tokens.ElementLength());
+    memcpy(tokens.data(), js_tokens.Data(), js_tokens.ElementLength() * sizeof(int32_t));
+  } else if (info[0].IsArray()) {
+    auto js_tokens = info[0].As<Napi::Array>();
+    for (size_t i = 0; i < js_tokens.Length(); i++) {
+      tokens.push_back(js_tokens.Get(i).ToNumber().Int32Value());
+    }
+  } else {
+    Napi::TypeError::New(env, "Tokens must be an number array or a Int32Array").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+  tts_type type = getTTSType(env);
+  if (type == UNKNOWN) {
+    Napi::Error::New(env, "Unsupported audio tokens").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+  if (type == OUTETTS_V0_3 || type == OUTETTS_V0_2) {
+    tokens.erase(std::remove_if(tokens.begin(), tokens.end(), [](llama_token t) { return t < 151672 || t > 155772; }), tokens.end());
+    for (auto & token : tokens) {
+      token -= 151672;
+    }
+  }
+  auto worker = new DecodeAudioTokenWorker(info, _vocoder.model.get(), _vocoder.context.get(), _sess->params().cpuparams.n_threads, tokens);
+  worker->Queue();
+  return worker->Promise();
 }
