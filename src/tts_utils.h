@@ -1,27 +1,35 @@
 #pragma once
 
-#include <string>
-#include <sstream>
-#include <vector>
-#include <thread>
 #include <regex>
+#include <sstream>
+#include <string>
+#include <thread>
+#include <vector>
 
 #include "json.hpp"
 
-enum tts_type {
-    UNKNOWN = -1,
-    OUTETTS_V0_2 = 1,
-    OUTETTS_V0_3 = 2
-};
+enum tts_type { UNKNOWN = -1, OUTETTS_V0_2 = 1, OUTETTS_V0_3 = 2 };
 
-std::string audio_text_from_speaker(nlohmann::json speaker, const tts_type type);
-std::string audio_data_from_speaker(nlohmann::json speaker, const tts_type type);
-std::string process_text(const std::string & text, const tts_type tts_type);
-std::vector<float> embd_to_audio(const float * embd, const int n_codes, const int n_embd, const int n_thread);
+std::string audio_text_from_speaker(nlohmann::json speaker,
+                                    const tts_type type);
+std::string audio_data_from_speaker(nlohmann::json speaker,
+                                    const tts_type type);
+std::string process_text(const std::string &text, const tts_type tts_type);
+std::vector<float> embd_to_audio(const float *embd, const int n_codes,
+                                 const int n_embd, const int n_thread);
 
-// the default speaker profile is from: https://github.com/edwko/OuteTTS/blob/main/outetts/version/v1/default_speakers/en_male_1.json
-static const char * DEFAULT_AUDIO_TEXT = "<|text_start|>the<|text_sep|>overall<|text_sep|>package<|text_sep|>from<|text_sep|>just<|text_sep|>two<|text_sep|>people<|text_sep|>is<|text_sep|>pretty<|text_sep|>remarkable<|text_sep|>sure<|text_sep|>i<|text_sep|>have<|text_sep|>some<|text_sep|>critiques<|text_sep|>about<|text_sep|>some<|text_sep|>of<|text_sep|>the<|text_sep|>gameplay<|text_sep|>aspects<|text_sep|>but<|text_sep|>its<|text_sep|>still<|text_sep|>really<|text_sep|>enjoyable<|text_sep|>and<|text_sep|>it<|text_sep|>looks<|text_sep|>lovely<|text_sep|>";
-static const char * DEFAULT_AUDIO_DATA = R"(<|audio_start|>
+// the default speaker profile is from:
+// https://github.com/edwko/OuteTTS/blob/main/outetts/version/v1/default_speakers/en_male_1.json
+static const char *DEFAULT_AUDIO_TEXT =
+    "<|text_start|>the<|text_sep|>overall<|text_sep|>package<|text_sep|>from<|"
+    "text_sep|>just<|text_sep|>two<|text_sep|>people<|text_sep|>is<|text_sep|>"
+    "pretty<|text_sep|>remarkable<|text_sep|>sure<|text_sep|>i<|text_sep|>have<"
+    "|text_sep|>some<|text_sep|>critiques<|text_sep|>about<|text_sep|>some<|"
+    "text_sep|>of<|text_sep|>the<|text_sep|>gameplay<|text_sep|>aspects<|text_"
+    "sep|>but<|text_sep|>its<|text_sep|>still<|text_sep|>really<|text_sep|>"
+    "enjoyable<|text_sep|>and<|text_sep|>it<|text_sep|>looks<|text_sep|>lovely<"
+    "|text_sep|>";
+static const char *DEFAULT_AUDIO_DATA = R"(<|audio_start|>
 the<|t_0.08|><|code_start|><|257|><|740|><|636|><|913|><|788|><|1703|><|code_end|>
 overall<|t_0.36|><|code_start|><|127|><|201|><|191|><|774|><|700|><|532|><|1056|><|557|><|798|><|298|><|1741|><|747|><|1662|><|1617|><|1702|><|1527|><|368|><|1588|><|1049|><|1008|><|1625|><|747|><|1576|><|728|><|1019|><|1696|><|1765|><|code_end|>
 package<|t_0.56|><|code_start|><|935|><|584|><|1319|><|627|><|1016|><|1491|><|1344|><|1117|><|1526|><|1040|><|239|><|1435|><|951|><|498|><|723|><|1180|><|535|><|789|><|1649|><|1637|><|78|><|465|><|1668|><|901|><|595|><|1675|><|117|><|1009|><|1667|><|320|><|840|><|79|><|507|><|1762|><|1508|><|1228|><|1768|><|802|><|1450|><|1457|><|232|><|639|><|code_end|>

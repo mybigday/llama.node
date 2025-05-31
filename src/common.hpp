@@ -1,11 +1,10 @@
 #pragma once
 
+#include "chat.h"
 #include "common/common.h"
 #include "common/sampling.h"
-#include "tools/mtmd/mtmd.h"
-#include "tools/mtmd/clip.h"
-#include "chat.h"
 #include "llama.h"
+#include "tools/mtmd/clip.h"
 #include "tools/mtmd/mtmd.h"
 #include <memory>
 #include <mutex>
@@ -27,13 +26,17 @@ static std::string json_stringify(const Napi::Object &obj) {
   Napi::Env env = obj.Env();
   Napi::Object json = env.Global().Get("JSON").As<Napi::Object>();
   Napi::Function stringify = json.Get("stringify").As<Napi::Function>();
-  return stringify.Call(json, { obj }).As<Napi::String>().ToString();
+  return stringify.Call(json, {obj}).As<Napi::String>().ToString();
 }
 
-static void console_log(Napi::Env env, const std::string& message) {
-  Napi::Function consoleLog = env.Global().Get("console").As<Napi::Object>().Get("log").As<Napi::Function>();
-  consoleLog.Call({ Napi::String::New(env, message) });
-} 
+static void console_log(Napi::Env env, const std::string &message) {
+  Napi::Function consoleLog = env.Global()
+                                  .Get("console")
+                                  .As<Napi::Object>()
+                                  .Get("log")
+                                  .As<Napi::Function>();
+  consoleLog.Call({Napi::String::New(env, message)});
+}
 
 template <typename T>
 constexpr T get_option(const Napi::Object &options, const std::string &name,
@@ -64,8 +67,7 @@ constexpr T get_option(const Napi::Object &options, const std::string &name,
 
 class LlamaSession {
 public:
-  LlamaSession(common_params params)
-      : params_(params) {
+  LlamaSession(common_params params) : params_(params) {
     llama_init_ = common_init_from_params(params);
     tokens_.reserve(params.n_ctx);
   }
@@ -93,21 +95,17 @@ public:
   inline const common_params &params() const { return params_; }
 
   inline std::mutex &get_mutex() { return mutex; }
-  
+
   // Getter for the multimodal context
-  inline const mtmd_context* get_mtmd_ctx() const { 
-    return _mtmd_ctx; 
-  }
-  
+  inline const mtmd_context *get_mtmd_ctx() const { return _mtmd_ctx; }
+
   // Setter for the multimodal context
-  inline void set_mtmd_ctx(mtmd_context* ctx) {
-    _mtmd_ctx = ctx;
-  }
+  inline void set_mtmd_ctx(mtmd_context *ctx) { _mtmd_ctx = ctx; }
 
   void dispose() {
     std::lock_guard<std::mutex> lock(mutex);
     tokens_.clear();
-    
+
     // mtmd_ctx is owned by LlamaContext, so we don't free it here
     _mtmd_ctx = nullptr;
   }
@@ -118,13 +116,13 @@ private:
   std::vector<llama_token> tokens_{};
   std::vector<std::string> mtmd_bitmap_past_hashes_{};
   std::mutex mutex;
-  mtmd_context* _mtmd_ctx = nullptr;
+  mtmd_context *_mtmd_ctx = nullptr;
 };
 
 typedef std::shared_ptr<LlamaSession> LlamaSessionPtr;
 
 static size_t common_tokens_part(const std::vector<llama_token> &a,
-                   const std::vector<llama_token> &b) {
+                                 const std::vector<llama_token> &b) {
   size_t i = 0;
   while (i < a.size() && i < b.size() && a[i] == b[i]) {
     i++;
@@ -133,7 +131,7 @@ static size_t common_tokens_part(const std::vector<llama_token> &a,
 }
 
 // Computes FNV-1a hash of the data
-static std::string fnv_hash(const uint8_t * data, size_t len) {
+static std::string fnv_hash(const uint8_t *data, size_t len) {
   const uint64_t fnv_prime = 0x100000001b3ULL;
   uint64_t hash = 0xcbf29ce484222325ULL;
 
@@ -144,10 +142,9 @@ static std::string fnv_hash(const uint8_t * data, size_t len) {
   return std::to_string(hash);
 }
 
-static const std::string base64_chars =
-  "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-  "abcdefghijklmnopqrstuvwxyz"
-  "0123456789+/";
+static const std::string base64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                        "abcdefghijklmnopqrstuvwxyz"
+                                        "0123456789+/";
 
 // Base64 decoding function
 static std::vector<uint8_t> base64_decode(const std::string &encoded_string) {
@@ -164,18 +161,22 @@ static std::vector<uint8_t> base64_decode(const std::string &encoded_string) {
       continue;
     }
 
-    if (encoded_string[in_] == '=' || base64_chars.find(encoded_string[in_]) == std::string::npos) {
+    if (encoded_string[in_] == '=' ||
+        base64_chars.find(encoded_string[in_]) == std::string::npos) {
       break;
     }
 
-    char_array_4[i++] = encoded_string[in_]; in_++;
+    char_array_4[i++] = encoded_string[in_];
+    in_++;
     if (i == 4) {
       for (i = 0; i < 4; i++) {
         char_array_4[i] = base64_chars.find(char_array_4[i]);
       }
 
-      char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
-      char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
+      char_array_3[0] =
+          (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
+      char_array_3[1] =
+          ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
       char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
 
       for (i = 0; i < 3; i++) {
@@ -195,7 +196,8 @@ static std::vector<uint8_t> base64_decode(const std::string &encoded_string) {
     }
 
     char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
-    char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
+    char_array_3[1] =
+        ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
     char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
 
     for (j = 0; j < i - 1; j++) {
@@ -211,16 +213,14 @@ struct TokenizeResult {
 
   bool has_media = false;
   std::vector<std::string> bitmap_hashes;
-  std::vector<size_t> chunk_pos; // both text and media
+  std::vector<size_t> chunk_pos;       // both text and media
   std::vector<size_t> chunk_pos_media; // media only
-  mtmd_input_chunks* chunks = nullptr;
+  mtmd_input_chunks *chunks = nullptr;
 };
 
-static TokenizeResult tokenizeWithMedia(
-  const mtmd_context* mtmd_ctx,
-  const std::string &prompt,
-  const std::vector<std::string> &media_paths
-) {
+static TokenizeResult
+tokenizeWithMedia(const mtmd_context *mtmd_ctx, const std::string &prompt,
+                  const std::vector<std::string> &media_paths) {
   if (mtmd_ctx == nullptr) {
     throw std::runtime_error("Multimodal context is not initialized");
   }
@@ -231,19 +231,22 @@ static TokenizeResult tokenizeWithMedia(
   mtmd::bitmaps bitmaps;
 
   // Load all media paths
-  for (const auto& media_path : media_paths) {
-    fprintf(stdout, "[DEBUG] Loading media: %s\n",
-             media_path.substr(0, 50).c_str()); // Only log part of path for base64
+  for (const auto &media_path : media_paths) {
+    fprintf(
+        stdout, "[DEBUG] Loading media: %s\n",
+        media_path.substr(0, 50).c_str()); // Only log part of path for base64
 
     // Check if it's a base64 media
-    if (media_path.compare(0, 11, "data:image/") == 0 || media_path.compare(0, 11, "data:audio/") == 0) {
+    if (media_path.compare(0, 11, "data:image/") == 0 ||
+        media_path.compare(0, 11, "data:audio/") == 0) {
 
       // Parse base64 data
       std::vector<std::string> parts;
       size_t comma_pos = media_path.find(',');
       if (comma_pos == std::string::npos) {
         result.bitmap_hashes.clear();
-        throw std::runtime_error("Invalid base64 media format, missing comma separator");
+        throw std::runtime_error(
+            "Invalid base64 media format, missing comma separator");
       }
 
       std::string header = media_path.substr(0, comma_pos);
@@ -260,7 +263,8 @@ static TokenizeResult tokenizeWithMedia(
         std::vector<uint8_t> media_data = base64_decode(base64_data);
 
         // Load bitmap from memory buffer using direct initialization
-        mtmd::bitmap bmp(mtmd_helper_bitmap_init_from_buf(media_data.data(), media_data.size()));
+        mtmd::bitmap bmp(mtmd_helper_bitmap_init_from_buf(media_data.data(),
+                                                          media_data.size()));
         if (!bmp.ptr) {
           bitmaps.entries.clear();
           throw std::runtime_error("Failed to load base64 media");
@@ -271,18 +275,19 @@ static TokenizeResult tokenizeWithMedia(
         bmp.set_id(hash.c_str());
         bitmaps.entries.push_back(std::move(bmp));
         result.bitmap_hashes.push_back(hash.c_str());
-      } catch (const std::exception& e) {
+      } catch (const std::exception &e) {
         bitmaps.entries.clear();
         throw std::runtime_error("Failed to decode base64 media");
       }
-    } else if (media_path.compare(0, 7, "http://") == 0 || media_path.compare(0, 8, "https://") == 0) {
+    } else if (media_path.compare(0, 7, "http://") == 0 ||
+               media_path.compare(0, 8, "https://") == 0) {
       // HTTP URLs are not supported yet
       bitmaps.entries.clear();
       throw std::runtime_error("HTTP/HTTPS URLs are not supported yet");
     } else {
       // Regular file path
       // Check if file exists
-      FILE* file = fopen(media_path.c_str(), "rb");
+      FILE *file = fopen(media_path.c_str(), "rb");
       if (file == nullptr) {
         bitmaps.entries.clear();
         throw std::runtime_error("File does not exist or cannot be opened");
@@ -302,7 +307,7 @@ static TokenizeResult tokenizeWithMedia(
       }
 
       // Calculate bitmap hash (for KV caching)
-      std::string hash = fnv_hash(bmp.data(), bmp.nx()*bmp.ny()*3);
+      std::string hash = fnv_hash(bmp.data(), bmp.nx() * bmp.ny() * 3);
       bmp.set_id(hash.c_str());
       bitmaps.entries.push_back(std::move(bmp));
       result.bitmap_hashes.push_back(hash.c_str());
@@ -314,26 +319,23 @@ static TokenizeResult tokenizeWithMedia(
     bitmaps.entries.clear();
     throw std::runtime_error("Failed to initialize input chunks");
   }
-  
+
   // Create input text
   mtmd_input_text input_text;
   input_text.text = prompt.c_str(); // Use the full prompt with media marker
-  input_text.add_special = true;  // Add BOS token if this is the first message
-  input_text.parse_special = true;       // Parse special tokens like <__media__>
+  input_text.add_special = true;   // Add BOS token if this is the first message
+  input_text.parse_special = true; // Parse special tokens like <__media__>
 
   // Tokenize the text and media
-  fprintf(stdout, "[DEBUG] Tokenizing text and %zu media\n", bitmaps.entries.size());
+  fprintf(stdout, "[DEBUG] Tokenizing text and %zu media\n",
+          bitmaps.entries.size());
   auto bitmaps_c_ptr = bitmaps.c_ptr();
-  
+
   // Cast away const for mtmd_tokenize
-  int32_t res = mtmd_tokenize(
-    const_cast<mtmd_context*>(mtmd_ctx), 
-    result.chunks, 
-    &input_text, 
-    bitmaps_c_ptr.data(), 
-    bitmaps_c_ptr.size()
-  );
-  
+  int32_t res =
+      mtmd_tokenize(const_cast<mtmd_context *>(mtmd_ctx), result.chunks,
+                    &input_text, bitmaps_c_ptr.data(), bitmaps_c_ptr.size());
+
   if (res != 0) {
     mtmd_input_chunks_free(result.chunks);
     bitmaps.entries.clear();
@@ -342,7 +344,8 @@ static TokenizeResult tokenizeWithMedia(
 
   // Log chunk information
   size_t num_chunks = mtmd_input_chunks_size(result.chunks);
-  fprintf(stdout, "[DEBUG] Tokenization successful: num_chunks=%zu\n", num_chunks);
+  fprintf(stdout, "[DEBUG] Tokenization successful: num_chunks=%zu\n",
+          num_chunks);
 
   // Track the total number of tokens (both text and media)
   size_t total_token_count = 0;
@@ -351,22 +354,25 @@ static TokenizeResult tokenizeWithMedia(
   for (size_t i = 0; i < num_chunks; i++) {
     result.chunk_pos.push_back(total_token_count);
 
-    const mtmd_input_chunk* chunk = mtmd_input_chunks_get(result.chunks, i);
+    const mtmd_input_chunk *chunk = mtmd_input_chunks_get(result.chunks, i);
     mtmd_input_chunk_type chunk_type = mtmd_input_chunk_get_type(chunk);
 
     if (chunk_type == MTMD_INPUT_CHUNK_TYPE_TEXT) {
       size_t n_tokens;
-      const llama_token* tokens = mtmd_input_chunk_get_tokens_text(chunk, &n_tokens);
+      const llama_token *tokens =
+          mtmd_input_chunk_get_tokens_text(chunk, &n_tokens);
 
       result.tokens.insert(result.tokens.end(), tokens, tokens + n_tokens);
       total_token_count += n_tokens;
-    } else if (chunk_type == MTMD_INPUT_CHUNK_TYPE_IMAGE || chunk_type == MTMD_INPUT_CHUNK_TYPE_AUDIO) {
+    } else if (chunk_type == MTMD_INPUT_CHUNK_TYPE_IMAGE ||
+               chunk_type == MTMD_INPUT_CHUNK_TYPE_AUDIO) {
       result.chunk_pos_media.push_back(total_token_count);
 
       size_t n_tokens = mtmd_input_chunk_get_n_tokens(chunk);
       size_t n_pos = mtmd_input_chunk_get_n_pos(chunk);
       fprintf(stdout, "[DEBUG] Chunk %zu: type=%s, n_tokens=%zu, n_pos=%zu\n",
-               i, chunk_type == MTMD_INPUT_CHUNK_TYPE_IMAGE ? "IMAGE" : "AUDIO", n_tokens, n_pos);
+              i, chunk_type == MTMD_INPUT_CHUNK_TYPE_IMAGE ? "IMAGE" : "AUDIO",
+              n_tokens, n_pos);
 
       for (size_t j = 0; j < n_pos; j++) {
         result.tokens.push_back(LLAMA_TOKEN_NULL);
@@ -376,18 +382,15 @@ static TokenizeResult tokenizeWithMedia(
   }
 
   bitmaps.entries.clear();
-  
+
   return result;
 }
 
 // Process media and add them to the tokenized input
-static llama_pos processMediaPrompt(
-  llama_context* ctx,
-  const mtmd_context* mtmd_ctx,
-  LlamaSessionPtr sess,
-  const common_params& params,  
-  const std::vector<std::string>& media_paths
-) {
+static llama_pos
+processMediaPrompt(llama_context *ctx, const mtmd_context *mtmd_ctx,
+                   LlamaSessionPtr sess, const common_params &params,
+                   const std::vector<std::string> &media_paths) {
   if (mtmd_ctx == nullptr) {
     throw std::runtime_error("Multimodal context is not initialized");
   }
@@ -422,11 +425,10 @@ static llama_pos processMediaPrompt(
       break;
     }
     bool is_end = i + 1 == chunk_pos.size();
-    if (
-      chunk_pos[i] < n_past &&
-      (!is_end && chunk_pos[i + 1] > n_past)
-      // is_end & n_past < total_token_count:
-      // don't need to adjust and it will skip eval_chunk_single, let nextToken() to finish the job
+    if (chunk_pos[i] < n_past && (!is_end && chunk_pos[i + 1] > n_past)
+        // is_end & n_past < total_token_count:
+        // don't need to adjust and it will skip eval_chunk_single, let
+        // nextToken() to finish the job
     ) {
       adjusted_n_past = chunk_pos[i];
     }
@@ -437,7 +439,8 @@ static llama_pos processMediaPrompt(
     fprintf(stdout, "[DEBUG] Adjusted n_past to %d\n", n_past);
   }
 
-  // Compare bitmap hashes, if they are not the same, backtrack n_past to the position of the first mismatch
+  // Compare bitmap hashes, if they are not the same, backtrack n_past to the
+  // position of the first mismatch
   auto mtmd_bitmap_past_hashes = sess->mtmd_bitmap_past_hashes_ptr();
   if (mtmd_bitmap_past_hashes->size() > 0) {
     for (size_t i = 0; i < bitmap_hashes.size(); i++) {
@@ -462,7 +465,8 @@ static llama_pos processMediaPrompt(
   size_t num_chunks = mtmd_input_chunks_size(chunks);
 
   for (size_t i = 0; i < chunk_pos.size(); i++) {
-    fprintf(stdout, "[DEBUG] Evaluating chunk %zu: n_past=%d, chunk_pos=%zu\n", i, n_past, chunk_pos[i]);
+    fprintf(stdout, "[DEBUG] Evaluating chunk %zu: n_past=%d, chunk_pos=%zu\n",
+            i, n_past, chunk_pos[i]);
 
     // Process chunk only if it's after the current n_past
     if (chunk_pos[i] >= new_n_past) {
@@ -471,16 +475,10 @@ static llama_pos processMediaPrompt(
 
       // Cast away const for mtmd_helper_eval_chunk_single
       int32_t res = mtmd_helper_eval_chunk_single(
-        const_cast<mtmd_context*>(mtmd_ctx),
-        ctx,
-        chunk,
-        n_past,
-        0,
-        params.n_batch, // batch size
-        chunk_logits_last,
-        &new_n_past
-      );
-      
+          const_cast<mtmd_context *>(mtmd_ctx), ctx, chunk, n_past, 0,
+          params.n_batch, // batch size
+          chunk_logits_last, &new_n_past);
+
       if (res != 0) {
         mtmd_input_chunks_free(chunks);
         throw std::runtime_error("Failed to process chunk");
@@ -489,13 +487,14 @@ static llama_pos processMediaPrompt(
     }
   }
 
-  if (n_past == all_tokens.size() && n_past > 0 && all_tokens[n_past - 1] != LLAMA_TOKEN_NULL) {
+  if (n_past == all_tokens.size() && n_past > 0 &&
+      all_tokens[n_past - 1] != LLAMA_TOKEN_NULL) {
     // we have to evaluate at least 1 token to generate logits.
     n_past--;
   }
 
   // Update sampling context to process token sequences
-  for (auto & token : all_tokens) {
+  for (auto &token : all_tokens) {
     if (token == LLAMA_TOKEN_NULL) {
       continue;
     }

@@ -1,6 +1,6 @@
 #include "common.hpp"
-#include "tools/mtmd/mtmd.h"
 #include "tools/mtmd/clip.h"
+#include "tools/mtmd/mtmd.h"
 #include "tts_utils.h"
 
 class LlamaCompletionWorker;
@@ -16,7 +16,7 @@ public:
   LlamaContext(const Napi::CallbackInfo &info);
   ~LlamaContext();
   static void ToggleNativeLog(const Napi::CallbackInfo &info);
-  static Napi::Value ModelInfo(const Napi::CallbackInfo& info);
+  static Napi::Value ModelInfo(const Napi::CallbackInfo &info);
   static void Init(Napi::Env env, Napi::Object &exports);
 
 private:
@@ -34,7 +34,7 @@ private:
   void RemoveLoraAdapters(const Napi::CallbackInfo &info);
   Napi::Value GetLoadedLoraAdapters(const Napi::CallbackInfo &info);
   Napi::Value Release(const Napi::CallbackInfo &info);
-  
+
   // Multimodal methods
   Napi::Value InitMultimodal(const Napi::CallbackInfo &info);
   Napi::Value IsMultimodalEnabled(const Napi::CallbackInfo &info);
@@ -56,7 +56,7 @@ private:
   common_chat_templates_ptr _templates;
   std::vector<common_adapter_lora_info> _lora;
   LlamaCompletionWorker *_wip = nullptr;
-  
+
   // Multimodal support
   mtmd_context *_mtmd_ctx = nullptr;
   bool _has_multimodal = false;

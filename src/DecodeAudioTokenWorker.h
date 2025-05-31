@@ -2,10 +2,11 @@
 #include <vector>
 
 class DecodeAudioTokenWorker : public Napi::AsyncWorker,
-                        public Napi::Promise::Deferred {
+                               public Napi::Promise::Deferred {
 public:
-  DecodeAudioTokenWorker(const Napi::CallbackInfo &info, llama_model *model, llama_context *ctx, int n_threads,
-                  const std::vector<llama_token> &tokens);
+  DecodeAudioTokenWorker(const Napi::CallbackInfo &info, llama_model *model,
+                         llama_context *ctx, int n_threads,
+                         const std::vector<llama_token> &tokens);
 
 protected:
   void Execute();

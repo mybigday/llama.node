@@ -27,13 +27,9 @@ public:
 
   Napi::Promise GetPromise() { return Napi::Promise::Deferred::Promise(); }
 
-  void OnComplete(std::function<void()> cb) {
-    _onComplete = cb;
-  }
+  void OnComplete(std::function<void()> cb) { _onComplete = cb; }
 
-  void SetStop() {
-    _stop = true;
-  }
+  void SetStop() { _stop = true; }
 
 protected:
   void Execute() override;

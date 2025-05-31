@@ -12,8 +12,10 @@ void LoadSessionWorker::Execute() {
   std::vector<llama_token> tokens;
   tokens.reserve(_sess->params().n_ctx);
 
-  // Find LLAMA_TOKEN_NULL in the tokens and resize the array to the index of the null token
-  auto null_token_iter = std::find(tokens.begin(), tokens.end(), LLAMA_TOKEN_NULL);
+  // Find LLAMA_TOKEN_NULL in the tokens and resize the array to the index of
+  // the null token
+  auto null_token_iter =
+      std::find(tokens.begin(), tokens.end(), LLAMA_TOKEN_NULL);
   if (null_token_iter != tokens.end()) {
     tokens.resize(std::distance(tokens.begin(), null_token_iter));
   }

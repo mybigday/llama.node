@@ -1,9 +1,5 @@
-#include "ggml.h"
-#include "gguf.h"
-#include "llama-impl.h"
-#include "json.hpp"
-#include "json-schema-to-grammar.h"
 #include "LlamaContext.h"
+#include "DecodeAudioTokenWorker.h"
 #include "DetokenizeWorker.h"
 #include "DisposeWorker.h"
 #include "EmbeddingWorker.h"
@@ -11,34 +7,42 @@
 #include "LoadSessionWorker.h"
 #include "SaveSessionWorker.h"
 #include "TokenizeWorker.h"
-#include "DecodeAudioTokenWorker.h"
+#include "ggml.h"
+#include "gguf.h"
+#include "json-schema-to-grammar.h"
+#include "json.hpp"
+#include "llama-impl.h"
 
+#include <atomic>
 #include <mutex>
 #include <queue>
-#include <atomic>
 
 // Helper function for formatted strings (for console logs)
-template<typename ... Args>
-static std::string format_string(const std::string& format, Args ... args) {
-    int size_s = std::snprintf(nullptr, 0, format.c_str(), args ...) + 1; // +1 for null terminator
-    if (size_s <= 0) { return "Error formatting string"; }
-    auto size = static_cast<size_t>(size_s);
-    std::unique_ptr<char[]> buf(new char[size]);
-    std::snprintf(buf.get(), size, format.c_str(), args ...);
-    return std::string(buf.get(), buf.get() + size - 1); // -1 to exclude null terminator
+template <typename... Args>
+static std::string format_string(const std::string &format, Args... args) {
+  int size_s = std::snprintf(nullptr, 0, format.c_str(), args...) +
+               1; // +1 for null terminator
+  if (size_s <= 0) {
+    return "Error formatting string";
+  }
+  auto size = static_cast<size_t>(size_s);
+  std::unique_ptr<char[]> buf(new char[size]);
+  std::snprintf(buf.get(), size, format.c_str(), args...);
+  return std::string(buf.get(),
+                     buf.get() + size - 1); // -1 to exclude null terminator
 }
 
 using json = nlohmann::ordered_json;
 
 // loadModelInfo(path: string): object
-Napi::Value LlamaContext::ModelInfo(const Napi::CallbackInfo& info) {
+Napi::Value LlamaContext::ModelInfo(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   struct gguf_init_params params = {
-    /*.no_alloc = */ false,
-    /*.ctx      = */ NULL,
+      /*.no_alloc = */ false,
+      /*.ctx      = */ NULL,
   };
   std::string path = info[0].ToString().Utf8Value();
-  
+
   // Convert Napi::Array to vector<string>
   std::vector<std::string> skip;
   if (info.Length() > 1 && info[1].IsArray()) {
@@ -48,7 +52,7 @@ Napi::Value LlamaContext::ModelInfo(const Napi::CallbackInfo& info) {
     }
   }
 
-  struct gguf_context * ctx = gguf_init_from_file(path.c_str(), params);
+  struct gguf_context *ctx = gguf_init_from_file(path.c_str(), params);
 
   Napi::Object metadata = Napi::Object::New(env);
   if (std::find(skip.begin(), skip.end(), "version") == skip.end()) {
@@ -58,7 +62,8 @@ Napi::Value LlamaContext::ModelInfo(const Napi::CallbackInfo& info) {
     metadata.Set("alignment", Napi::Number::New(env, gguf_get_alignment(ctx)));
   }
   if (std::find(skip.begin(), skip.end(), "data_offset") == skip.end()) {
-    metadata.Set("data_offset", Napi::Number::New(env, gguf_get_data_offset(ctx)));
+    metadata.Set("data_offset",
+                 Napi::Number::New(env, gguf_get_data_offset(ctx)));
   }
 
   // kv
@@ -66,7 +71,7 @@ Napi::Value LlamaContext::ModelInfo(const Napi::CallbackInfo& info) {
     const int n_kv = gguf_get_n_kv(ctx);
 
     for (int i = 0; i < n_kv; ++i) {
-      const char * key = gguf_get_key(ctx, i);
+      const char *key = gguf_get_key(ctx, i);
       if (std::find(skip.begin(), skip.end(), key) != skip.end()) {
         continue;
       }
@@ -167,19 +172,13 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
 }
 
 const std::vector<ggml_type> kv_cache_types = {
-  GGML_TYPE_F32,
-  GGML_TYPE_F16,
-  GGML_TYPE_BF16,
-  GGML_TYPE_Q8_0,
-  GGML_TYPE_Q4_0,
-  GGML_TYPE_Q4_1,
-  GGML_TYPE_IQ4_NL,
-  GGML_TYPE_Q5_0,
-  GGML_TYPE_Q5_1,
+    GGML_TYPE_F32,    GGML_TYPE_F16,  GGML_TYPE_BF16,
+    GGML_TYPE_Q8_0,   GGML_TYPE_Q4_0, GGML_TYPE_Q4_1,
+    GGML_TYPE_IQ4_NL, GGML_TYPE_Q5_0, GGML_TYPE_Q5_1,
 };
 
-static ggml_type kv_cache_type_from_str(const std::string & s) {
-  for (const auto & type : kv_cache_types) {
+static ggml_type kv_cache_type_from_str(const std::string &s) {
+  for (const auto &type : kv_cache_types) {
     if (ggml_type_name(type) == s) {
       return type;
     }
@@ -187,12 +186,17 @@ static ggml_type kv_cache_type_from_str(const std::string & s) {
   throw std::runtime_error("Unsupported cache type: " + s);
 }
 
-static int32_t pooling_type_from_str(const std::string & s) {
-  if (s == "none") return LLAMA_POOLING_TYPE_NONE;
-  if (s == "mean") return LLAMA_POOLING_TYPE_MEAN;
-  if (s == "cls") return LLAMA_POOLING_TYPE_CLS;
-  if (s == "last") return LLAMA_POOLING_TYPE_LAST;
-  if (s == "rank") return LLAMA_POOLING_TYPE_RANK;
+static int32_t pooling_type_from_str(const std::string &s) {
+  if (s == "none")
+    return LLAMA_POOLING_TYPE_NONE;
+  if (s == "mean")
+    return LLAMA_POOLING_TYPE_MEAN;
+  if (s == "cls")
+    return LLAMA_POOLING_TYPE_CLS;
+  if (s == "last")
+    return LLAMA_POOLING_TYPE_LAST;
+  if (s == "rank")
+    return LLAMA_POOLING_TYPE_RANK;
   return LLAMA_POOLING_TYPE_UNSPECIFIED;
 }
 
@@ -219,7 +223,8 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
 
   params.chat_template = get_option<std::string>(options, "chat_template", "");
 
-  std::string reasoning_format = get_option<std::string>(options, "reasoning_format", "none");
+  std::string reasoning_format =
+      get_option<std::string>(options, "reasoning_format", "none");
   if (reasoning_format == "deepseek") {
     params.reasoning_format = COMMON_REASONING_FORMAT_DEEPSEEK;
   } else {
@@ -235,16 +240,17 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
     params.n_ubatch = params.n_batch;
   }
   params.embd_normalize = get_option<int32_t>(options, "embd_normalize", 2);
-  params.pooling_type = (enum llama_pooling_type) pooling_type_from_str(
-    get_option<std::string>(options, "pooling_type", "").c_str()
-  );
+  params.pooling_type = (enum llama_pooling_type)pooling_type_from_str(
+      get_option<std::string>(options, "pooling_type", "").c_str());
 
   params.cpuparams.n_threads =
       get_option<int32_t>(options, "n_threads", cpu_get_num_math() / 2);
   params.n_gpu_layers = get_option<int32_t>(options, "n_gpu_layers", -1);
   params.flash_attn = get_option<bool>(options, "flash_attn", false);
-  params.cache_type_k = kv_cache_type_from_str(get_option<std::string>(options, "cache_type_k", "f16").c_str());
-  params.cache_type_v = kv_cache_type_from_str(get_option<std::string>(options, "cache_type_v", "f16").c_str());
+  params.cache_type_k = kv_cache_type_from_str(
+      get_option<std::string>(options, "cache_type_k", "f16").c_str());
+  params.cache_type_v = kv_cache_type_from_str(
+      get_option<std::string>(options, "cache_type_v", "f16").c_str());
   params.ctx_shift = get_option<bool>(options, "ctx_shift", true);
 
   params.use_mlock = get_option<bool>(options, "use_mlock", false);
@@ -315,8 +321,9 @@ Napi::Value LlamaContext::GetSystemInfo(const Napi::CallbackInfo &info) {
   return Napi::String::New(info.Env(), _info);
 }
 
-bool validateModelChatTemplate(const struct llama_model * model, const bool use_jinja, const char * name) {
-  const char * tmpl = llama_model_chat_template(model, name);
+bool validateModelChatTemplate(const struct llama_model *model,
+                               const bool use_jinja, const char *name) {
+  const char *tmpl = llama_model_chat_template(model, name);
   if (tmpl == nullptr) {
     return false;
   }
@@ -342,68 +349,68 @@ extern "C" void cleanup_logging();
 void LlamaContext::ToggleNativeLog(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   bool enable = info[0].ToBoolean().Value();
-  
+
   if (enable) {
     if (!info[1].IsFunction()) {
-      Napi::TypeError::New(env, "Callback function required").ThrowAsJavaScriptException();
+      Napi::TypeError::New(env, "Callback function required")
+          .ThrowAsJavaScriptException();
       return;
     }
-    
+
     // First clean up existing thread-safe function if any
     if (g_logging_enabled) {
       g_tsfn.Release();
       g_logging_enabled = false;
     }
-    
+
     // Create thread-safe function that can be called from any thread
-    g_tsfn = Napi::ThreadSafeFunction::New(
-      env,
-      info[1].As<Napi::Function>(),
-      "LLAMA Logger",
-      0,
-      1,
-      [](Napi::Env) {
-        // Finalizer callback - nothing needed here
-      }
-    );
+    g_tsfn = Napi::ThreadSafeFunction::New(env, info[1].As<Napi::Function>(),
+                                           "LLAMA Logger", 0, 1, [](Napi::Env) {
+                                             // Finalizer callback - nothing
+                                             // needed here
+                                           });
 
     g_logging_enabled = true;
-    
+
     // Set up log callback
-    llama_log_set([](ggml_log_level level, const char* text, void* user_data) {
-      // First call the default logger
-      llama_log_callback_default(level, text, user_data);
+    llama_log_set(
+        [](ggml_log_level level, const char *text, void *user_data) {
+          // First call the default logger
+          llama_log_callback_default(level, text, user_data);
 
-      if (!g_logging_enabled) return;
+          if (!g_logging_enabled)
+            return;
 
-      // Determine log level string
-      std::string level_str = "";
-      if (level == GGML_LOG_LEVEL_ERROR) {
-        level_str = "error";
-      } else if (level == GGML_LOG_LEVEL_INFO) {
-        level_str = "info";
-      } else if (level == GGML_LOG_LEVEL_WARN) {
-        level_str = "warn";
-      }
-      
-      // Create a heap-allocated copy of the data
-      auto* data = new LogMessage{level_str, text};
+          // Determine log level string
+          std::string level_str = "";
+          if (level == GGML_LOG_LEVEL_ERROR) {
+            level_str = "error";
+          } else if (level == GGML_LOG_LEVEL_INFO) {
+            level_str = "info";
+          } else if (level == GGML_LOG_LEVEL_WARN) {
+            level_str = "warn";
+          }
 
-      // Queue callback to be executed on the JavaScript thread
-      auto status = g_tsfn.BlockingCall(data, [](Napi::Env env, Napi::Function jsCallback, LogMessage* data) {
-        // This code runs on the JavaScript thread
-        jsCallback.Call({
-          Napi::String::New(env, data->level),
-          Napi::String::New(env, data->text)
-        });
-        delete data;
-      });
+          // Create a heap-allocated copy of the data
+          auto *data = new LogMessage{level_str, text};
 
-      // If the call failed (e.g., runtime is shutting down), clean up the data
-      if (status != napi_ok) {
-        delete data;
-      }
-    }, nullptr);
+          // Queue callback to be executed on the JavaScript thread
+          auto status = g_tsfn.BlockingCall(
+              data,
+              [](Napi::Env env, Napi::Function jsCallback, LogMessage *data) {
+                // This code runs on the JavaScript thread
+                jsCallback.Call({Napi::String::New(env, data->level),
+                                 Napi::String::New(env, data->text)});
+                delete data;
+              });
+
+          // If the call failed (e.g., runtime is shutting down), clean up the
+          // data
+          if (status != napi_ok) {
+            delete data;
+          }
+        },
+        nullptr);
   } else {
     // Disable logging
     if (g_logging_enabled) {
@@ -441,22 +448,47 @@ Napi::Value LlamaContext::GetModelInfo(const Napi::CallbackInfo &info) {
   Napi::Object minja = Napi::Object::New(info.Env());
   minja.Set("default", validateModelChatTemplate(model, true, ""));
   Napi::Object defaultCaps = Napi::Object::New(info.Env());
-  defaultCaps.Set("tools", _templates.get()->template_default->original_caps().supports_tools);
-  defaultCaps.Set("toolCalls", _templates.get()->template_default->original_caps().supports_tool_calls);
-  defaultCaps.Set("toolResponses", _templates.get()->template_default->original_caps().supports_tool_responses);
-  defaultCaps.Set("systemRole", _templates.get()->template_default->original_caps().supports_system_role);
-  defaultCaps.Set("parallelToolCalls", _templates.get()->template_default->original_caps().supports_parallel_tool_calls);
-  defaultCaps.Set("toolCallId", _templates.get()->template_default->original_caps().supports_tool_call_id);
+  defaultCaps.Set(
+      "tools",
+      _templates.get()->template_default->original_caps().supports_tools);
+  defaultCaps.Set(
+      "toolCalls",
+      _templates.get()->template_default->original_caps().supports_tool_calls);
+  defaultCaps.Set("toolResponses", _templates.get()
+                                       ->template_default->original_caps()
+                                       .supports_tool_responses);
+  defaultCaps.Set(
+      "systemRole",
+      _templates.get()->template_default->original_caps().supports_system_role);
+  defaultCaps.Set("parallelToolCalls", _templates.get()
+                                           ->template_default->original_caps()
+                                           .supports_parallel_tool_calls);
+  defaultCaps.Set("toolCallId", _templates.get()
+                                    ->template_default->original_caps()
+                                    .supports_tool_call_id);
   minja.Set("defaultCaps", defaultCaps);
   minja.Set("toolUse", validateModelChatTemplate(model, true, "tool_use"));
   if (_templates.get()->template_tool_use) {
     Napi::Object toolUseCaps = Napi::Object::New(info.Env());
-    toolUseCaps.Set("tools", _templates.get()->template_tool_use->original_caps().supports_tools);
-    toolUseCaps.Set("toolCalls", _templates.get()->template_tool_use->original_caps().supports_tool_calls);
-    toolUseCaps.Set("toolResponses", _templates.get()->template_tool_use->original_caps().supports_tool_responses);
-    toolUseCaps.Set("systemRole", _templates.get()->template_tool_use->original_caps().supports_system_role);
-    toolUseCaps.Set("parallelToolCalls", _templates.get()->template_tool_use->original_caps().supports_parallel_tool_calls);
-    toolUseCaps.Set("toolCallId", _templates.get()->template_tool_use->original_caps().supports_tool_call_id);
+    toolUseCaps.Set(
+        "tools",
+        _templates.get()->template_tool_use->original_caps().supports_tools);
+    toolUseCaps.Set("toolCalls", _templates.get()
+                                     ->template_tool_use->original_caps()
+                                     .supports_tool_calls);
+    toolUseCaps.Set("toolResponses", _templates.get()
+                                         ->template_tool_use->original_caps()
+                                         .supports_tool_responses);
+    toolUseCaps.Set("systemRole", _templates.get()
+                                      ->template_tool_use->original_caps()
+                                      .supports_system_role);
+    toolUseCaps.Set("parallelToolCalls",
+                    _templates.get()
+                        ->template_tool_use->original_caps()
+                        .supports_parallel_tool_calls);
+    toolUseCaps.Set("toolCallId", _templates.get()
+                                      ->template_tool_use->original_caps()
+                                      .supports_tool_call_id);
     minja.Set("toolUseCaps", toolUseCaps);
   }
   chatTemplates.Set("minja", minja);
@@ -465,20 +497,17 @@ Napi::Value LlamaContext::GetModelInfo(const Napi::CallbackInfo &info) {
   details.Set("metadata", metadata);
 
   // Deprecated: use chatTemplates.llamaChat instead
-  details.Set("isChatTemplateSupported", validateModelChatTemplate(_sess->model(), false, ""));
+  details.Set("isChatTemplateSupported",
+              validateModelChatTemplate(_sess->model(), false, ""));
   return details;
 }
 
 common_chat_params getFormattedChatWithJinja(
-  const std::shared_ptr<LlamaSession> &sess,
-  const common_chat_templates_ptr &templates,
-  const std::string &messages,
-  const std::string &chat_template,
-  const std::string &json_schema,
-  const std::string &tools,
-  const bool &parallel_tool_calls,
-  const std::string &tool_choice
-) {
+    const std::shared_ptr<LlamaSession> &sess,
+    const common_chat_templates_ptr &templates, const std::string &messages,
+    const std::string &chat_template, const std::string &json_schema,
+    const std::string &tools, const bool &parallel_tool_calls,
+    const std::string &tool_choice) {
   common_chat_templates_inputs inputs;
   inputs.messages = common_chat_msgs_parse_oaicompat(json::parse(messages));
   auto useTools = !tools.empty();
@@ -492,23 +521,22 @@ common_chat_params getFormattedChatWithJinja(
   if (!json_schema.empty()) {
     inputs.json_schema = json::parse(json_schema);
   }
-  inputs.extract_reasoning = sess->params().reasoning_format != COMMON_REASONING_FORMAT_NONE;
+  inputs.extract_reasoning =
+      sess->params().reasoning_format != COMMON_REASONING_FORMAT_NONE;
 
   // If chat_template is provided, create new one and use it (probably slow)
   if (!chat_template.empty()) {
-      auto tmps = common_chat_templates_init(sess->model(), chat_template);
-      return common_chat_templates_apply(tmps.get(), inputs);
+    auto tmps = common_chat_templates_init(sess->model(), chat_template);
+    return common_chat_templates_apply(tmps.get(), inputs);
   } else {
-      return common_chat_templates_apply(templates.get(), inputs);
+    return common_chat_templates_apply(templates.get(), inputs);
   }
 }
 
-std::string getFormattedChat(
-  const struct llama_model * model,
-  const common_chat_templates_ptr &templates,
-  const std::string &messages,
-  const std::string &chat_template
-) {
+std::string getFormattedChat(const struct llama_model *model,
+                             const common_chat_templates_ptr &templates,
+                             const std::string &messages,
+                             const std::string &chat_template) {
   common_chat_templates_inputs inputs;
   inputs.messages = common_chat_msgs_parse_oaicompat(json::parse(messages));
   inputs.use_jinja = false;
@@ -525,7 +553,8 @@ std::string getFormattedChat(
 // getFormattedChat(
 //   messages: [{ role: string, content: string }],
 //   chat_template: string,
-//   params: { jinja: boolean, json_schema: string, tools: string, parallel_tool_calls: boolean, tool_choice: string }
+//   params: { jinja: boolean, json_schema: string, tools: string,
+//   parallel_tool_calls: boolean, tool_choice: string }
 // ): object | string
 Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
@@ -536,32 +565,42 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
   auto chat_template = info[1].IsString() ? info[1].ToString().Utf8Value() : "";
 
   auto has_params = info.Length() >= 2;
-  auto params = has_params ? info[2].As<Napi::Object>() : Napi::Object::New(env);
+  auto params =
+      has_params ? info[2].As<Napi::Object>() : Napi::Object::New(env);
 
   if (get_option<bool>(params, "jinja", false)) {
     std::string json_schema_str = "";
     if (!is_nil(params.Get("response_format"))) {
       auto response_format = params.Get("response_format").As<Napi::Object>();
-      auto response_format_type = get_option<std::string>(response_format, "type", "text");
-      if (response_format_type == "json_schema" && response_format.Has("json_schema")) {
-        auto json_schema = response_format.Get("json_schema").As<Napi::Object>();
-        json_schema_str = json_schema.Has("schema") ?
-          json_stringify(json_schema.Get("schema").As<Napi::Object>()) :
-          "{}";
+      auto response_format_type =
+          get_option<std::string>(response_format, "type", "text");
+      if (response_format_type == "json_schema" &&
+          response_format.Has("json_schema")) {
+        auto json_schema =
+            response_format.Get("json_schema").As<Napi::Object>();
+        json_schema_str =
+            json_schema.Has("schema")
+                ? json_stringify(json_schema.Get("schema").As<Napi::Object>())
+                : "{}";
       } else if (response_format_type == "json_object") {
-        json_schema_str = response_format.Has("schema") ?
-          json_stringify(response_format.Get("schema").As<Napi::Object>()) :
-          "{}";
+        json_schema_str =
+            response_format.Has("schema")
+                ? json_stringify(
+                      response_format.Get("schema").As<Napi::Object>())
+                : "{}";
       }
     }
-    auto tools_str = params.Has("tools") ?
-      json_stringify(params.Get("tools").As<Napi::Array>()) :
-      "";
-    auto parallel_tool_calls = get_option<bool>(params, "parallel_tool_calls", false);
+    auto tools_str = params.Has("tools")
+                         ? json_stringify(params.Get("tools").As<Napi::Array>())
+                         : "";
+    auto parallel_tool_calls =
+        get_option<bool>(params, "parallel_tool_calls", false);
     auto tool_choice = get_option<std::string>(params, "tool_choice", "");
 
-    auto chatParams = getFormattedChatWithJinja(_sess, _templates, messages, chat_template, json_schema_str, tools_str, parallel_tool_calls, tool_choice);
-    
+    auto chatParams = getFormattedChatWithJinja(
+        _sess, _templates, messages, chat_template, json_schema_str, tools_str,
+        parallel_tool_calls, tool_choice);
+
     Napi::Object result = Napi::Object::New(env);
     result.Set("prompt", chatParams.prompt);
     // chat_format: int
@@ -573,30 +612,33 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
     // grammar_triggers: [{ value: string, token: number }]
     Napi::Array grammar_triggers = Napi::Array::New(env);
     for (size_t i = 0; i < chatParams.grammar_triggers.size(); i++) {
-        const auto & trigger = chatParams.grammar_triggers[i];
-        Napi::Object triggerObj = Napi::Object::New(env);
-        triggerObj.Set("type", Napi::Number::New(env, trigger.type));
-        triggerObj.Set("value", Napi::String::New(env, trigger.value));
-        triggerObj.Set("token", Napi::Number::New(env, trigger.token));
-        grammar_triggers.Set(i, triggerObj);
+      const auto &trigger = chatParams.grammar_triggers[i];
+      Napi::Object triggerObj = Napi::Object::New(env);
+      triggerObj.Set("type", Napi::Number::New(env, trigger.type));
+      triggerObj.Set("value", Napi::String::New(env, trigger.value));
+      triggerObj.Set("token", Napi::Number::New(env, trigger.token));
+      grammar_triggers.Set(i, triggerObj);
     }
     result.Set("grammar_triggers", grammar_triggers);
     // preserved_tokens: string[]
     Napi::Array preserved_tokens = Napi::Array::New(env);
     for (size_t i = 0; i < chatParams.preserved_tokens.size(); i++) {
-        preserved_tokens.Set(i, Napi::String::New(env, chatParams.preserved_tokens[i].c_str()));
+      preserved_tokens.Set(
+          i, Napi::String::New(env, chatParams.preserved_tokens[i].c_str()));
     }
     result.Set("preserved_tokens", preserved_tokens);
     // additional_stops: string[]
     Napi::Array additional_stops = Napi::Array::New(env);
     for (size_t i = 0; i < chatParams.additional_stops.size(); i++) {
-        additional_stops.Set(i, Napi::String::New(env, chatParams.additional_stops[i].c_str()));
+      additional_stops.Set(
+          i, Napi::String::New(env, chatParams.additional_stops[i].c_str()));
     }
     result.Set("additional_stops", additional_stops);
 
     return result;
   } else {
-    auto formatted = getFormattedChat(_sess->model(), _templates, messages, chat_template);
+    auto formatted =
+        getFormattedChat(_sess->model(), _templates, messages, chat_template);
     return Napi::String::New(env, formatted);
   }
 }
@@ -644,7 +686,9 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
 
   // Check if multimodal is enabled when media_paths are provided
   if (!media_paths.empty() && !(_has_multimodal && _mtmd_ctx != nullptr)) {
-    Napi::Error::New(env, "Multimodal support must be enabled via initMultimodal to use media_paths").ThrowAsJavaScriptException();
+    Napi::Error::New(env, "Multimodal support must be enabled via "
+                          "initMultimodal to use media_paths")
+        .ThrowAsJavaScriptException();
     return env.Undefined();
   }
 
@@ -660,16 +704,20 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   std::string json_schema_str = "";
   if (options.Has("response_format")) {
     auto response_format = options.Get("response_format").As<Napi::Object>();
-    auto response_format_type = get_option<std::string>(response_format, "type", "text");
-    if (response_format_type == "json_schema" && response_format.Has("json_schema")) {
+    auto response_format_type =
+        get_option<std::string>(response_format, "type", "text");
+    if (response_format_type == "json_schema" &&
+        response_format.Has("json_schema")) {
       auto json_schema = response_format.Get("json_schema").As<Napi::Object>();
-      json_schema_str = json_schema.Has("schema") ?
-        json_stringify(json_schema.Get("schema").As<Napi::Object>()) :
-        "{}";
+      json_schema_str =
+          json_schema.Has("schema")
+              ? json_stringify(json_schema.Get("schema").As<Napi::Object>())
+              : "{}";
     } else if (response_format_type == "json_object") {
-      json_schema_str = response_format.Has("schema") ?
-        json_stringify(response_format.Get("schema").As<Napi::Object>()) :
-        "{}";
+      json_schema_str =
+          response_format.Has("schema")
+              ? json_stringify(response_format.Get("schema").As<Napi::Object>())
+              : "{}";
     }
   }
 
@@ -678,7 +726,9 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
     auto preserved_tokens = options.Get("preserved_tokens").As<Napi::Array>();
     for (size_t i = 0; i < preserved_tokens.Length(); i++) {
       auto token = preserved_tokens.Get(i).ToString().Utf8Value();
-      auto ids = common_tokenize(_sess->context(), token, /* add_special= */ false, /* parse_special= */ true);
+      auto ids =
+          common_tokenize(_sess->context(), token, /* add_special= */ false,
+                          /* parse_special= */ true);
       if (ids.size() == 1) {
         params.sampling.preserved_tokens.insert(ids[0]);
       }
@@ -691,15 +741,22 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
     for (size_t i = 0; i < grammar_triggers.Length(); i++) {
       auto trigger_obj = grammar_triggers.Get(i).As<Napi::Object>();
 
-      auto type = static_cast<common_grammar_trigger_type>(trigger_obj.Get("type").ToNumber().Int32Value());
+      auto type = static_cast<common_grammar_trigger_type>(
+          trigger_obj.Get("type").ToNumber().Int32Value());
       auto word = trigger_obj.Get("value").ToString().Utf8Value();
 
       if (type == COMMON_GRAMMAR_TRIGGER_TYPE_WORD) {
-        auto ids = common_tokenize(_sess->context(), word, /* add_special= */ false, /* parse_special= */ true);
+        auto ids =
+            common_tokenize(_sess->context(), word, /* add_special= */ false,
+                            /* parse_special= */ true);
         if (ids.size() == 1) {
           auto token = ids[0];
-          if (std::find(params.sampling.preserved_tokens.begin(), params.sampling.preserved_tokens.end(), (llama_token) token) == params.sampling.preserved_tokens.end()) {
-            throw std::runtime_error("Grammar trigger word should be marked as preserved token");
+          if (std::find(params.sampling.preserved_tokens.begin(),
+                        params.sampling.preserved_tokens.end(),
+                        (llama_token)token) ==
+              params.sampling.preserved_tokens.end()) {
+            throw std::runtime_error(
+                "Grammar trigger word should be marked as preserved token");
           }
           common_grammar_trigger trigger;
           trigger.type = COMMON_GRAMMAR_TRIGGER_TYPE_TOKEN;
@@ -707,14 +764,16 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
           trigger.token = token;
           params.sampling.grammar_triggers.push_back(std::move(trigger));
         } else {
-          params.sampling.grammar_triggers.push_back({COMMON_GRAMMAR_TRIGGER_TYPE_WORD, word});
+          params.sampling.grammar_triggers.push_back(
+              {COMMON_GRAMMAR_TRIGGER_TYPE_WORD, word});
         }
       } else {
         common_grammar_trigger trigger;
         trigger.type = type;
         trigger.value = word;
         if (type == COMMON_GRAMMAR_TRIGGER_TYPE_TOKEN) {
-          auto token = (llama_token) trigger_obj.Get("token").ToNumber().Int32Value();
+          auto token =
+              (llama_token)trigger_obj.Get("token").ToNumber().Int32Value();
           trigger.token = token;
         }
         params.sampling.grammar_triggers.push_back(std::move(trigger));
@@ -724,7 +783,8 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
 
   // Handle grammar_lazy from options
   if (options.Has("grammar_lazy")) {
-    params.sampling.grammar_lazy = options.Get("grammar_lazy").ToBoolean().Value();
+    params.sampling.grammar_lazy =
+        options.Get("grammar_lazy").ToBoolean().Value();
   }
 
   if (options.Has("messages") && options.Get("messages").IsArray()) {
@@ -732,29 +792,27 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
     auto chat_template = get_option<std::string>(options, "chat_template", "");
     auto jinja = get_option<bool>(options, "jinja", false);
     if (jinja) {
-      auto tools_str = options.Has("tools") ?
-        json_stringify(options.Get("tools").As<Napi::Array>()) :
-        "";
-      auto parallel_tool_calls = get_option<bool>(options, "parallel_tool_calls", false);
-      auto tool_choice = get_option<std::string>(options, "tool_choice", "none");
+      auto tools_str =
+          options.Has("tools")
+              ? json_stringify(options.Get("tools").As<Napi::Array>())
+              : "";
+      auto parallel_tool_calls =
+          get_option<bool>(options, "parallel_tool_calls", false);
+      auto tool_choice =
+          get_option<std::string>(options, "tool_choice", "none");
 
       auto chatParams = getFormattedChatWithJinja(
-        _sess,
-        _templates,
-        json_stringify(messages),
-        chat_template,
-        json_schema_str,
-        tools_str,
-        parallel_tool_calls,
-        tool_choice
-      );  
-      
+          _sess, _templates, json_stringify(messages), chat_template,
+          json_schema_str, tools_str, parallel_tool_calls, tool_choice);
+
       params.prompt = chatParams.prompt;
 
       chat_format = chatParams.format;
 
-      for (const auto & token : chatParams.preserved_tokens) {
-        auto ids = common_tokenize(_sess->context(), token, /* add_special= */ false, /* parse_special= */ true);
+      for (const auto &token : chatParams.preserved_tokens) {
+        auto ids =
+            common_tokenize(_sess->context(), token, /* add_special= */ false,
+                            /* parse_special= */ true);
         if (ids.size() == 1) {
           params.sampling.preserved_tokens.insert(ids[0]);
         }
@@ -764,22 +822,18 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
         // grammar param always wins jinja template & json_schema
         params.sampling.grammar = chatParams.grammar;
         params.sampling.grammar_lazy = chatParams.grammar_lazy;
-        for (const auto & trigger : chatParams.grammar_triggers) {
+        for (const auto &trigger : chatParams.grammar_triggers) {
           params.sampling.grammar_triggers.push_back(trigger);
         }
         has_grammar_set = true;
       }
-      
-      for (const auto & stop : chatParams.additional_stops) {
+
+      for (const auto &stop : chatParams.additional_stops) {
         stop_words.push_back(stop);
       }
     } else {
       auto formatted = getFormattedChat(
-        _sess->model(),
-        _templates,
-        json_stringify(messages),
-        chat_template
-      );
+          _sess->model(), _templates, json_stringify(messages), chat_template);
       params.prompt = formatted;
     }
   } else {
@@ -791,7 +845,8 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   }
 
   if (!has_grammar_set && !json_schema_str.empty()) {
-    params.sampling.grammar = json_schema_to_grammar(json::parse(json_schema_str));
+    params.sampling.grammar =
+        json_schema_to_grammar(json::parse(json_schema_str));
   }
 
   params.n_predict = get_option<int32_t>(options, "n_predict", -1);
@@ -813,16 +868,23 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   params.sampling.penalty_present =
       get_option<float>(options, "penalty_present", 0.00f);
   params.sampling.typ_p = get_option<float>(options, "typical_p", 1.00f);
-  params.sampling.xtc_threshold = get_option<float>(options, "xtc_threshold", 0.00f);
-  params.sampling.xtc_probability = get_option<float>(options, "xtc_probability", 0.10f);
-  params.sampling.dry_multiplier = get_option<float>(options, "dry_multiplier", 1.75f);
+  params.sampling.xtc_threshold =
+      get_option<float>(options, "xtc_threshold", 0.00f);
+  params.sampling.xtc_probability =
+      get_option<float>(options, "xtc_probability", 0.10f);
+  params.sampling.dry_multiplier =
+      get_option<float>(options, "dry_multiplier", 1.75f);
   params.sampling.dry_base = get_option<float>(options, "dry_base", 2);
-  params.sampling.dry_allowed_length = get_option<float>(options, "dry_allowed_length", -1);
-  params.sampling.dry_penalty_last_n = get_option<float>(options, "dry_penalty_last_n", 0);
-  params.sampling.top_n_sigma = get_option<float>(options, "top_n_sigma", -1.0f);
+  params.sampling.dry_allowed_length =
+      get_option<float>(options, "dry_allowed_length", -1);
+  params.sampling.dry_penalty_last_n =
+      get_option<float>(options, "dry_penalty_last_n", 0);
+  params.sampling.top_n_sigma =
+      get_option<float>(options, "top_n_sigma", -1.0f);
   params.sampling.ignore_eos = get_option<bool>(options, "ignore_eos", false);
   params.n_keep = get_option<int32_t>(options, "n_keep", 0);
-  params.sampling.seed = get_option<int32_t>(options, "seed", LLAMA_DEFAULT_SEED);
+  params.sampling.seed =
+      get_option<int32_t>(options, "seed", LLAMA_DEFAULT_SEED);
 
   // guide_tokens
   std::vector<llama_token> guide_tokens;
@@ -839,7 +901,8 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   }
 
   auto *worker =
-      new LlamaCompletionWorker(info, _sess, callback, params, stop_words, chat_format, media_paths, guide_tokens);
+      new LlamaCompletionWorker(info, _sess, callback, params, stop_words,
+                                chat_format, media_paths, guide_tokens);
   worker->Queue();
   _wip = worker;
   worker->OnComplete([this]() { _wip = nullptr; });
@@ -993,7 +1056,8 @@ void LlamaContext::RemoveLoraAdapters(const Napi::CallbackInfo &info) {
 
 // getLoadedLoraAdapters(): Promise<{ count, lora_adapters: [{ path: string,
 // scaled: number }] }>
-Napi::Value LlamaContext::GetLoadedLoraAdapters(const Napi::CallbackInfo &info) {
+Napi::Value
+LlamaContext::GetLoadedLoraAdapters(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   Napi::Array lora_adapters = Napi::Array::New(env, _lora.size());
   for (size_t i = 0; i < _lora.size(); i++) {
@@ -1011,18 +1075,18 @@ Napi::Value LlamaContext::Release(const Napi::CallbackInfo &info) {
   if (_wip != nullptr) {
     _wip->SetStop();
   }
-  
+
   if (_sess == nullptr) {
     auto promise = Napi::Promise::Deferred(env);
     promise.Resolve(env.Undefined());
     return promise.Promise();
   }
-  
+
   // Clear the mtmd context reference in the session
   if (_mtmd_ctx != nullptr) {
     _sess->set_mtmd_ctx(nullptr);
   }
-  
+
   auto *worker = new DisposeWorker(info, std::move(_sess));
   worker->Queue();
   return worker->Promise();
@@ -1050,7 +1114,8 @@ Napi::Value LlamaContext::InitMultimodal(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
 
   if (info.Length() < 1 || !info[0].IsObject()) {
-    Napi::TypeError::New(env, "Object expected for mmproj path").ThrowAsJavaScriptException();
+    Napi::TypeError::New(env, "Object expected for mmproj path")
+        .ThrowAsJavaScriptException();
   }
 
   auto options = info[0].As<Napi::Object>();
@@ -1058,7 +1123,8 @@ Napi::Value LlamaContext::InitMultimodal(const Napi::CallbackInfo &info) {
   auto use_gpu = options.Get("use_gpu").ToBoolean().Value();
 
   if (mmproj_path.empty()) {
-    Napi::TypeError::New(env, "mmproj path is required").ThrowAsJavaScriptException();
+    Napi::TypeError::New(env, "mmproj path is required")
+        .ThrowAsJavaScriptException();
   }
 
   console_log(env, "Initializing multimodal with mmproj path: " + mmproj_path);
@@ -1083,48 +1149,55 @@ Napi::Value LlamaContext::InitMultimodal(const Napi::CallbackInfo &info) {
   mtmd_params.n_threads = _sess->params().cpuparams.n_threads;
   mtmd_params.verbosity = (ggml_log_level)GGML_LOG_LEVEL_INFO;
 
-  console_log(env, format_string("Initializing mtmd context with threads=%d, use_gpu=%d", 
-                   mtmd_params.n_threads, mtmd_params.use_gpu ? 1 : 0));
+  console_log(env, format_string(
+                       "Initializing mtmd context with threads=%d, use_gpu=%d",
+                       mtmd_params.n_threads, mtmd_params.use_gpu ? 1 : 0));
 
   _mtmd_ctx = mtmd_init_from_file(mmproj_path.c_str(), model, mtmd_params);
   if (_mtmd_ctx == nullptr) {
-    Napi::Error::New(env, "Failed to initialize multimodal context").ThrowAsJavaScriptException();
+    Napi::Error::New(env, "Failed to initialize multimodal context")
+        .ThrowAsJavaScriptException();
     return Napi::Boolean::New(env, false);
   }
 
   _has_multimodal = true;
-  
+
   // Share the mtmd context with the session
   _sess->set_mtmd_ctx(_mtmd_ctx);
 
   // Check if the model uses M-RoPE or non-causal attention
   bool uses_mrope = mtmd_decode_use_mrope(_mtmd_ctx);
   bool uses_non_causal = mtmd_decode_use_non_causal(_mtmd_ctx);
-  console_log(env, format_string("Model multimodal properties: uses_mrope=%d, uses_non_causal=%d",
-             uses_mrope ? 1 : 0, uses_non_causal ? 1 : 0));
+  console_log(
+      env, format_string(
+               "Model multimodal properties: uses_mrope=%d, uses_non_causal=%d",
+               uses_mrope ? 1 : 0, uses_non_causal ? 1 : 0));
 
-  console_log(env, "Multimodal context initialized successfully with mmproj: " + mmproj_path);
+  console_log(env, "Multimodal context initialized successfully with mmproj: " +
+                       mmproj_path);
   return Napi::Boolean::New(env, true);
 }
 
 // isMultimodalEnabled(): boolean
 Napi::Value LlamaContext::IsMultimodalEnabled(const Napi::CallbackInfo &info) {
-  return Napi::Boolean::New(info.Env(), _has_multimodal && _mtmd_ctx != nullptr);
+  return Napi::Boolean::New(info.Env(),
+                            _has_multimodal && _mtmd_ctx != nullptr);
 }
 
 // getMultimodalSupport(): Promise<{ vision: boolean, audio: boolean }>
 Napi::Value LlamaContext::GetMultimodalSupport(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   auto result = Napi::Object::New(env);
-  
+
   if (_has_multimodal && _mtmd_ctx != nullptr) {
-    result.Set("vision", Napi::Boolean::New(env, mtmd_support_vision(_mtmd_ctx)));
+    result.Set("vision",
+               Napi::Boolean::New(env, mtmd_support_vision(_mtmd_ctx)));
     result.Set("audio", Napi::Boolean::New(env, mtmd_support_audio(_mtmd_ctx)));
   } else {
     result.Set("vision", Napi::Boolean::New(env, false));
     result.Set("audio", Napi::Boolean::New(env, false));
   }
-  
+
   return result;
 }
 
@@ -1135,7 +1208,7 @@ void LlamaContext::ReleaseMultimodal(const Napi::CallbackInfo &info) {
     if (_sess != nullptr) {
       _sess->set_mtmd_ctx(nullptr);
     }
-    
+
     // Free the mtmd context
     mtmd_free(_mtmd_ctx);
     _mtmd_ctx = nullptr;
@@ -1151,14 +1224,17 @@ tts_type LlamaContext::getTTSType(Napi::Env env, nlohmann::json speaker) {
     } else if (version == "0.3") {
       return OUTETTS_V0_3;
     } else {
-      Napi::Error::New(env, format_string("Unsupported speaker version '%s'\n", version.c_str())).ThrowAsJavaScriptException();
+      Napi::Error::New(env, format_string("Unsupported speaker version '%s'\n",
+                                          version.c_str()))
+          .ThrowAsJavaScriptException();
       return UNKNOWN;
     }
   }
   if (_tts_type != UNKNOWN) {
     return _tts_type;
   }
-  const char *chat_template = llama_model_chat_template(_sess->model(), nullptr);
+  const char *chat_template =
+      llama_model_chat_template(_sess->model(), nullptr);
   if (chat_template && std::string(chat_template) == "outetts-0.3") {
     return OUTETTS_V0_3;
   }
@@ -1169,14 +1245,17 @@ tts_type LlamaContext::getTTSType(Napi::Env env, nlohmann::json speaker) {
 Napi::Value LlamaContext::InitVocoder(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   if (info.Length() < 1 || !info[0].IsString()) {
-    Napi::TypeError::New(env, "String expected for vocoder path").ThrowAsJavaScriptException();
+    Napi::TypeError::New(env, "String expected for vocoder path")
+        .ThrowAsJavaScriptException();
   }
   auto vocoder_path = info[0].ToString().Utf8Value();
   if (vocoder_path.empty()) {
-    Napi::TypeError::New(env, "vocoder path is required").ThrowAsJavaScriptException();
+    Napi::TypeError::New(env, "vocoder path is required")
+        .ThrowAsJavaScriptException();
   }
   if (_has_vocoder) {
-    Napi::Error::New(env, "Vocoder already initialized").ThrowAsJavaScriptException();
+    Napi::Error::New(env, "Vocoder already initialized")
+        .ThrowAsJavaScriptException();
     return Napi::Boolean::New(env, false);
   }
   _tts_type = getTTSType(env);
@@ -1188,7 +1267,8 @@ Napi::Value LlamaContext::InitVocoder(const Napi::CallbackInfo &info) {
   _vocoder.params.n_ubatch = _vocoder.params.n_batch;
   common_init_result result = common_init_from_params(_vocoder.params);
   if (result.model == nullptr || result.context == nullptr) {
-    Napi::Error::New(env, "Failed to initialize vocoder").ThrowAsJavaScriptException();
+    Napi::Error::New(env, "Failed to initialize vocoder")
+        .ThrowAsJavaScriptException();
     return Napi::Boolean::New(env, false);
   }
   _vocoder.model = std::move(result.model);
@@ -1213,47 +1293,59 @@ Napi::Value LlamaContext::IsVocoderEnabled(const Napi::CallbackInfo &info) {
 }
 
 // getFormattedAudioCompletion(speaker: string|null, text: string): string
-Napi::Value LlamaContext::GetFormattedAudioCompletion(const Napi::CallbackInfo &info) {
+Napi::Value
+LlamaContext::GetFormattedAudioCompletion(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   if (info.Length() < 2 || !info[1].IsString()) {
-    Napi::TypeError::New(env, "text parameter is required for audio completion").ThrowAsJavaScriptException();
+    Napi::TypeError::New(env, "text parameter is required for audio completion")
+        .ThrowAsJavaScriptException();
   }
-  auto text = info[1].ToString().Utf8Value();  
+  auto text = info[1].ToString().Utf8Value();
   auto speaker_json = info[0].IsString() ? info[0].ToString().Utf8Value() : "";
-  nlohmann::json speaker = speaker_json.empty() ? nullptr : nlohmann::json::parse(speaker_json);
+  nlohmann::json speaker =
+      speaker_json.empty() ? nullptr : nlohmann::json::parse(speaker_json);
   const tts_type type = getTTSType(env, speaker);
   std::string audio_text = DEFAULT_AUDIO_TEXT;
   std::string audio_data = DEFAULT_AUDIO_DATA;
   if (type == OUTETTS_V0_3) {
-    audio_text = std::regex_replace(audio_text, std::regex(R"(<\|text_sep\|>)"), "<|space|>");
-    audio_data = std::regex_replace(audio_data, std::regex(R"(<\|code_start\|>)"), "");
-    audio_data = std::regex_replace(audio_data, std::regex(R"(<\|code_end\|>)"), "<|space|>");
+    audio_text = std::regex_replace(audio_text, std::regex(R"(<\|text_sep\|>)"),
+                                    "<|space|>");
+    audio_data =
+        std::regex_replace(audio_data, std::regex(R"(<\|code_start\|>)"), "");
+    audio_data = std::regex_replace(audio_data, std::regex(R"(<\|code_end\|>)"),
+                                    "<|space|>");
   }
   if (!speaker_json.empty()) {
     audio_text = audio_text_from_speaker(speaker, type);
     audio_data = audio_data_from_speaker(speaker, type);
   }
-  return Napi::String::New(env, "<|im_start|>\n" + audio_text + process_text(text, type) + "<|text_end|>\n" + audio_data + "\n");
+  return Napi::String::New(env, "<|im_start|>\n" + audio_text +
+                                    process_text(text, type) +
+                                    "<|text_end|>\n" + audio_data + "\n");
 }
 
 // getAudioCompletionGuideTokens(text: string): Int32Array
-Napi::Value LlamaContext::GetAudioCompletionGuideTokens(const Napi::CallbackInfo &info) {
+Napi::Value
+LlamaContext::GetAudioCompletionGuideTokens(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   if (info.Length() < 1 || !info[0].IsString()) {
-    Napi::TypeError::New(env, "String expected for audio completion guide tokens").ThrowAsJavaScriptException();
+    Napi::TypeError::New(env,
+                         "String expected for audio completion guide tokens")
+        .ThrowAsJavaScriptException();
     return env.Undefined();
   }
   auto text = info[0].ToString().Utf8Value();
   const tts_type type = getTTSType(env);
   auto clean_text = process_text(text, type);
-  const std::string& delimiter = (type == OUTETTS_V0_3 ? "<|space|>" : "<|text_sep|>");
-  const llama_vocab * vocab = llama_model_get_vocab(_sess->model());
+  const std::string &delimiter =
+      (type == OUTETTS_V0_3 ? "<|space|>" : "<|text_sep|>");
+  const llama_vocab *vocab = llama_model_get_vocab(_sess->model());
 
   std::vector<int32_t> result;
   size_t start = 0;
   size_t end = clean_text.find(delimiter);
 
-  //first token is always a newline, as it was not previously added
+  // first token is always a newline, as it was not previously added
   result.push_back(common_tokenize(vocab, "\n", false, true)[0]);
 
   while (end != std::string::npos) {
@@ -1268,7 +1360,7 @@ Napi::Value LlamaContext::GetAudioCompletionGuideTokens(const Napi::CallbackInfo
   std::string current_word = clean_text.substr(start);
   auto tmp = common_tokenize(vocab, current_word, false, true);
   if (tmp.size() > 0) {
-      result.push_back(tmp[0]);
+    result.push_back(tmp[0]);
   }
   auto tokens = Napi::Int32Array::New(env, result.size());
   memcpy(tokens.Data(), result.data(), result.size() * sizeof(int32_t));
@@ -1279,34 +1371,43 @@ Napi::Value LlamaContext::GetAudioCompletionGuideTokens(const Napi::CallbackInfo
 Napi::Value LlamaContext::DecodeAudioTokens(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   if (info.Length() < 1) {
-    Napi::TypeError::New(env, "Tokens parameter is required").ThrowAsJavaScriptException();
+    Napi::TypeError::New(env, "Tokens parameter is required")
+        .ThrowAsJavaScriptException();
   }
   std::vector<int32_t> tokens;
   if (info[0].IsTypedArray()) {
     auto js_tokens = info[0].As<Napi::Int32Array>();
     tokens.resize(js_tokens.ElementLength());
-    memcpy(tokens.data(), js_tokens.Data(), js_tokens.ElementLength() * sizeof(int32_t));
+    memcpy(tokens.data(), js_tokens.Data(),
+           js_tokens.ElementLength() * sizeof(int32_t));
   } else if (info[0].IsArray()) {
     auto js_tokens = info[0].As<Napi::Array>();
     for (size_t i = 0; i < js_tokens.Length(); i++) {
       tokens.push_back(js_tokens.Get(i).ToNumber().Int32Value());
     }
   } else {
-    Napi::TypeError::New(env, "Tokens must be an number array or a Int32Array").ThrowAsJavaScriptException();
+    Napi::TypeError::New(env, "Tokens must be an number array or a Int32Array")
+        .ThrowAsJavaScriptException();
     return env.Undefined();
   }
   tts_type type = getTTSType(env);
   if (type == UNKNOWN) {
-    Napi::Error::New(env, "Unsupported audio tokens").ThrowAsJavaScriptException();
+    Napi::Error::New(env, "Unsupported audio tokens")
+        .ThrowAsJavaScriptException();
     return env.Undefined();
   }
   if (type == OUTETTS_V0_3 || type == OUTETTS_V0_2) {
-    tokens.erase(std::remove_if(tokens.begin(), tokens.end(), [](llama_token t) { return t < 151672 || t > 155772; }), tokens.end());
-    for (auto & token : tokens) {
+    tokens.erase(
+        std::remove_if(tokens.begin(), tokens.end(),
+                       [](llama_token t) { return t < 151672 || t > 155772; }),
+        tokens.end());
+    for (auto &token : tokens) {
       token -= 151672;
     }
   }
-  auto worker = new DecodeAudioTokenWorker(info, _vocoder.model.get(), _vocoder.context.get(), _sess->params().cpuparams.n_threads, tokens);
+  auto worker = new DecodeAudioTokenWorker(
+      info, _vocoder.model.get(), _vocoder.context.get(),
+      _sess->params().cpuparams.n_threads, tokens);
   worker->Queue();
   return worker->Promise();
 }

@@ -1,7 +1,6 @@
 #include "LlamaCompletionWorker.h"
 #include "LlamaContext.h"
 
-
 size_t findStoppingStrings(const std::string &text,
                            const size_t last_token_size,
                            const std::vector<std::string> &stop_words) {
@@ -27,8 +26,7 @@ size_t findStoppingStrings(const std::string &text,
 LlamaCompletionWorker::LlamaCompletionWorker(
     const Napi::CallbackInfo &info, LlamaSessionPtr &sess,
     Napi::Function callback, common_params params,
-    std::vector<std::string> stop_words,
-    int32_t chat_format,
+    std::vector<std::string> stop_words, int32_t chat_format,
     const std::vector<std::string> &media_paths,
     const std::vector<llama_token> &guide_tokens)
     : AsyncWorker(info.Env()), Deferred(info.Env()), _sess(sess),
@@ -67,32 +65,27 @@ void LlamaCompletionWorker::Execute() {
 
   // Process media if any are provided
   if (!_media_paths.empty()) {
-    const auto* mtmd_ctx = _sess->get_mtmd_ctx();
-    
+    const auto *mtmd_ctx = _sess->get_mtmd_ctx();
+
     if (mtmd_ctx != nullptr) {
       // Process the media and get the tokens
       try {
-        n_cur = processMediaPrompt(
-          ctx,
-          mtmd_ctx,
-          _sess,
-          _params,
-          _media_paths
-        );
-      } catch (const std::exception& e) {
+        n_cur = processMediaPrompt(ctx, mtmd_ctx, _sess, _params, _media_paths);
+      } catch (const std::exception &e) {
         SetError(e.what());
         _sess->get_mutex().unlock();
         return;
       }
-      
+
       if (n_cur <= 0) {
         SetError("Failed to process media");
         _sess->get_mutex().unlock();
         return;
       }
 
-      fprintf(stdout, "[DEBUG] Media processing successful, n_cur=%zu, tokens=%zu\n", 
-                       n_cur, _sess->tokens_ptr()->size());
+      fprintf(stdout,
+              "[DEBUG] Media processing successful, n_cur=%zu, tokens=%zu\n",
+              n_cur, _sess->tokens_ptr()->size());
 
       n_input = _sess->tokens_ptr()->size();
       if (n_cur == n_input) {
@@ -106,9 +99,10 @@ void LlamaCompletionWorker::Execute() {
     }
   } else {
     // Text-only path
-    std::vector<llama_token> prompt_tokens = ::common_tokenize(ctx, _params.prompt, add_bos);
+    std::vector<llama_token> prompt_tokens =
+        ::common_tokenize(ctx, _params.prompt, add_bos);
     n_input = prompt_tokens.size();
-    
+
     if (_sess->tokens_ptr()->size() > 0) {
       n_cur = common_tokens_part(*(_sess->tokens_ptr()), prompt_tokens);
       if (n_cur == n_input) {
@@ -133,7 +127,7 @@ void LlamaCompletionWorker::Execute() {
         _result.context_full = true;
         break;
       }
-      
+
       const int n_left = n_cur - n_keep - 1;
       const int n_discard = n_left / 2;
 
@@ -148,22 +142,23 @@ void LlamaCompletionWorker::Execute() {
       n_cur -= n_discard;
       _result.truncated = true;
     }
-    
+
     // For multimodal input, n_past might already be set
     // Only decode text tokens if we have any input left
     if (n_input > 0) {
-      int ret = llama_decode(
-          ctx, llama_batch_get_one(embd->data() + n_cur, n_input));
+      int ret =
+          llama_decode(ctx, llama_batch_get_one(embd->data() + n_cur, n_input));
       if (ret < 0) {
         SetError("Failed to decode token, code: " + std::to_string(ret));
         break;
       }
     }
-    
+
     // sample the next token
-    llama_token new_token_id =
-        common_sampler_sample(sampling.get(), ctx, -1);
-    if (_next_token_uses_guide_token && !_guide_tokens.empty() && !llama_vocab_is_control(vocab, new_token_id) && !llama_vocab_is_eog(vocab, new_token_id)) {
+    llama_token new_token_id = common_sampler_sample(sampling.get(), ctx, -1);
+    if (_next_token_uses_guide_token && !_guide_tokens.empty() &&
+        !llama_vocab_is_control(vocab, new_token_id) &&
+        !llama_vocab_is_eog(vocab, new_token_id)) {
       new_token_id = _guide_tokens[0];
       _guide_tokens.erase(_guide_tokens.begin());
     }
@@ -220,20 +215,15 @@ void LlamaCompletionWorker::Execute() {
 void LlamaCompletionWorker::OnOK() {
   auto env = Napi::AsyncWorker::Env();
   auto result = Napi::Object::New(env);
-  result.Set("tokens_evaluated", Napi::Number::New(env,
-                                                   _result.tokens_evaluated));
+  result.Set("tokens_evaluated",
+             Napi::Number::New(env, _result.tokens_evaluated));
   result.Set("tokens_predicted", Napi::Number::New(Napi::AsyncWorker::Env(),
                                                    _result.tokens_predicted));
-  result.Set("truncated",
-             Napi::Boolean::New(env, _result.truncated));
-  result.Set("context_full",
-             Napi::Boolean::New(env, _result.context_full));
-  result.Set("text",
-             Napi::String::New(env, _result.text.c_str()));
-  result.Set("stopped_eos",
-             Napi::Boolean::New(env, _result.stopped_eos));
-  result.Set("stopped_words",
-             Napi::Boolean::New(env, _result.stopped_words));
+  result.Set("truncated", Napi::Boolean::New(env, _result.truncated));
+  result.Set("context_full", Napi::Boolean::New(env, _result.context_full));
+  result.Set("text", Napi::String::New(env, _result.text.c_str()));
+  result.Set("stopped_eos", Napi::Boolean::New(env, _result.stopped_eos));
+  result.Set("stopped_words", Napi::Boolean::New(env, _result.stopped_words));
   result.Set("stopping_word",
              Napi::String::New(env, _result.stopping_word.c_str()));
   result.Set("stopped_limited",
@@ -244,7 +234,8 @@ void LlamaCompletionWorker::OnOK() {
   std::string content;
   if (!_stop) {
     try {
-      common_chat_msg message = common_chat_parse(_result.text, static_cast<common_chat_format>(_chat_format));
+      common_chat_msg message = common_chat_parse(
+          _result.text, static_cast<common_chat_format>(_chat_format));
       if (!message.reasoning_content.empty()) {
         reasoning_content = message.reasoning_content;
       }
@@ -272,7 +263,8 @@ void LlamaCompletionWorker::OnOK() {
     result.Set("tool_calls", tool_calls);
   }
   if (!reasoning_content.empty()) {
-    result.Set("reasoning_content", Napi::String::New(env, reasoning_content.c_str()));
+    result.Set("reasoning_content",
+               Napi::String::New(env, reasoning_content.c_str()));
   }
   if (!content.empty()) {
     result.Set("content", Napi::String::New(env, content.c_str()));
@@ -282,17 +274,33 @@ void LlamaCompletionWorker::OnOK() {
   const auto timings_token = llama_perf_context(ctx);
 
   auto timingsResult = Napi::Object::New(Napi::AsyncWorker::Env());
-  timingsResult.Set("prompt_n", Napi::Number::New(Napi::AsyncWorker::Env(), timings_token.n_p_eval));
-  timingsResult.Set("prompt_ms", Napi::Number::New(Napi::AsyncWorker::Env(), timings_token.t_p_eval_ms));
-  timingsResult.Set("prompt_per_token_ms", Napi::Number::New(Napi::AsyncWorker::Env(), timings_token.t_p_eval_ms / timings_token.n_p_eval));
-  timingsResult.Set("prompt_per_second", Napi::Number::New(Napi::AsyncWorker::Env(), 1e3 / timings_token.t_p_eval_ms * timings_token.n_p_eval));
-  timingsResult.Set("predicted_n", Napi::Number::New(Napi::AsyncWorker::Env(), timings_token.n_eval));
-  timingsResult.Set("predicted_ms", Napi::Number::New(Napi::AsyncWorker::Env(), timings_token.t_eval_ms));
-  timingsResult.Set("predicted_per_token_ms", Napi::Number::New(Napi::AsyncWorker::Env(), timings_token.t_eval_ms / timings_token.n_eval));
-  timingsResult.Set("predicted_per_second", Napi::Number::New(Napi::AsyncWorker::Env(), 1e3 / timings_token.t_eval_ms * timings_token.n_eval));
+  timingsResult.Set("prompt_n", Napi::Number::New(Napi::AsyncWorker::Env(),
+                                                  timings_token.n_p_eval));
+  timingsResult.Set("prompt_ms", Napi::Number::New(Napi::AsyncWorker::Env(),
+                                                   timings_token.t_p_eval_ms));
+  timingsResult.Set(
+      "prompt_per_token_ms",
+      Napi::Number::New(Napi::AsyncWorker::Env(),
+                        timings_token.t_p_eval_ms / timings_token.n_p_eval));
+  timingsResult.Set("prompt_per_second",
+                    Napi::Number::New(Napi::AsyncWorker::Env(),
+                                      1e3 / timings_token.t_p_eval_ms *
+                                          timings_token.n_p_eval));
+  timingsResult.Set("predicted_n", Napi::Number::New(Napi::AsyncWorker::Env(),
+                                                     timings_token.n_eval));
+  timingsResult.Set("predicted_ms", Napi::Number::New(Napi::AsyncWorker::Env(),
+                                                      timings_token.t_eval_ms));
+  timingsResult.Set(
+      "predicted_per_token_ms",
+      Napi::Number::New(Napi::AsyncWorker::Env(),
+                        timings_token.t_eval_ms / timings_token.n_eval));
+  timingsResult.Set(
+      "predicted_per_second",
+      Napi::Number::New(Napi::AsyncWorker::Env(),
+                        1e3 / timings_token.t_eval_ms * timings_token.n_eval));
 
   result.Set("timings", timingsResult);
-  
+
   Napi::Promise::Deferred::Resolve(result);
 }
 
