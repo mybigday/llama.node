@@ -72,6 +72,18 @@ async function main() {
 
   const files = [
     {
+      path: path.join(testDir, 'bge-small-en.gguf'),
+      url: 'https://huggingface.co/ggml-org/bge-small-en-v1.5-Q8_0-GGUF/resolve/main/bge-small-en-v1.5-q8_0.gguf?download=true',
+    },
+    {
+      path: path.join(testDir, 'tiny-random-llama.gguf'),
+      url: 'https://huggingface.co/tensorblock/tiny-random-llama-GGUF/resolve/main/tiny-random-llama-Q4_0.gguf?download=true',
+    },
+    {
+      path: path.join(testDir, 'WavTokenizer.gguf'),
+      url: 'https://huggingface.co/ggml-org/WavTokenizer/resolve/main/WavTokenizer-Large-75-Q5_1.gguf?download=true',
+    },
+    {
       path: path.join(testDir, 'SmolVLM-256M-Instruct-Q8_0.gguf'),
       url: 'https://huggingface.co/ggml-org/SmolVLM-256M-Instruct-GGUF/resolve/main/SmolVLM-256M-Instruct-Q8_0.gguf?download=true',
     },
