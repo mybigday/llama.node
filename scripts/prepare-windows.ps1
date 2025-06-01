@@ -1,5 +1,9 @@
 $ErrorActionPreference='Stop'
 
+param (
+  [string]$target = "all"
+)
+
 function DelIfExist {
   param([string]$path)
   if (Test-Path $path) {
@@ -35,7 +39,7 @@ if (-not (Test-Path "win32-x64/Vulkan-SDK") -or -not (Test-Path "win32-arm64/Vul
 
 # x64
 
-if (-not (Test-Path "win32-x64/Vulkan-SDK")) {
+if (-not (Test-Path "win32-x64/Vulkan-SDK") -and ($target -eq "all" -or $target -eq "x64")) {
   New-Item -ItemType Directory -Force -Path "win32-x64/Vulkan-SDK" | Out-Null
   $VULKAN_ROOT = (Resolve-Path "win32-x64/Vulkan-SDK").Path
   # build from source
@@ -59,7 +63,7 @@ if (-not (Test-Path "win32-x64/Vulkan-SDK")) {
 
 # ARM64
 
-if (-not (Test-Path "win32-arm64/Vulkan-SDK")) {
+if (-not (Test-Path "win32-arm64/Vulkan-SDK") -and ($target -eq "all" -or $target -eq "arm64")) {
   New-Item -ItemType Directory -Force -Path "win32-arm64/Vulkan-SDK" | Out-Null
   $VULKAN_ROOT = (Resolve-Path "win32-arm64/Vulkan-SDK").Path
   # build from source

@@ -1,0 +1,26 @@
+diff --git a/node_modules/node-api-headers/include/js_native_api.h b/node_modules/node-api-headers/include/js_native_api.h
+index e06bdc8..c35398a 100644
+--- a/node_modules/node-api-headers/include/js_native_api.h
++++ b/node_modules/node-api-headers/include/js_native_api.h
+@@ -22,7 +22,7 @@
+ // If you need __declspec(dllimport), either include <node_api.h> instead, or
+ // define NAPI_EXTERN as __declspec(dllimport) on the compiler's command line.
+ #ifndef NAPI_EXTERN
+-#ifdef _WIN32
++#if defined(_WIN32) && _MSC_VER
+ #define NAPI_EXTERN __declspec(dllexport)
+ #elif defined(__wasm32__)
+ #define NAPI_EXTERN                                                            \
+diff --git a/node_modules/node-api-headers/include/node_api.h b/node_modules/node-api-headers/include/node_api.h
+index 0345468..359c496 100644
+--- a/node_modules/node-api-headers/include/node_api.h
++++ b/node_modules/node-api-headers/include/node_api.h
+@@ -2,7 +2,7 @@
+ #define SRC_NODE_API_H_
+ 
+ #ifdef BUILDING_NODE_EXTENSION
+-#ifdef _WIN32
++#if defined(_WIN32) && _MSC_VER
+ // Building native addon against node
+ #define NAPI_EXTERN __declspec(dllimport)
+ #elif defined(__wasm32__)

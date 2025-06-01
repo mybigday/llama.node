@@ -49,7 +49,9 @@ message(STATUS "PLATFORM_BINARY_DIR: ${PLATFORM_BINARY_DIR}")
 
 # set strip flags
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-  if(UNIX OR MINGW)
+  if (CLANG)
+    # ignore
+  elseif(UNIX OR MINGW)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s")
   elseif(MSVC)
@@ -68,6 +70,11 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -funroll-loops -flto")
     set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -flto")
   endif()
+endif()
+
+if (CLANG)
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static-libgcc -static-libstdc++")
 endif()
 
 # flags: -fPIC
@@ -120,9 +127,24 @@ file(
     "src/tts_utils.h"
 )
 
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows" AND NOT MSVC)
+  file(GLOB WIN_DYNAMIC_LOAD_SRC "src/win_dynamic_load.c")
+
+  add_library(win_dynamic_load ${WIN_DYNAMIC_LOAD_SRC})
+  set_target_properties(win_dynamic_load PROPERTIES COMPILE_FLAGS "-Wno-implicit-function-declaration")
+  
+  unset(CMAKE_JS_SRC)
+  unset(CMAKE_JS_INC)
+  unset(CMAKE_JS_LIB)
+endif()
+
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES} ${CMAKE_JS_SRC})
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
-target_link_libraries(${PROJECT_NAME} ${CMAKE_JS_LIB} llama ggml common mtmd ${CMAKE_THREAD_LIBS_INIT})
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows" AND NOT MSVC)
+  target_link_libraries(${PROJECT_NAME} ${CMAKE_JS_LIB} llama ggml common mtmd ${CMAKE_THREAD_LIBS_INIT} win_dynamic_load)
+else()
+  target_link_libraries(${PROJECT_NAME} ${CMAKE_JS_LIB} llama ggml common mtmd ${CMAKE_THREAD_LIBS_INIT})
+endif()
 
 add_custom_target(copy_assets ALL DEPENDS ${PROJECT_NAME})
 
