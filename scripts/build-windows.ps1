@@ -1,15 +1,32 @@
+param (
+  [string]$target = "all"
+  [string]$toolchain = "clang-cl"
+)
+
 $ErrorActionPreference='Stop'
 
-$x64Args = "--CDCMAKE_TOOLCHAIN_FILE=cmake/x86_64-windows-msvc-clang.toolchain.cmake"
-
-$arm64Args = "--CDCMAKE_TOOLCHAIN_FILE=cmake/arm64-windows-msvc-clang.toolchain.cmake"
+if ($toolchain -eq "clang-cl") {
+  $x86Args = "--CDCMAKE_TOOLCHAIN_FILE=cmake/x86_64-windows-msvc-clang.toolchain.cmake"
+  $arm64Args = "--CDCMAKE_TOOLCHAIN_FILE=cmake/arm64-windows-msvc-clang.toolchain.cmake"
+} else {
+  $x86Args = "--CDCMAKE_TOOLCHAIN_FILE=cmake/x86_64-w64-mingw32-clang.toolchain.cmake"
+  $arm64Args = "--CDCMAKE_TOOLCHAIN_FILE=cmake/aarch64-w64-mingw32-clang.toolchain.cmake"
+}
 
 # General
 
-yarn clean ; yarn build-native $x64Args -a x86_64
-yarn clean ; yarn build-native $arm64Args -a arm64
+if ($target -eq "all" -or $target -eq "x86_64") {
+  yarn clean ; yarn build-native -C -a x86_64 $x86Args
+}
+if ($target -eq "all" -or $target -eq "arm64") {
+  yarn clean ; yarn build-native -C -a arm64 $arm64Args
+}
 
 # Vulkan, might crash on some scenario
 
-yarn clean ; yarn build-native $x64Args -a x86_64 --CDVULKAN_SDK="$(Resolve-Path 'externals/win32-x64/Vulkan-SDK')" --CDVARIANT=vulkan --CDLLAMA_VULKAN=1
-yarn clean ; yarn build-native $arm64Args -a arm64 --CDVULKAN_SDK="$(Resolve-Path 'externals/win32-arm64/Vulkan-SDK')" --CDVARIANT=vulkan --CDLLAMA_VULKAN=1
+if ($target -eq "all" -or $target -eq "x86_64") {
+  yarn clean ; yarn build-native -C -a x86_64 --CDVULKAN_SDK="$(Resolve-Path 'externals/win32-x64/Vulkan-SDK')" --CDVARIANT=vulkan --CDLLAMA_VULKAN=1
+}
+if ($target -eq "all" -or $target -eq "arm64") {
+  yarn clean ; yarn build-native -C -a arm64 --CDVULKAN_SDK="$(Resolve-Path 'externals/win32-arm64/Vulkan-SDK')" --CDVARIANT=vulkan --CDLLAMA_VULKAN=1
+}

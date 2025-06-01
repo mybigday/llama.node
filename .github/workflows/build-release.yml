@@ -41,7 +41,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: externals
-          key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -79,7 +79,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: externals
-          key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -117,7 +117,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: externals
-          key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -134,7 +134,7 @@ jobs:
           path: bin
           retention-days: ${{ inputs.artifacts-retention-days }}
 
-  build-windows:
+  build-windows-x86_64:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -149,7 +149,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: externals
-          key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.ps1') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-externals-${{ hashFiles('scripts/prepare-*.ps1') }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -158,8 +158,42 @@ jobs:
         run: yarn install
       - name: Prepare & build
         run: |
-          powershell ./scripts/prepare-windows.ps1
-          powershell ./scripts/build-windows.ps1
+          powershell ./scripts/prepare-windows.ps1 -target x86_64
+          powershell ./scripts/build-windows.ps1 -target x86_64
+      - name: Upload build artifacts
+        if: github.event.inputs.upload-artifacts == 'YES' || inputs.upload-artifacts == 'YES'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-windows
+          path: bin
+          retention-days: ${{ inputs.artifacts-retention-days }}
+  
+  build-windows-arm64:
+    runs-on: windows-11-arm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: "true"
+      - name: node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
+      - name: externals cache
+        uses: actions/cache@v4
+        with:
+          path: externals
+          key: ${{ runner.os }}-${{ runner.arch }}-externals-${{ hashFiles('scripts/prepare-*.ps1') }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "yarn"
+      - name: Install dependencies
+        run: yarn install
+      - name: Prepare & build
+        run: |
+          powershell ./scripts/prepare-windows.ps1 -target arm64
+          powershell ./scripts/build-windows.ps1 -target arm64
       - name: Upload build artifacts
         if: github.event.inputs.upload-artifacts == 'YES' || inputs.upload-artifacts == 'YES'
         uses: actions/upload-artifact@v4
