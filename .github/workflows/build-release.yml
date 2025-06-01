@@ -41,7 +41,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: externals
-          key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -49,7 +49,7 @@ jobs:
         uses: KyleMayes/install-llvm-action@v2
         with:
           version: '18'
-          arch: x86_64
+          arch: x64
       - name: Install yarn
         run: npm install -g yarn
       - name: Install dependencies
@@ -84,7 +84,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: externals
-          key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -127,7 +127,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: externals
-          key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -159,7 +159,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: externals
-          key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.ps1') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-externals-${{ hashFiles('scripts/prepare-*.ps1') }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -168,7 +168,7 @@ jobs:
         uses: KyleMayes/install-llvm-action@v2
         with:
           version: '18'
-          arch: x86_64
+          arch: x64
       - name: Install dependencies
         run: yarn install
       - name: Prepare & build
@@ -198,7 +198,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: externals
-          key: ${{ runner.os }}-externals-${{ hashFiles('scripts/prepare-*.ps1') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-externals-${{ hashFiles('scripts/prepare-*.ps1') }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
