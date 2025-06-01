@@ -164,7 +164,7 @@ jobs:
         if: github.event.inputs.upload-artifacts == 'YES' || inputs.upload-artifacts == 'YES'
         uses: actions/upload-artifact@v4
         with:
-          name: bin-windows
+          name: bin-windows-x64
           path: bin
           retention-days: ${{ inputs.artifacts-retention-days }}
   
@@ -198,6 +198,6 @@ jobs:
         if: github.event.inputs.upload-artifacts == 'YES' || inputs.upload-artifacts == 'YES'
         uses: actions/upload-artifact@v4
         with:
-          name: bin-windows
+          name: bin-windows-arm64
           path: bin
           retention-days: ${{ inputs.artifacts-retention-days }}
