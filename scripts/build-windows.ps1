@@ -1,5 +1,5 @@
 param (
-  [string]$target = "all"
+  [string]$target = "all",
   [string]$toolchain = "clang-cl"
 )
 
