@@ -86,12 +86,12 @@ test('completion with response_format', async () => {
 
 test('completion with tools', async () => {
   const model = await loadModel({
-    model: path.resolve(__dirname, './tiny-random-llama.gguf'),
+    model: path.resolve(__dirname, './Qwen3-0.6B-Q8_0.gguf'),
   })
   expect(
     filterCompletionResult(
       await model.completion({
-        n_predict: 10,
+        n_predict: 64,
         temperature: 0,
         max_length: 100,
         seed: 0,
@@ -99,25 +99,25 @@ test('completion with tools', async () => {
         messages: [
           {
             role: 'user',
-            content: 'My name is Merve and my favorite',
+            content: 'What is the sum of 1 and 2?',
           },
         ],
         tools: [
           {
             type: 'function',
             function: {
-              name: 'ipython',
+              name: 'calc',
               description:
-                'Runs code in an ipython interpreter and returns the result of the execution after 60 seconds.',
+                'Calculates the result of a math expression.',
               parameters: {
                 type: 'object',
                 properties: {
-                  code: {
+                  expression: {
                     type: 'string',
-                    description: 'The code to run in the ipython interpreter.',
+                    description: 'The math expression to evaluate.',
                   },
                 },
-                required: ['code'],
+                required: ['expression'],
               },
             },
           },
@@ -126,7 +126,7 @@ test('completion with tools', async () => {
       }),
     ),
   ).toMatchSnapshot()
-})
+}, 6e4)
 
 test('works fine with vocab_only', async () => {
   const model = await loadModel({

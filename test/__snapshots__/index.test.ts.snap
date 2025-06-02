@@ -106,15 +106,26 @@ exports[`completion with tools 1`] = `
 {
   "content": "<removed>",
   "context_full": false,
-  "stopped_eos": false,
-  "stopped_limited": true,
+  "stopped_eos": true,
+  "stopped_limited": false,
   "stopped_words": false,
   "stopping_word": "",
-  "text": "{
-	   	   	   	   	   "tool_ca",
+  "text": "<tool_call>
+{"name": "calc", "arguments": {"expression": "1 + 2"}}
+</tool_call>
+<|im_end|>",
   "timings": "Timings: (8) keys",
-  "tokens_evaluated": 270,
-  "tokens_predicted": 10,
+  "tokens_evaluated": 213,
+  "tokens_predicted": 23,
+  "tool_calls": [
+    {
+      "function": {
+        "arguments": "{"expression":"1 + 2"}",
+        "name": "calc",
+      },
+      "type": "function",
+    },
+  ],
   "truncated": false,
 }
 `;

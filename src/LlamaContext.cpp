@@ -444,9 +444,9 @@ Napi::Value LlamaContext::GetModelInfo(const Napi::CallbackInfo &info) {
   details.Set("size", llama_model_size(model));
 
   Napi::Object chatTemplates = Napi::Object::New(info.Env());
-  chatTemplates.Set("llamaChat", validateModelChatTemplate(model, false, ""));
+  chatTemplates.Set("llamaChat", validateModelChatTemplate(model, false, nullptr));
   Napi::Object minja = Napi::Object::New(info.Env());
-  minja.Set("default", validateModelChatTemplate(model, true, ""));
+  minja.Set("default", validateModelChatTemplate(model, true, nullptr));
   Napi::Object defaultCaps = Napi::Object::New(info.Env());
   defaultCaps.Set(
       "tools",
@@ -498,7 +498,7 @@ Napi::Value LlamaContext::GetModelInfo(const Napi::CallbackInfo &info) {
 
   // Deprecated: use chatTemplates.llamaChat instead
   details.Set("isChatTemplateSupported",
-              validateModelChatTemplate(_sess->model(), false, ""));
+              validateModelChatTemplate(_sess->model(), false, nullptr));
   return details;
 }
 
@@ -600,6 +600,8 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
     auto chatParams = getFormattedChatWithJinja(
         _sess, _templates, messages, chat_template, json_schema_str, tools_str,
         parallel_tool_calls, tool_choice);
+
+    console_log(env, std::string("format: ") + std::to_string(chatParams.format));
 
     Napi::Object result = Napi::Object::New(env);
     result.Set("prompt", chatParams.prompt);
