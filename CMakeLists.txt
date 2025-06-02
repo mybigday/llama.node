@@ -47,15 +47,28 @@ message(STATUS "Platform: ${PLATFORM}")
 message(STATUS "Architecture: ${ARCH}")
 message(STATUS "PLATFORM_BINARY_DIR: ${PLATFORM_BINARY_DIR}")
 
-# set strip flags
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-  if(UNIX OR MINGW)
+  if((UNIX OR MINGW) AND NOT CLANG)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s")
-  elseif(MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /s")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /s")
   endif()
+endif()
+
+# Improve speed
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+  if (MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /O2 /Ob2 /Oi /Ot /Oy /GL")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /O2 /Ob2 /Oi /Ot /Oy /GL")
+  else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -funroll-loops -flto")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -funroll-loops -flto")
+    set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -flto")
+  endif()
+endif()
+
+if (CLANG)
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static-libgcc -static-libstdc++")
 endif()
 
 # flags: -fPIC
@@ -107,6 +120,24 @@ file(
     "src/tts_utils.cpp"
     "src/tts_utils.h"
 )
+
+if (CLANG AND CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  file(GLOB WIN_DYNAMIC_LOAD_SRC "src/win_dynamic_load.c")
+
+  add_library(win_dynamic_load ${WIN_DYNAMIC_LOAD_SRC})
+  if (NOT MSVC)
+    set_target_properties(win_dynamic_load PROPERTIES COMPILE_FLAGS "-Wno-implicit-function-declaration")
+  endif()
+  
+  unset(CMAKE_JS_SRC)
+  unset(CMAKE_JS_LIB)
+  unset(CMAKE_JS_NODELIB_DEF)
+  unset(CMAKE_JS_NODELIB_TARGET)
+  unset(CMAKE_JS_NODELIB_TARGET_NAME)
+  string(REGEX REPLACE "/DELAYLOAD:NODE.EXE" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
+
+  set(CMAKE_JS_LIB win_dynamic_load)
+endif()
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES} ${CMAKE_JS_SRC})
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")

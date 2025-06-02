@@ -4,4 +4,4 @@ set -e
 
 # General
 
-yarn clean && yarn build-native
+yarn clean && yarn build-native -C

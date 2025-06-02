@@ -188,6 +188,10 @@ std::string process_text(const std::string &text,
   return processed_text;
 }
 
+#ifdef _WIN32
+#define M_PI 3.14159265358979323846
+#endif
+
 void fill_hann_window(int length, bool periodic, float *output) {
   int offset = -1;
   if (periodic) {
