@@ -7,7 +7,7 @@ test('TTS', async () => {
     model: path.resolve(__dirname, './tiny-random-llama.gguf'),
     chat_template: 'outetts-0.3',
   })
-  await model.initVocoder(path.resolve(__dirname, './WavTokenizer.gguf'))
+  await model.initVocoder({ path: path.resolve(__dirname, './WavTokenizer.gguf') })
   expect(model.isVocoderEnabled()).toBe(true)
   const formatted = model.getFormattedAudioCompletion(null, 'Hello, world!')
   expect(formatted).toMatchSnapshot('formatted')

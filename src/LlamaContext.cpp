@@ -1246,11 +1246,11 @@ tts_type LlamaContext::getTTSType(Napi::Env env, nlohmann::json speaker) {
 // initVocoder(path: string): boolean
 Napi::Value LlamaContext::InitVocoder(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
-  if (info.Length() < 1 || !info[0].IsString()) {
-    Napi::TypeError::New(env, "String expected for vocoder path")
+  if (info.Length() < 1 || !info[0].IsObject()) {
+    Napi::TypeError::New(env, "Object is expected for vocoder path")
         .ThrowAsJavaScriptException();
   }
-  auto vocoder_path = info[0].ToString().Utf8Value();
+  auto vocoder_path = info[0].As<Napi::Object>().Get("path").ToString().Utf8Value();
   if (vocoder_path.empty()) {
     Napi::TypeError::New(env, "vocoder path is required")
         .ThrowAsJavaScriptException();

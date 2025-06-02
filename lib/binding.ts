@@ -218,7 +218,7 @@ export interface LlamaContext {
    * @param path Path to the vocoder model
    * @returns Promise resolving to true if loading was successful
    */
-  initVocoder(path: string): Promise<boolean>
+  initVocoder(options: { path: string }): Promise<boolean>
 
   /**
    * Unload the vocoder model
