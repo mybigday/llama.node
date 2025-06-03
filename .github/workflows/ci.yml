@@ -18,11 +18,15 @@ jobs:
       with:
         path: node_modules
         key: ${{ runner.os }}-node_modules-${{ hashFiles('**/package-lock.json') }}
-    - name: Set up Clang
-      uses: egor-tensin/setup-clang@v1
-      with:
-        version: '18'
-        platform: x64
+    - name: Install LLVM and Clang
+      run: |
+        curl -L https://apt.llvm.org/llvm.sh | ALL=1 sudo bash -s 18
+        sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
+        sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100
+        sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-18 100
+        sudo update-alternatives --install /usr/bin/llvm-ar llvm-ar /usr/bin/llvm-ar-18 100
+        sudo update-alternatives --install /usr/bin/llvm-ranlib llvm-ranlib /usr/bin/llvm-ranlib-18 100
+        sudo update-alternatives --install /usr/bin/llvm-nm llvm-nm /usr/bin/llvm-nm-18 100
     - name: gguf models cache
       uses: actions/cache@v4
       with:
