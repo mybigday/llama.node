@@ -21,7 +21,7 @@ jobs:
     - name: Install LLVM and Clang
       uses: KyleMayes/install-llvm-action@v2
       with:
-        version: "20.0"
+        version: "19"
     - name: gguf models cache
       uses: actions/cache@v4
       with:
