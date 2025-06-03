@@ -26,6 +26,7 @@ void DecodeAudioTokenWorker::Execute() {
   const int n_embd = llama_model_n_embd(_model);
   const float *embd = llama_get_embeddings(_ctx);
   _result = embd_to_audio(embd, n_codes, n_embd, _n_threads);
+  apply_fade(_result, 360); // 0.015s * 24000Hz
 }
 
 void DecodeAudioTokenWorker::OnOK() {

@@ -344,3 +344,13 @@ std::vector<float> embd_to_audio(const float *embd, const int n_codes,
 
   return audio;
 }
+
+void apply_fade(std::vector<float> &audio, const size_t n_samples) {
+  const size_t max_fade_length = std::min(n_samples, audio.size() / 2);
+  for (size_t i = 0; i < max_fade_length; ++i) {
+    audio[i] *= 0.5 * (1.0 - cosf((2.0 * M_PI * i) / (max_fade_length + 1)));
+  }
+  for (size_t i = audio.size() - max_fade_length; i < audio.size(); ++i) {
+    audio[i] *= 0.5 * (1.0 - cosf((2.0 * M_PI * i) / (max_fade_length + 1)));
+  }
+}

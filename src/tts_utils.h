@@ -18,6 +18,8 @@ std::string process_text(const std::string &text, const tts_type tts_type);
 std::vector<float> embd_to_audio(const float *embd, const int n_codes,
                                  const int n_embd, const int n_thread);
 
+void apply_fade(std::vector<float> &audio, const size_t n_samples);
+
 // the default speaker profile is from:
 // https://github.com/edwko/OuteTTS/blob/main/outetts/version/v1/default_speakers/en_male_1.json
 static const char *DEFAULT_AUDIO_TEXT =
