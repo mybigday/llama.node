@@ -66,7 +66,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bin-linux-x86_64
-          path: bin
+          path: |
+            packages/*/index.node
+            packages/*/*.dll
+            packages/*/*.so
+            packages/*/*.metallib
           retention-days: ${{ inputs.artifacts-retention-days }}
       - name: Publish to NPM (default)
         if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
@@ -129,7 +133,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bin-linux-arm64
-          path: bin
+          path: |
+            packages/*/index.node
+            packages/*/*.dll
+            packages/*/*.so
+            packages/*/*.metallib
           retention-days: ${{ inputs.artifacts-retention-days }}
       - name: Publish to NPM (default)
         if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
@@ -186,7 +194,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bin-${{ matrix.os }}
-          path: bin
+          path: |
+            packages/*/index.node
+            packages/*/*.dll
+            packages/*/*.so
+            packages/*/*.metallib
           retention-days: ${{ inputs.artifacts-retention-days }}
       - name: Publish to NPM
         if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
@@ -226,7 +238,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bin-windows-x64
-          path: bin
+          path: |
+            packages/*/index.node
+            packages/*/*.dll
+            packages/*/*.so
+            packages/*/*.metallib
           retention-days: ${{ inputs.artifacts-retention-days }}
       - name: Publish to NPM (default)
         if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
@@ -272,7 +288,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bin-windows-arm64
-          path: bin
+          path: |
+            packages/*/index.node
+            packages/*/*.dll
+            packages/*/*.so
+            packages/*/*.metallib
           retention-days: ${{ inputs.artifacts-retention-days }}
       - name: Publish to NPM (default)
         if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
