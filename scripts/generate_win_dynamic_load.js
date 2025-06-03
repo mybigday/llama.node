@@ -447,9 +447,24 @@ const args = process.argv.slice(2);
 const napiVersion = args[0] ? parseInt(args[0]) : 9;
 
 if (napiVersion < 1 || napiVersion > 9) {
-console.error('Error: Invalid NAPI version');
-process.exit(1);
+  console.error('Error: Invalid NAPI version');
+  process.exit(1);
 }
+
+const jsNativeApiPath = path.join(include_dir, 'js_native_api.h');
+const nodeApiPath = path.join(include_dir, 'node_api.h');
+const jsNativeApi = fs.readFileSync(jsNativeApiPath, 'utf8');
+const nodeApi = fs.readFileSync(nodeApiPath, 'utf8');
+const jsNativeApiPatched = jsNativeApi.replace(
+  '#ifndef NAPI_EXTERN\n#ifdef _WIN32',
+  '#ifndef NAPI_EXTERN\n#if defined(_WIN32) && _MSC_VER',
+);
+const nodeApiPatched = nodeApi.replace(
+  '#ifdef BUILDING_NODE_EXTENSION\n#ifdef _WIN32',
+  '#ifdef BUILDING_NODE_EXTENSION\n#if defined(_WIN32) && _MSC_VER',
+);
+fs.writeFileSync(jsNativeApiPath, jsNativeApiPatched, 'utf8');
+fs.writeFileSync(nodeApiPath, nodeApiPatched, 'utf8');
 
 console.log(`Generating NAPI v${napiVersion} dynamic load code...`);
 console.log(`Found ${Object.keys(napiFunctions).length} NAPI versions`);
