@@ -18,10 +18,11 @@ jobs:
       with:
         path: node_modules
         key: ${{ runner.os }}-node_modules-${{ hashFiles('**/package-lock.json') }}
-    - name: Install LLVM and Clang
-      uses: KyleMayes/install-llvm-action@v2
+    - name: Set up Clang
+      uses: egor-tensin/setup-clang@v1
       with:
-        version: "19"
+        version: '18'
+        platform: x64
     - name: gguf models cache
       uses: actions/cache@v4
       with:
