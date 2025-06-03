@@ -28,8 +28,8 @@ jobs:
     runs-on: ubuntu-22.04
     container: nvidia/cuda:12.6.2-devel-ubuntu22.04
     steps:
-      - name: Install latest utils
-        run: apt-get update && apt-get install -y git curl lsb-release
+      - name: Upgrade git
+        run: apt-get update && apt-get install -y git
       - uses: actions/checkout@v4
         with:
           submodules: "true"
@@ -48,7 +48,7 @@ jobs:
           node-version: 20
       - name: Install LLVM and Clang
         run: |
-          curl -L https://apt.llvm.org/llvm.sh | ALL=1 bash -s 18
+          apt-get install -y llvm-18-dev clang-18 lld-18
           update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
           update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100
           update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-18 100
@@ -95,8 +95,8 @@ jobs:
     runs-on: ubuntu-22.04-arm
     container: nvidia/cuda:12.6.2-devel-ubuntu22.04
     steps:
-      - name: Install latest utils
-        run: apt-get update && apt-get install -y git curl lsb-release
+      - name: Upgrade git
+        run: apt-get update && apt-get install -y git
       - uses: actions/checkout@v4
         with:
           submodules: "true"
@@ -115,7 +115,7 @@ jobs:
           node-version: 20
       - name: Install LLVM and Clang
         run: |
-          curl -L https://apt.llvm.org/llvm.sh | ALL=1 bash -s 18
+          apt-get install -y llvm-18-dev clang-18 lld-18
           update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
           update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100
           update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-18 100
