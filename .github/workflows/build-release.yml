@@ -28,8 +28,8 @@ jobs:
     runs-on: ubuntu-22.04
     container: nvidia/cuda:12.6.2-devel-ubuntu22.04
     steps:
-      - name: Upgrade git
-        run: apt-get update && apt-get install -y git
+      - name: Install latest git and curl
+        run: apt-get update && apt-get install -y git curl
       - uses: actions/checkout@v4
         with:
           submodules: "true"
@@ -95,8 +95,8 @@ jobs:
     runs-on: ubuntu-22.04-arm
     container: nvidia/cuda:12.6.2-devel-ubuntu22.04
     steps:
-      - name: Upgrade git
-        run: apt-get update && apt-get install -y git
+      - name: Install latest git and curl
+        run: apt-get update && apt-get install -y git curl
       - uses: actions/checkout@v4
         with:
           submodules: "true"
