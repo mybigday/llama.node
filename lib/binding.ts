@@ -268,33 +268,33 @@ export interface Module {
 
 export type LibVariant = 'default' | 'vulkan' | 'cuda'
 
-const setupEnv = (variant?: string) => {
-  const postfix = variant ? `-${variant}` : ''
-  const binPath = path.resolve(
-    __dirname,
-    `../bin/${process.platform}${postfix}/${process.arch}/`,
-  )
-  const systemPathEnv = process.env.PATH ?? process.env.Path ?? ''
-  if (!systemPathEnv.includes(binPath)) {
-    if (process.platform === 'win32') {
-      process.env.Path = `${binPath};${systemPathEnv}`
-    } else {
-      process.env.PATH = `${binPath}:${systemPathEnv}`
-    }
+const getPlatformPackageName = (variant?: LibVariant): string => {
+  const platform = process.platform
+  const arch = process.arch
+  const variantSuffix = variant && variant !== 'default' ? `-${variant}` : ''
+  return `@fugood/node-llama-${platform}-${arch}${variantSuffix}`
+}
+
+const loadPlatformPackage = async (packageName: string): Promise<Module | null> => {
+  try {
+    return await import(packageName) as Module
+  } catch (error) {
+    return null
   }
 }
 
 export const loadModule = async (variant?: LibVariant): Promise<Module> => {
-  try {
-    if (variant && variant !== 'default') {
-      setupEnv(variant)
-      return (await import(
-        `../bin/${process.platform}-${variant}/${process.arch}/llama-node.node`
-      )) as Module
-    }
-  } catch {} // ignore errors and try the common path
-  setupEnv()
-  return (await import(
-    `../bin/${process.platform}/${process.arch}/llama-node.node`
-  )) as Module
+  let module = await loadPlatformPackage(getPlatformPackageName(variant))
+  if (module) {
+    return module
+  }
+
+  module = await loadPlatformPackage(getPlatformPackageName())
+  if (module) {
+    console.warn(`Not found package for variant "${variant}", fallback to default`)
+    return module
+  }
+
+  console.warn(`Not found package for your platform, fallback to local build`)
+  return (await import('../build/Release/index.node')) as Module
 }

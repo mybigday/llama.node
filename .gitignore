@@ -2,10 +2,10 @@
 .DS_Store
 *.log
 node_modules/
-/bin/*
 build/
 *.bin
 *.gguf
 coverage/
 tmp.sess
 /externals/
+*.node

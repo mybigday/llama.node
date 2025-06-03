@@ -5,16 +5,18 @@
   "description": "An another Node binding of llama.cpp",
   "main": "lib/index.js",
   "scripts": {
+    "postinstall": "node scripts/build.js",
     "pretest": "node scripts/download-test-models.js",
     "test": "jest",
     "build": "tsc",
-    "prepack": "yarn build",
+    "prepack": "npm run build",
     "prebuild-native": "node scripts/generate_win_dynamic_load.js 6",
     "build-native": "cmake-js compile",
     "clean": "rimraf build",
     "prepare": "husky",
     "commitlint": "commitlint --edit",
-    "release": "release-it"
+    "release": "release-it",
+    "update-packages": "node scripts/update-packages.js"
   },
   "repository": {
     "type": "git",
@@ -43,12 +45,33 @@
     ]
   },
   "files": [
-    "bin/**/*",
+    "scripts/build.js",
+    "scripts/llama.cpp.patch",
     "src/**/*.{c,cc,cpp,h,hh,hpp,txt,cmake}",
     "lib/*.js",
     "lib/*.ts",
     "CMakeLists.txt"
   ],
+  "optionalDependencies": {
+    "@fugood/node-llama-linux-x64": "0.6.3",
+    "@fugood/node-llama-linux-x64-vulkan": "0.6.3",
+    "@fugood/node-llama-linux-x64-cuda": "0.6.3",
+    "@fugood/node-llama-linux-arm64": "0.6.3",
+    "@fugood/node-llama-linux-arm64-vulkan": "0.6.3",
+    "@fugood/node-llama-linux-arm64-cuda": "0.6.3",
+    "@fugood/node-llama-win32-x64": "0.6.3",
+    "@fugood/node-llama-win32-x64-vulkan": "0.6.3",
+    "@fugood/node-llama-win32-x64-cuda": "0.6.3",
+    "@fugood/node-llama-win32-arm64": "0.6.3",
+    "@fugood/node-llama-win32-arm64-vulkan": "0.6.3",
+    "@fugood/node-llama-win32-arm64-cuda": "0.6.3",
+    "@fugood/node-llama-darwin-x64": "0.6.3",
+    "@fugood/node-llama-darwin-x64-vulkan": "0.6.3",
+    "@fugood/node-llama-darwin-x64-cuda": "0.6.3",
+    "@fugood/node-llama-darwin-arm64": "0.6.3",
+    "@fugood/node-llama-darwin-arm64-vulkan": "0.6.3",
+    "@fugood/node-llama-darwin-arm64-cuda": "0.6.3"
+  },
   "devDependencies": {
     "@babel/preset-env": "^7.24.4",
     "@babel/preset-typescript": "^7.24.1",
@@ -87,5 +110,8 @@
     "semi": false,
     "singleQuote": true,
     "printWidth": 80
+  },
+  "hooks": {
+    "after:bump": "npm run update-packages"
   }
 }

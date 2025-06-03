@@ -12,17 +12,17 @@ jobs:
     - uses: actions/setup-node@v4
       with:
         node-version: 20
-        cache: 'yarn'
+        cache: 'npm'
     - name: node_modules cache
       uses: actions/cache@v4
       with:
         path: node_modules
-        key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
+        key: ${{ runner.os }}-node_modules-${{ hashFiles('**/package-lock.json') }}
     - name: gguf models cache
       uses: actions/cache@v4
       with:
         path: test/*.gguf
         key: ${{ runner.os }}-gguf-models-${{ hashFiles('test/*.gguf') }}
-    - run: yarn install
-    - run: yarn build-native && rm -rf build
-    - run: yarn test
+    - run: npm ci --ignore-scripts
+    - run: npm run build-native && rm -rf build
+    - run: npm run test

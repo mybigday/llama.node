@@ -7,12 +7,12 @@ set -e
 ARCH=${ARCH:-${1:-$(uname -m)}}
 
 if [ $ARCH == "x86_64" ]; then
-  yarn clean && yarn build-native -C
-  yarn clean && yarn build-native -C --CDLLAMA_VULKAN=1 --CDVARIANT=vulkan
+  yarn cmake-js rebuild -C --CDTO_PACKAGE=ON
+  yarn cmake-js rebuild -C --CDTO_PACKAGE=ON --CDLLAMA_VULKAN=1 --CDVARIANT=vulkan
 
   # Check CUDA is available
   if [ -f /usr/local/cuda/bin/nvcc ]; then
-    yarn clean && yarn build-native -C \
+    yarn cmake-js rebuild -C --CDTO_PACKAGE=ON \
       --CDLLAMA_CUDA=1 \
       --CDVARIANT=cuda \
       --CDCMAKE_CUDA_ARCHITECTURES=89 # > GeForce RTX 40 series
@@ -20,8 +20,8 @@ if [ $ARCH == "x86_64" ]; then
     echo "CUDA is not available, skipping CUDA build"
   fi
 else
-  yarn clean && yarn build-native -C --CDGGML_NATIVE=OFF
-  yarn clean && yarn build-native -C \
+  yarn cmake-js rebuild -C --CDTO_PACKAGE=ON --CDGGML_NATIVE=OFF
+  yarn cmake-js rebuild -C --CDTO_PACKAGE=ON \
     --CDGGML_NATIVE=OFF \
     --CDLLAMA_VULKAN=1 \
     --CDVULKAN_SDK="$(realpath 'externals/arm64-Vulkan-SDK')" \
@@ -29,7 +29,7 @@ else
 
   # Check CUDA is available
   if [ -f /usr/local/cuda/bin/nvcc ]; then
-    yarn clean && yarn build-native -C \
+    yarn cmake-js rebuild -C --CDTO_PACKAGE=ON \
       --CDLLAMA_CUDA=1 \
       --CDVARIANT=cuda \
       --CDGGML_NATIVE=OFF \
