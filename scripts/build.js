@@ -1,6 +1,5 @@
 const fs = require('fs');
 const path = require('path');
-const { BuildSystem } = require('cmake-js');
 
 const validAccelerators = process.platform === 'darwin' ? [] : ['vulkan', 'cuda'];
 
@@ -27,6 +26,14 @@ if (accelerator && !validAccelerators.includes(accelerator)) {
 
 if (isBuildFromSource) {
   console.log('Build from source is enabled');
+}
+
+let BuildSystem;
+try {
+  ({ BuildSystem } = require('cmake-js'));
+} catch (error) {
+  console.error('cmake-js is not installed, please install it');
+  process.exit(1);
 }
 
 const buildSystem = new BuildSystem({
