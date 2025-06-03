@@ -47,14 +47,7 @@ jobs:
         with:
           node-version: 20
       - name: Install LLVM and Clang
-        run: |
-          apt-get install -y llvm-18-dev clang-18 lld-18
-          update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
-          update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100
-          update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-18 100
-          update-alternatives --install /usr/bin/llvm-ar llvm-ar /usr/bin/llvm-ar-18 100
-          update-alternatives --install /usr/bin/llvm-ranlib llvm-ranlib /usr/bin/llvm-ranlib-18 100
-          update-alternatives --install /usr/bin/llvm-nm llvm-nm /usr/bin/llvm-nm-18 100
+        run: apt-get install -y llvm clang lld
       - name: Install dependencies
         run: npm ci --no-scripts
       - name: Prepare & build
@@ -114,14 +107,7 @@ jobs:
         with:
           node-version: 20
       - name: Install LLVM and Clang
-        run: |
-          apt-get install -y llvm-18-dev clang-18 lld-18
-          update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
-          update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100
-          update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-18 100
-          update-alternatives --install /usr/bin/llvm-ar llvm-ar /usr/bin/llvm-ar-18 100
-          update-alternatives --install /usr/bin/llvm-ranlib llvm-ranlib /usr/bin/llvm-ranlib-18 100
-          update-alternatives --install /usr/bin/llvm-nm llvm-nm /usr/bin/llvm-nm-18 100
+        run: apt-get install -y llvm clang lld
       - name: Install dependencies
         run: npm ci --no-scripts
       - name: Prepare & build
