@@ -8,6 +8,9 @@ on:
       artifacts-retention-days:
         type: number
         default: 1
+      publish:
+        type: string
+        default: 'NO'
   workflow_call:
     inputs:
       upload-artifacts:
@@ -16,6 +19,9 @@ on:
       artifacts-retention-days:
         type: number
         default: 3
+      publish:
+        type: string
+        default: 'NO'
 
 jobs:
   build-linux-x86_64:
@@ -31,12 +37,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
-      - name: gguf models cache
-        uses: actions/cache@v4
-        with:
-          path: test/*.gguf
-          key: ${{ runner.os }}-gguf-models-${{ hashFiles('test/*.gguf') }}
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/package-lock.json') }}
       - name: externals cache
         uses: actions/cache@v4
         with:
@@ -45,10 +46,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Install yarn
-        run: npm install -g yarn
+      - name: Install build dependencies
+        run: apt-get install -y llvm clang lld cmake ninja-build
       - name: Install dependencies
-        run: yarn install
+        run: npm ci --ignore-scripts
       - name: Prepare & build
         run: |
           bash ./scripts/prepare-linux.sh
@@ -58,8 +59,26 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bin-linux-x86_64
-          path: bin
+          path: packages/
           retention-days: ${{ inputs.artifacts-retention-days }}
+      - name: Publish to NPM (default)
+        if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
+        uses: JS-DevTools/npm-publish@v3
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          package: packages/node-llama-linux-x64
+      - name: Publish to NPM (vulkan)
+        if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
+        uses: JS-DevTools/npm-publish@v3
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          package: packages/node-llama-linux-x64-vulkan
+      - name: Publish to NPM (cuda)
+        if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
+        uses: JS-DevTools/npm-publish@v3
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          package: packages/node-llama-linux-x64-cuda
 
   build-linux-arm64:
     runs-on: ubuntu-22.04-arm
@@ -74,7 +93,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/package-lock.json') }}
       - name: externals cache
         uses: actions/cache@v4
         with:
@@ -83,10 +102,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Install yarn
-        run: npm install -g yarn
+      - name: Install build dependencies
+        run: apt-get install -y llvm clang lld cmake ninja-build
       - name: Install dependencies
-        run: yarn install
+        run: npm ci --ignore-scripts
       - name: Prepare & build
         run: |
           bash ./scripts/prepare-linux.sh
@@ -96,14 +115,36 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bin-linux-arm64
-          path: bin
+          path: packages/
           retention-days: ${{ inputs.artifacts-retention-days }}
+      - name: Publish to NPM (default)
+        if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
+        uses: JS-DevTools/npm-publish@v3
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          package: packages/node-llama-linux-arm64
+      - name: Publish to NPM (cuda)
+        if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
+        uses: JS-DevTools/npm-publish@v3
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          package: packages/node-llama-linux-arm64-cuda
+      - name: Publish to NPM (vulkan)
+        if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
+        uses: JS-DevTools/npm-publish@v3
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          package: packages/node-llama-linux-arm64-vulkan
 
   build-macos:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-13, macos-14]
+        include:
+          - os: macos-13
+            arch: x64
+          - os: macos-14
+            arch: arm64
     steps:
       - uses: actions/checkout@v4
         with:
@@ -112,7 +153,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/package-lock.json') }}
       - name: externals cache
         uses: actions/cache@v4
         with:
@@ -121,9 +162,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "yarn"
+          cache: "npm"
       - name: Install dependencies
-        run: yarn install
+        run: npm ci --ignore-scripts
       - name: Build (macOS)
         run: bash ./scripts/build-macos.sh
       - name: Upload build artifacts
@@ -131,8 +172,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bin-${{ matrix.os }}
-          path: bin
+          path: packages/
           retention-days: ${{ inputs.artifacts-retention-days }}
+      - name: Publish to NPM
+        if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
+        uses: JS-DevTools/npm-publish@v3
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          package: packages/node-llama-darwin-${{ matrix.arch }}
 
   build-windows-x86_64:
     runs-on: windows-latest
@@ -144,7 +191,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/package-lock.json') }}
       - name: externals cache
         uses: actions/cache@v4
         with:
@@ -153,9 +200,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "yarn"
+          cache: "npm"
       - name: Install dependencies
-        run: yarn install
+        run: npm ci --ignore-scripts
       - name: Prepare & build
         run: |
           powershell ./scripts/prepare-windows.ps1 -target x86_64
@@ -165,8 +212,20 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bin-windows-x64
-          path: bin
+          path: packages/
           retention-days: ${{ inputs.artifacts-retention-days }}
+      - name: Publish to NPM (default)
+        if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
+        uses: JS-DevTools/npm-publish@v3
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          package: packages/node-llama-win32-x64
+      - name: Publish to NPM (vulkan)
+        if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
+        uses: JS-DevTools/npm-publish@v3
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          package: packages/node-llama-win32-x64-vulkan
   
   build-windows-arm64:
     runs-on: windows-11-arm
@@ -178,7 +237,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/package-lock.json') }}
       - name: externals cache
         uses: actions/cache@v4
         with:
@@ -187,9 +246,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "yarn"
+          cache: "npm"
       - name: Install dependencies
-        run: yarn install
+        run: npm ci --ignore-scripts
       - name: Prepare & build
         run: |
           powershell ./scripts/prepare-windows.ps1 -target arm64
@@ -199,5 +258,18 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bin-windows-arm64
-          path: bin
+          path: packages/
           retention-days: ${{ inputs.artifacts-retention-days }}
+      - name: Publish to NPM (default)
+        if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
+        uses: JS-DevTools/npm-publish@v3
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          package: packages/node-llama-win32-arm64
+      - name: Publish to NPM (vulkan)
+        if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
+        uses: JS-DevTools/npm-publish@v3
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          package: packages/node-llama-win32-arm64-vulkan
+

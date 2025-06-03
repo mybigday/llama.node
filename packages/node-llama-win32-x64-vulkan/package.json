@@ -1,0 +1,41 @@
+{
+  "name": "@fugood/node-llama-win32-x64-vulkan",
+  "version": "0.6.3",
+  "description": "Native module for An another Node binding of llama.cpp (win32-x64-vulkan)",
+  "main": "index.node",
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mybigday/llama.node.git"
+  },
+  "keywords": [
+    "llama",
+    "llm",
+    "ai",
+    "genai",
+    "Local LLM",
+    "llama.cpp",
+    "win32",
+    "x64",
+    "native"
+  ],
+  "author": "Hans <hans.chen@bricks.tools>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mybigday/llama.node/issues"
+  },
+  "homepage": "https://github.com/mybigday/llama.node#readme",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org"
+  },
+  "files": [
+    "index.node",
+    "*.dll"
+  ],
+  "variant": "vulkan"
+}

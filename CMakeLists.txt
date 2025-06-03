@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 cmake_policy(SET CMP0091 NEW)
 cmake_policy(SET CMP0042 NEW)
 
-project (llama-node)
+project (index)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -40,7 +40,11 @@ else()
   set(VARIANT "")
 endif()
 
-set(PLATFORM_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin/${PLATFORM}${VARIANT}/${ARCH})
+if (TO_PACKAGE)
+  set(PLATFORM_BINARY_DIR ${CMAKE_SOURCE_DIR}/packages/node-llama-${PLATFORM}-${ARCH}${VARIANT})
+else()
+  set(PLATFORM_BINARY_DIR ${CMAKE_SOURCE_DIR}/build/Release)
+endif()
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Platform: ${PLATFORM}")
@@ -145,31 +149,18 @@ target_link_libraries(${PROJECT_NAME} ${CMAKE_JS_LIB} llama ggml common mtmd ${C
 
 add_custom_target(copy_assets ALL DEPENDS ${PROJECT_NAME})
 
-add_custom_command(
-  TARGET copy_assets
-  COMMAND ${CMAKE_COMMAND} -E remove_directory ${PLATFORM_BINARY_DIR}
-  COMMENT "Cleaning bin folder"
-)
-
-if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)
-  # Generate node.lib
-  execute_process(COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF} /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS})
-  # copy target to bin folder
-  get_filename_component(CMAKE_JS_NODELIB_TARGET_NAME ${CMAKE_JS_NODELIB_TARGET} NAME)
-  add_custom_command(TARGET copy_assets
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_JS_NODELIB_TARGET} ${PLATFORM_BINARY_DIR}/${CMAKE_JS_NODELIB_TARGET_NAME}
-    COMMENT "Copying to bin folder"
-  )
+if (TO_PACKAGE)
+  set(METAL_LIB_TARGET_PATH ${PLATFORM_BINARY_DIR})
+else()
+  set(METAL_LIB_TARGET_PATH ${CMAKE_BINARY_DIR}/bin/default.metallib)
 endif()
 
-# copy target to bin folder
-add_custom_command(TARGET copy_assets
-  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> ${PLATFORM_BINARY_DIR}/$<TARGET_FILE_NAME:${PROJECT_NAME}>
-  COMMENT "Copying to bin folder"
-)
+if(CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)
+  execute_process(COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF} /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS})
+endif()
 
 if (LLAMA_METAL)
-  # copy ${CMAKE_BINARY_DIR}/bin/default.metallib
+  # copy ${CMAKE_BINARY_DIR}/bin/default.metallib  
   add_custom_command(
     TARGET copy_assets
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/bin/default.metallib ${PLATFORM_BINARY_DIR}/default.metallib
@@ -178,7 +169,7 @@ if (LLAMA_METAL)
   add_dependencies(copy_assets ggml-metal)
 endif()
 
-if (LLAMA_CLBLAST)
+if (LLAMA_CLBLAST AND TO_PACKAGE)
   find_package(CLBlast)
   if (CLBlast_FOUND)
     message(STATUS "CLBlast found: ${CLBlast_DIR}")

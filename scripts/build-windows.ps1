@@ -16,17 +16,17 @@ if ($toolchain -eq "clang-cl") {
 # General
 
 if ($target -eq "all" -or $target -eq "x86_64") {
-  yarn clean ; yarn build-native -C -a x86_64 $x86Args
+  npx cmake-js rebuild -C -a x86_64 --CDTO_PACKAGE=ON $x86Args
 }
 if ($target -eq "all" -or $target -eq "arm64") {
-  yarn clean ; yarn build-native -C -a arm64 $arm64Args
+  npx cmake-js rebuild -C -a arm64 --CDTO_PACKAGE=ON $arm64Args
 }
 
 # Vulkan, might crash on some scenario
 
 if ($target -eq "all" -or $target -eq "x86_64") {
-  yarn clean ; yarn build-native -C -a x86_64 --CDVULKAN_SDK="$(Resolve-Path 'externals/win32-x64/Vulkan-SDK')" --CDVARIANT=vulkan --CDLLAMA_VULKAN=1
+  npx cmake-js rebuild -C -a x86_64 --CDTO_PACKAGE=ON --CDVULKAN_SDK="$(Resolve-Path 'externals/win32-x64/Vulkan-SDK')" --CDVARIANT=vulkan --CDLLAMA_VULKAN=1
 }
 if ($target -eq "all" -or $target -eq "arm64") {
-  yarn clean ; yarn build-native -C -a arm64 --CDVULKAN_SDK="$(Resolve-Path 'externals/win32-arm64/Vulkan-SDK')" --CDVARIANT=vulkan --CDLLAMA_VULKAN=1
+  npx cmake-js rebuild -C -a arm64 --CDTO_PACKAGE=ON --CDVULKAN_SDK="$(Resolve-Path 'externals/win32-arm64/Vulkan-SDK')" --CDVARIANT=vulkan --CDLLAMA_VULKAN=1
 }
