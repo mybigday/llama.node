@@ -46,10 +46,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Install LLVM and Clang
-        run: apt-get install -y llvm clang lld
+      - name: Install build dependencies
+        run: apt-get install -y llvm clang lld cmake ninja-build
       - name: Install dependencies
-        run: npm ci --no-scripts
+        run: npm ci --ignore-scripts
       - name: Prepare & build
         run: |
           bash ./scripts/prepare-linux.sh
@@ -106,10 +106,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Install LLVM and Clang
-        run: apt-get install -y llvm clang lld
+      - name: Install build dependencies
+        run: apt-get install -y llvm clang lld cmake ninja-build
       - name: Install dependencies
-        run: npm ci --no-scripts
+        run: npm ci --ignore-scripts
       - name: Prepare & build
         run: |
           bash ./scripts/prepare-linux.sh
@@ -172,7 +172,7 @@ jobs:
           node-version: 20
           cache: "npm"
       - name: Install dependencies
-        run: npm ci --no-scripts
+        run: npm ci --ignore-scripts
       - name: Build (macOS)
         run: bash ./scripts/build-macos.sh
       - name: Upload build artifacts
@@ -214,7 +214,7 @@ jobs:
           node-version: 20
           cache: "npm"
       - name: Install dependencies
-        run: npm ci --no-scripts
+        run: npm ci --ignore-scripts
       - name: Prepare & build
         run: |
           powershell ./scripts/prepare-windows.ps1 -target x86_64
@@ -264,7 +264,7 @@ jobs:
           node-version: 20
           cache: "npm"
       - name: Install dependencies
-        run: npm ci --no-scripts
+        run: npm ci --ignore-scripts
       - name: Prepare & build
         run: |
           powershell ./scripts/prepare-windows.ps1 -target arm64
