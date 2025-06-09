@@ -17,7 +17,7 @@ An another Node binding of [llama.cpp](https://github.com/ggerganov/llama.cpp) t
 - Windows (x86_64 and arm64)
   - CPU
   - GPU acceleration via Vulkan
-  - GPU acceleration via CUDA 12.6
+  - GPU acceleration via CUDA (x86_64)
 - Linux (x86_64 and arm64)
   - CPU
   - GPU acceleration via Vulkan
