@@ -206,14 +206,14 @@ jobs:
       - name: Install Cuda Toolkit
         shell: powershell
         run: |
-          choco install cuda --version=12.6.2.560 -y
-          $env:Path += ';C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\bin'
-          $env:Path += ';C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\libnvvp'
+          choco install cuda --version=12.9.1.576 -y
+          $env:Path += ';C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9\bin'
+          $env:Path += ';C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9\libnvvp'
           echo "PATH=$env:Path" | Out-File -FilePath $env:GITHUB_ENV -Append
-          $env:CUDA_PATH = 'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6'
+          $env:CUDA_PATH = 'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9'
           echo "CUDA_PATH=$env:CUDA_PATH" | Out-File -FilePath $env:GITHUB_ENV -Append
-          $env:CUDA_PATH_V12_6 = 'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6'
-          echo "CUDA_PATH_V12_6=$env:CUDA_PATH_V12_6" | Out-File -FilePath $env:GITHUB_ENV -Append
+          $env:CUDA_PATH_V12_9 = 'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9'
+          echo "CUDA_PATH_V12_9=$env:CUDA_PATH_V12_9" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: Prepare & build
         run: |
           powershell ./scripts/prepare-windows.ps1 -target x86_64
