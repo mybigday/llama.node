@@ -123,6 +123,8 @@ file(
     "src/DecodeAudioTokenWorker.h"
     "src/tts_utils.cpp"
     "src/tts_utils.h"
+    "src/anyascii.h"
+    "src/anyascii.c"
 )
 
 if (CLANG AND CMAKE_SYSTEM_NAME STREQUAL "Windows")

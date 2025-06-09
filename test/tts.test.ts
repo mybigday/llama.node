@@ -9,7 +9,7 @@ test('TTS', async () => {
   })
   await model.initVocoder({ path: path.resolve(__dirname, './WavTokenizer.gguf') })
   expect(model.isVocoderEnabled()).toBe(true)
-  const formatted = model.getFormattedAudioCompletion(null, 'Hello, world!')
+  const formatted = model.getFormattedAudioCompletion(null, 'Hello, world! 中文 にほんご 한국어')
   expect(formatted).toMatchSnapshot('formatted')
   const tokens = model.getAudioCompletionGuideTokens('Hello, world!')
   expect(tokens).toMatchSnapshot('guide tokens')

@@ -10,6 +10,8 @@
 
 enum tts_type { UNKNOWN = -1, OUTETTS_V0_2 = 1, OUTETTS_V0_3 = 2 };
 
+static std::string anyascii_string(const std::string &input);
+
 std::string audio_text_from_speaker(nlohmann::json speaker,
                                     const tts_type type);
 std::string audio_data_from_speaker(nlohmann::json speaker,
