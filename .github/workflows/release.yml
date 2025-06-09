@@ -6,13 +6,15 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  release_native:
     uses: ./.github/workflows/build-release.yml
+    with:
+      publish: YES
   publish:
     permissions:
       contents: write
       pull-requests: read
-    needs: build
+    needs: release_native
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,12 +23,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'yarn'
+          cache: 'npm'
       - name: node_modules cache
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/package-lock.json') }}
       - name: gguf models cache
         uses: actions/cache@v4
         with:
@@ -38,8 +40,8 @@ jobs:
           path: bin
           pattern: bin-*
           merge-multiple: true
-      - run: yarn install
-      - run: yarn build
+      - run: npm ci --ignore-scripts
+      - run: npm run build
       - name: Publish to NPM
         uses: JS-DevTools/npm-publish@v3
         with:

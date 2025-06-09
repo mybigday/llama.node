@@ -4,4 +4,4 @@ set -e
 
 # General
 
-yarn clean && yarn build-native -C
+npx cmake-js rebuild -C --CDTO_PACKAGE=ON

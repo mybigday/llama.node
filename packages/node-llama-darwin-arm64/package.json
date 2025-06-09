@@ -1,0 +1,41 @@
+{
+  "name": "@fugood/node-llama-darwin-arm64",
+  "version": "0.6.3",
+  "description": "Native module for An another Node binding of llama.cpp (darwin-arm64)",
+  "main": "index.node",
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mybigday/llama.node.git"
+  },
+  "keywords": [
+    "llama",
+    "llm",
+    "ai",
+    "genai",
+    "Local LLM",
+    "llama.cpp",
+    "darwin",
+    "arm64",
+    "native"
+  ],
+  "author": "Hans <hans.chen@bricks.tools>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mybigday/llama.node/issues"
+  },
+  "homepage": "https://github.com/mybigday/llama.node#readme",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org"
+  },
+  "files": [
+    "index.node",
+    "*.dylib",
+    "*.metallib"
+  ]
+}
