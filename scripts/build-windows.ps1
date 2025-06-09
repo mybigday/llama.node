@@ -35,5 +35,5 @@ if ($target -eq "all" -or $target -eq "arm64") {
 
 if ($target -eq "all" -or $target -eq "x86_64") {
   # See: https://developer.nvidia.com/cuda-gpus
-  npx cmake-js rebuild -C -a x86_64 --CDTO_PACKAGE=ON --CDVARIANT=cuda --CDLLAMA_CUDA=1 --CDCMAKE_CUDA_ARCHITECTURES="61;70;75;80;86;89;120"
+  npx cmake-js rebuild -C -a x86_64 --CDTO_PACKAGE=ON --CDVARIANT=cuda --CDLLAMA_CUDA=1 --CDCMAKE_CUDA_ARCHITECTURES="75;80;86;89;120"
 }
