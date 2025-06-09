@@ -17,6 +17,7 @@ An another Node binding of [llama.cpp](https://github.com/ggerganov/llama.cpp) t
 - Windows (x86_64 and arm64)
   - CPU
   - GPU acceleration via Vulkan
+  - GPU acceleration via CUDA 12.6
 - Linux (x86_64 and arm64)
   - CPU
   - GPU acceleration via Vulkan
@@ -63,7 +64,9 @@ console.log('Result:', text)
 
 - [x] `default`: General usage, not support GPU except macOS (Metal)
 - [x] `vulkan`: Support GPU Vulkan (Windows/Linux), but some scenario might unstable
-- [x] `cuda`: Support GPU CUDA (Linux), but only for limited capability (x86_64: 8.9, arm64: 8.7)
+- [x] `cuda`: Support GPU CUDA (Windows/Linux), but only for limited capability
+  > Linux: (x86_64: 8.9, arm64: 8.7)
+  > Windows: x86_64 - 12.0
 
 ## License
 

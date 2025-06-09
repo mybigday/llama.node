@@ -30,3 +30,9 @@ if ($target -eq "all" -or $target -eq "x86_64") {
 if ($target -eq "all" -or $target -eq "arm64") {
   npx cmake-js rebuild -C -a arm64 --CDTO_PACKAGE=ON --CDVULKAN_SDK="$(Resolve-Path 'externals/win32-arm64/Vulkan-SDK')" --CDVARIANT=vulkan --CDLLAMA_VULKAN=1
 }
+
+# CUDA
+
+if ($target -eq "all" -or $target -eq "x86_64") {
+  npx cmake-js rebuild -C -a x86_64 --CDTO_PACKAGE=ON --CDVARIANT=cuda --CDLLAMA_CUDA=1
+}

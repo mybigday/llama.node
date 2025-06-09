@@ -203,6 +203,8 @@ jobs:
           cache: "npm"
       - name: Install dependencies
         run: npm ci --ignore-scripts
+      - name: Install Cuda Toolkit
+        run: choco install cuda --version=12.6.2.560 -y
       - name: Prepare & build
         run: |
           powershell ./scripts/prepare-windows.ps1 -target x86_64
@@ -226,6 +228,12 @@ jobs:
         with:
           token: ${{ secrets.NPM_TOKEN }}
           package: packages/node-llama-win32-x64-vulkan
+      - name: Publish to NPM (cuda)
+        if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
+        uses: JS-DevTools/npm-publish@v3
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          package: packages/node-llama-win32-x64-cuda
   
   build-windows-arm64:
     runs-on: windows-11-arm
