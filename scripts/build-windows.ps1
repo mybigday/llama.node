@@ -44,5 +44,5 @@ if ($target -eq "all" -or $target -eq "x86_64" -and (Get-Command -Name "nvcc" -E
     --CDVARIANT=cuda `
     --CDGGML_CUDA=1 `
     --CDGGML_CUDA_F16=1 `
-    --CDCMAKE_CUDA_ARCHITECTURES="75;80;86;89;120" # See: https://developer.nvidia.com/cuda-gpus
+    --CDCMAKE_CUDA_ARCHITECTURES="80;86;89;120" # See: https://developer.nvidia.com/cuda-gpus
 }
