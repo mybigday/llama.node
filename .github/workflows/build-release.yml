@@ -147,7 +147,7 @@ jobs:
         if: matrix.target == 'vulkan'
         uses: jakoch/install-vulkan-sdk-action@v1
         with:
-          vulkan_version: '1.4.313.1'
+          vulkan_version: '1.4.313.0'
           install_runtime: false
           cache: true
           stripdown: true
