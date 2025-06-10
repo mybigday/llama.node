@@ -26,9 +26,9 @@ if ($toolchain -eq "clang-cl") {
   }
 } else {
   if ($arch -eq "x64") {
-    $cmakeArgs += " --CDCMAKE_TOOLCHAIN_FILE=cmake/x86_64-w64-mingw32-clang.toolchain.cmake"
+    $cmakeArgs += " --CDCMAKE_TOOLCHAIN_FILE=cmake/x86_64-w64-mingw32-clang.toolchain.cmake -G Ninja"
   } elseif ($arch -eq "arm64") {
-    $cmakeArgs += " --CDCMAKE_TOOLCHAIN_FILE=cmake/aarch64-w64-mingw32-clang.toolchain.cmake"
+    $cmakeArgs += " --CDCMAKE_TOOLCHAIN_FILE=cmake/aarch64-w64-mingw32-clang.toolchain.cmake -G Ninja"
   }
   if ($nativeArch -eq "Arm64") {
     $cmakeArgs += " --CDGGML_VULKAN_SHADERS_GEN_TOOLCHAIN=cmake/aarch64-w64-mingw32-clang.toolchain.cmake"
