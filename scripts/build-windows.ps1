@@ -6,8 +6,10 @@ param (
 
 $ErrorActionPreference='Stop'
 
+$nativeArch = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture
+
 if ($arch -eq "native") {
-  if ([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -eq "Arm64") {
+  if ($nativeArch -eq "Arm64") {
     $arch = "arm64"
   } else {
     $arch = "x64"
@@ -27,6 +29,11 @@ if ($toolchain -eq "clang-cl") {
     $cmakeArgs += " --CDCMAKE_TOOLCHAIN_FILE=cmake/x86_64-w64-mingw32-clang.toolchain.cmake"
   } elseif ($arch -eq "arm64") {
     $cmakeArgs += " --CDCMAKE_TOOLCHAIN_FILE=cmake/aarch64-w64-mingw32-clang.toolchain.cmake"
+  }
+  if ($nativeArch -eq "Arm64") {
+    $cmakeArgs += " --CDGGML_VULKAN_SHADERS_GEN_TOOLCHAIN=cmake/aarch64-w64-mingw32-clang.toolchain.cmake"
+  } else {
+    $cmakeArgs += " --CDGGML_VULKAN_SHADERS_GEN_TOOLCHAIN=cmake/x86_64-w64-mingw32-clang.toolchain.cmake"
   }
 }
 
