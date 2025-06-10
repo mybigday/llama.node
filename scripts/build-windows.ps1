@@ -21,22 +21,22 @@ $cmakeArgs.add("--CDTO_PACKAGE=ON")
 
 if ($toolchain -eq "clang-cl") {
   if ($arch -eq "x64") {
-    $cmakeArgs.add("--CDCMAKE_TOOLCHAIN_FILE=cmake/x86_64-windows-msvc-clang.toolchain.cmake")
+    $cmakeArgs.add("--CDCMAKE_TOOLCHAIN_FILE=$(Resolve-Path cmake/x86_64-windows-msvc-clang.toolchain.cmake)")
   } elseif ($arch -eq "arm64") {
-    $cmakeArgs.add("--CDCMAKE_TOOLCHAIN_FILE=cmake/arm64-windows-msvc-clang.toolchain.cmake")
+    $cmakeArgs.add("--CDCMAKE_TOOLCHAIN_FILE=$(Resolve-Path cmake/arm64-windows-msvc-clang.toolchain.cmake)")
   }
 } else {
   $cmakeArgs.add("-G")
   $cmakeArgs.add("Ninja")
   if ($arch -eq "x64") {
-    $cmakeArgs.add("--CDCMAKE_TOOLCHAIN_FILE=cmake/x86_64-w64-mingw32-clang.toolchain.cmake")
+    $cmakeArgs.add("--CDCMAKE_TOOLCHAIN_FILE=$(Resolve-Path cmake/x86_64-w64-mingw32-clang.toolchain.cmake)")
   } elseif ($arch -eq "arm64") {
-    $cmakeArgs.add("--CDCMAKE_TOOLCHAIN_FILE=cmake/aarch64-w64-mingw32-clang.toolchain.cmake")
+    $cmakeArgs.add("--CDCMAKE_TOOLCHAIN_FILE=$(Resolve-Path cmake/aarch64-w64-mingw32-clang.toolchain.cmake)")
   }
   if ($nativeArch -eq "Arm64") {
-    $cmakeArgs.add("--CDGGML_VULKAN_SHADERS_GEN_TOOLCHAIN=cmake/aarch64-w64-mingw32-clang.toolchain.cmake")
+    $cmakeArgs.add("--CDGGML_VULKAN_SHADERS_GEN_TOOLCHAIN=$(Resolve-Path cmake/aarch64-w64-mingw32-clang.toolchain.cmake)")
   } else {
-    $cmakeArgs.add("--CDGGML_VULKAN_SHADERS_GEN_TOOLCHAIN=cmake/x86_64-w64-mingw32-clang.toolchain.cmake")
+    $cmakeArgs.add("--CDGGML_VULKAN_SHADERS_GEN_TOOLCHAIN=$(Resolve-Path cmake/x86_64-w64-mingw32-clang.toolchain.cmake)")
   }
 }
 
