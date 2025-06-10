@@ -41,8 +41,8 @@ if ($toolchain -eq "mingw-clang") {
   } elseif ($nativeArch -eq "Arm64") {
     $name = "llvm-mingw-${version}-ucrt-aarch64"
   }
-  Invoke-WebRequest -Uri "https://github.com/mstorsjo/llvm-mingw/releases/download/${version}/${name}.zip" -OutFile "llvm-mingw.zip"
-  Expand-Archive -Path "llvm-mingw.zip" -DestinationPath .
+  wget "https://github.com/mstorsjo/llvm-mingw/releases/download/${version}/${name}.zip" -O "llvm-mingw.zip"
+  7z x "llvm-mingw.zip"
   $env:PATH += ";$(Resolve-Path $name\bin)"
 
   choco install ninja -y
