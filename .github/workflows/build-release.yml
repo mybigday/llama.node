@@ -14,7 +14,7 @@ on:
       target:
         type: string
         description: 'The target package to build'
-        default: 'all'
+        default: '*'
   workflow_call:
     inputs:
       upload-artifacts:
@@ -108,14 +108,14 @@ jobs:
       - name: Run this job?
         id: run
         env:
-          TRIGGER_TARGET: ${{ github.event.inputs.target || 'all' }}
+          TRIGGER_TARGET: ${{ github.event.inputs.target || '*' }}
           TARGET: ${{ matrix.package }}
         shell: bash
         run: |
-          if [ "$TRIGGER_TARGET" != "all" ] && [ "$TRIGGER_TARGET" != "$TARGET" ]; then
-            echo "should-run=false" >> $GITHUB_OUTPUT
-          else
+          if [[ "$TARGET" == $TRIGGER_TARGET ]]; then
             echo "should-run=true" >> $GITHUB_OUTPUT
+          else
+            echo "should-run=false" >> $GITHUB_OUTPUT
           fi
       - name: Upgrade git
         if: steps.run.outputs.should-run == 'true' && matrix.need-fix-git == 'true'
