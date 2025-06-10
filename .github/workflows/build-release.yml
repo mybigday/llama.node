@@ -257,8 +257,8 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Prepare & build
         run: |
-          powershell ./scripts/prepare-windows.ps1 -target arm64
-          powershell ./scripts/build-windows.ps1 -target arm64
+          pwsh ./scripts/prepare-windows.ps1 -target arm64
+          pwsh ./scripts/build-windows.ps1 -target arm64
       - name: Upload build artifacts
         if: github.event.inputs.upload-artifacts == 'YES' || inputs.upload-artifacts == 'YES'
         uses: actions/upload-artifact@v4
