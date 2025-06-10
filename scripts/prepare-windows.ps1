@@ -38,4 +38,21 @@ if ($env:VULKAN_SDK -eq $null) {
     Add-Content -Path $env:GITHUB_ENV -Value "VK_SDK_PATH=$env:VK_SDK_PATH" -Append
   }
 }
+
+# install CUDA
+if (($target -eq "all" -or $target -eq "x86_64") -and $env:CUDA_PATH -eq $null) {
+  choco install cuda --version=12.9.1.576 -y
+  $env:PATH += ';C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9\bin'
+  $env:PATH += ';C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9\libnvvp'
+  $env:CUDA_PATH = 'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9'
+  $env:CUDA_PATH_V12_9 = 'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9'
+
+  if ($env:GITHUB_ENV -ne $null) {
+    Add-Content -Path $env:GITHUB_ENV -Value "CUDA_PATH=$env:CUDA_PATH" -Append
+    Add-Content -Path $env:GITHUB_ENV -Value "CUDA_PATH_V12_9=$env:CUDA_PATH_V12_9" -Append
+  }
+}
+
+if ($env:GITHUB_ENV -ne $null) {
+  Add-Content -Path $env:GITHUB_ENV -Value "PATH=$env:PATH" -Append
 }
