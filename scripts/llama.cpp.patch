@@ -85,10 +85,10 @@ index 9a3085be..8218cc16 100644
          else()
              check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
              if (NOT "${GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E}" STREQUAL "")
-diff --git a/ggml/src/ggml-vulkan/CMakeLists.txt b/ggml/src/ggml-vulkan/CMakeLists.txt
+diff --git a/src/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt b/src/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
 index 662f1377..f9f99698 100644
---- a/ggml/src/ggml-vulkan/CMakeLists.txt
-+++ b/ggml/src/ggml-vulkan/CMakeLists.txt
+--- a/src/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
++++ b/src/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
 @@ -122,7 +122,7 @@ if (Vulkan_FOUND)
      endif()
  
