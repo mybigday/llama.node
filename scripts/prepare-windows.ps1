@@ -43,7 +43,7 @@ if ($toolchain -eq "mingw-clang") {
       $name = "llvm-mingw-${version}-ucrt-aarch64"
     }
     Invoke-WebRequest -Uri "https://github.com/mstorsjo/llvm-mingw/releases/download/${version}/${name}.zip" -OutFile "llvm-mingw.zip"
-    Expand-Archive -Path "llvm-mingw.zip"
+    Expand-Archive -Path "llvm-mingw.zip" -DestinationPath .
     $env:PATH += ";$(Resolve-Path $name\bin)"
   }
 
