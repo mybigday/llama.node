@@ -153,6 +153,7 @@ jobs:
         with:
           vulkan_version: '1.4.313.0'
           install_runtime: true
+          optional_components: com.lunarg.vulkan.arm64
           cache: true
           stripdown: true
       - name: Prepare & build (Linux)
