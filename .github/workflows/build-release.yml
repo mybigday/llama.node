@@ -143,6 +143,14 @@ jobs:
       - name: Install dependencies
         if: steps.run.outputs.should-run == 'true'
         run: npm ci --ignore-scripts
+      - name: Install Vulkan SDK
+        if: matrix.target == 'vulkan'
+        uses: jakoch/install-vulkan-sdk-action@v1
+        with:
+          vulkan_version: '1.4.313.1'
+          install_runtime: false
+          cache: true
+          stripdown: true
       - name: Prepare & build (Linux)
         if: steps.run.outputs.should-run == 'true' && runner.os == 'Linux'
         run: |
