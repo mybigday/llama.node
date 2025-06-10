@@ -11,6 +11,10 @@ on:
       publish:
         type: string
         default: 'NO'
+      target:
+        type: string
+        description: 'The target package to build'
+        default: 'all'
   workflow_call:
     inputs:
       upload-artifacts:
@@ -24,258 +28,148 @@ on:
         default: 'NO'
 
 jobs:
-  build-linux-x86_64:
-    runs-on: ubuntu-22.04
-    container: nvidia/cuda:12.6.2-devel-ubuntu22.04
-    steps:
-      - name: Upgrade git
-        run: apt-get update && apt-get install -y git
-      - uses: actions/checkout@v4
-        with:
-          submodules: "true"
-      - name: node_modules cache
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/package-lock.json') }}
-      - name: externals cache
-        uses: actions/cache@v4
-        with:
-          path: externals
-          key: ${{ runner.os }}-${{ runner.arch }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: Install build dependencies
-        run: apt-get install -y llvm clang lld cmake ninja-build
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
-      - name: Prepare & build
-        run: |
-          bash ./scripts/prepare-linux.sh
-          bash ./scripts/build-linux.sh
-      - name: Upload build artifacts
-        if: github.event.inputs.upload-artifacts == 'YES' || inputs.upload-artifacts == 'YES'
-        uses: actions/upload-artifact@v4
-        with:
-          name: bin-linux-x86_64
-          path: '**/*/index.node'
-          retention-days: ${{ inputs.artifacts-retention-days }}
-      - name: Publish to NPM (default)
-        if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
-        uses: JS-DevTools/npm-publish@v3
-        with:
-          token: ${{ secrets.NPM_TOKEN }}
-          package: packages/node-llama-linux-x64
-      - name: Publish to NPM (vulkan)
-        if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
-        uses: JS-DevTools/npm-publish@v3
-        with:
-          token: ${{ secrets.NPM_TOKEN }}
-          package: packages/node-llama-linux-x64-vulkan
-      - name: Publish to NPM (cuda)
-        if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
-        uses: JS-DevTools/npm-publish@v3
-        with:
-          token: ${{ secrets.NPM_TOKEN }}
-          package: packages/node-llama-linux-x64-cuda
-
-  build-linux-arm64:
-    runs-on: ubuntu-22.04-arm
-    container: nvidia/cuda:12.6.2-devel-ubuntu22.04
-    steps:
-      - name: Upgrade git
-        run: apt-get update && apt-get install -y git
-      - uses: actions/checkout@v4
-        with:
-          submodules: "true"
-      - name: node_modules cache
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/package-lock.json') }}
-      - name: externals cache
-        uses: actions/cache@v4
-        with:
-          path: externals
-          key: ${{ runner.os }}-${{ runner.arch }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: Install build dependencies
-        run: apt-get install -y llvm clang lld cmake ninja-build
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
-      - name: Prepare & build
-        run: |
-          bash ./scripts/prepare-linux.sh
-          bash ./scripts/build-linux.sh
-      - name: Upload build artifacts
-        if: github.event.inputs.upload-artifacts == 'YES' || inputs.upload-artifacts == 'YES'
-        uses: actions/upload-artifact@v4
-        with:
-          name: bin-linux-arm64
-          path: '**/*/index.node'
-          retention-days: ${{ inputs.artifacts-retention-days }}
-      - name: Publish to NPM (default)
-        if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
-        uses: JS-DevTools/npm-publish@v3
-        with:
-          token: ${{ secrets.NPM_TOKEN }}
-          package: packages/node-llama-linux-arm64
-      - name: Publish to NPM (cuda)
-        if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
-        uses: JS-DevTools/npm-publish@v3
-        with:
-          token: ${{ secrets.NPM_TOKEN }}
-          package: packages/node-llama-linux-arm64-cuda
-      - name: Publish to NPM (vulkan)
-        if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
-        uses: JS-DevTools/npm-publish@v3
-        with:
-          token: ${{ secrets.NPM_TOKEN }}
-          package: packages/node-llama-linux-arm64-vulkan
-
-  build-macos:
+  build:
     runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
     strategy:
       matrix:
         include:
+          # Linux x86_64 default
+          - os: ubuntu-22.04
+            arch: x86_64
+            container: ''
+            target: default
+            package: node-llama-linux-x64
+          # Linux x86_64 CUDA
+          - os: ubuntu-22.04
+            arch: x86_64
+            container: nvidia/cuda:12.6.2-devel-ubuntu22.04
+            target: cuda
+            package: node-llama-linux-x64-cuda
+          # Linux x86_64 Vulkan
+          - os: ubuntu-22.04
+            arch: x86_64
+            target: vulkan
+            package: node-llama-linux-x64-vulkan
+          # Linux arm64 default
+          - os: ubuntu-22.04-arm
+            arch: arm64
+            target: default
+            package: node-llama-linux-arm64
+          # Linux arm64 CUDA
+          - os: ubuntu-22.04-arm
+            arch: arm64
+            container: nvidia/cuda:12.6.2-devel-ubuntu22.04
+            target: cuda
+            package: node-llama-linux-arm64-cuda
+          # Linux arm64 Vulkan
+          - os: ubuntu-22.04-arm
+            arch: arm64
+            target: vulkan
+            package: node-llama-linux-arm64-vulkan
+          # macOS x64
           - os: macos-13
             arch: x64
+            target: default
+            package: node-llama-darwin-x64
+          # macOS arm64
           - os: macos-14
             arch: arm64
+            target: default
+            package: node-llama-darwin-arm64
+          # Windows x64 default
+          - os: windows-latest
+            arch: x64
+            target: default
+            package: node-llama-win32-x64
+          # Windows x64 CUDA
+          - os: windows-latest
+            arch: x64
+            target: cuda
+            package: node-llama-win32-x64-cuda
+          # Windows x64 Vulkan
+          - os: windows-latest
+            arch: x64
+            target: vulkan
+            package: node-llama-win32-x64-vulkan
+          # Windows arm64 default
+          - os: windows-11-arm
+            arch: arm64
+            target: default
+            package: node-llama-win32-arm64
+          # Windows arm64 CUDA
+          - os: windows-11-arm
+            arch: arm64
+            target: cuda
+            package: node-llama-win32-arm64-cuda
+          # Windows arm64 Vulkan
+          - os: windows-11-arm
+            arch: arm64
+            target: vulkan
+            package: node-llama-win32-arm64-vulkan
     steps:
+      - name: Run this job?
+        id: run
+        env:
+          TRIGGER_TARGET: ${{ github.event.inputs.target || 'all' }}
+          TARGET: ${{ matrix.package }}
+        run: |
+          if [ "$TRIGGER_TARGET" != "all" ] && [ "$TRIGGER_TARGET" != "$TARGET" ]; then
+            echo "should-run=false" >> $GITHUB_OUTPUT
+          else
+            echo "should-run=true" >> $GITHUB_OUTPUT
+          fi
+      - name: Upgrade git
+        if: ${{ matrix.container }} && ${{ steps.run.outputs.should-run }} == 'true'
+        run: apt-get update && apt-get install -y git
       - uses: actions/checkout@v4
         with:
           submodules: "true"
       - name: node_modules cache
+        if: ${{ steps.run.outputs.should-run }} == 'true'
         uses: actions/cache@v4
         with:
           path: node_modules
           key: ${{ runner.os }}-node_modules-${{ hashFiles('**/package-lock.json') }}
       - name: externals cache
+        if: ${{ steps.run.outputs.should-run }} == 'true'
         uses: actions/cache@v4
         with:
           path: externals
           key: ${{ runner.os }}-${{ runner.arch }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
       - uses: actions/setup-node@v4
+        if: ${{ steps.run.outputs.should-run }} == 'true'
         with:
           node-version: 20
           cache: "npm"
       - name: Install dependencies
+        if: ${{ steps.run.outputs.should-run }} == 'true'
         run: npm ci --ignore-scripts
-      - name: Build (macOS)
-        run: bash ./scripts/build-macos.sh
+      - name: Prepare & build (Linux)
+        if: ${{ steps.run.outputs.should-run }} == 'true' && ${{ runner.os }} == 'Linux'
+        run: |
+          bash ./scripts/prepare-linux.sh -a ${{ matrix.arch }} -t ${{ matrix.target }}
+          bash ./scripts/build-linux.sh -a ${{ matrix.arch }} -t ${{ matrix.target }}
+      - name: Prepare & build (macOS)
+        if: ${{ steps.run.outputs.should-run }} == 'true' && ${{ runner.os }} == 'macOS'
+        run: |
+          bash ./scripts/prepare-macos.sh
+          bash ./scripts/build-macos.sh
+      - name: Prepare & build (Windows)
+        if: ${{ steps.run.outputs.should-run }} == 'true' && ${{ runner.os }} == 'Windows'
+        run: |
+          pwsh ./scripts/prepare-windows.ps1 -arch ${{ matrix.arch }} -target ${{ matrix.target }}
+          pwsh ./scripts/build-windows.ps1 -arch ${{ matrix.arch }} -target ${{ matrix.target }}
       - name: Upload build artifacts
-        if: github.event.inputs.upload-artifacts == 'YES' || inputs.upload-artifacts == 'YES'
+        if: ${{ steps.run.outputs.should-run }} == 'true' && (github.event.inputs.upload-artifacts == 'YES' || inputs.upload-artifacts == 'YES')
         uses: actions/upload-artifact@v4
         with:
-          name: bin-${{ matrix.os }}
-          path: '**/*/index.node'
+          name: bin-${{ matrix.package }}
+          path: packages/${{ matrix.package }}
           retention-days: ${{ inputs.artifacts-retention-days }}
       - name: Publish to NPM
-        if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
+        if: ${{ steps.run.outputs.should-run }} == 'true' && (github.event.inputs.publish == 'YES' || inputs.publish == 'YES')
         uses: JS-DevTools/npm-publish@v3
         with:
           token: ${{ secrets.NPM_TOKEN }}
-          package: packages/node-llama-darwin-${{ matrix.arch }}
-
-  build-windows-x86_64:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: "true"
-      - name: node_modules cache
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/package-lock.json') }}
-      - name: externals cache
-        uses: actions/cache@v4
-        with:
-          path: externals
-          key: ${{ runner.os }}-${{ runner.arch }}-externals-${{ hashFiles('scripts/prepare-*.ps1') }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "npm"
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
-      - name: Prepare & build
-        run: |
-          pwsh ./scripts/prepare-windows.ps1 -target x86_64
-          pwsh ./scripts/build-windows.ps1 -target x86_64
-      - name: Upload build artifacts
-        if: github.event.inputs.upload-artifacts == 'YES' || inputs.upload-artifacts == 'YES'
-        uses: actions/upload-artifact@v4
-        with:
-          name: bin-windows-x64
-          path: '**/*/index.node'
-          retention-days: ${{ inputs.artifacts-retention-days }}
-      - name: Publish to NPM (default)
-        if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
-        uses: JS-DevTools/npm-publish@v3
-        with:
-          token: ${{ secrets.NPM_TOKEN }}
-          package: packages/node-llama-win32-x64
-      - name: Publish to NPM (vulkan)
-        if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
-        uses: JS-DevTools/npm-publish@v3
-        with:
-          token: ${{ secrets.NPM_TOKEN }}
-          package: packages/node-llama-win32-x64-vulkan
-      - name: Publish to NPM (cuda)
-        if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
-        uses: JS-DevTools/npm-publish@v3
-        with:
-          token: ${{ secrets.NPM_TOKEN }}
-          package: packages/node-llama-win32-x64-cuda
-  
-  build-windows-arm64:
-    runs-on: windows-11-arm
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: "true"
-      - name: node_modules cache
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/package-lock.json') }}
-      - name: externals cache
-        uses: actions/cache@v4
-        with:
-          path: externals
-          key: ${{ runner.os }}-${{ runner.arch }}-externals-${{ hashFiles('scripts/prepare-*.ps1') }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "npm"
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
-      - name: Prepare & build
-        run: |
-          pwsh ./scripts/prepare-windows.ps1 -target arm64
-          pwsh ./scripts/build-windows.ps1 -target arm64
-      - name: Upload build artifacts
-        if: github.event.inputs.upload-artifacts == 'YES' || inputs.upload-artifacts == 'YES'
-        uses: actions/upload-artifact@v4
-        with:
-          name: bin-windows-arm64
-          path: '**/*/index.node'
-          retention-days: ${{ inputs.artifacts-retention-days }}
-      - name: Publish to NPM (default)
-        if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
-        uses: JS-DevTools/npm-publish@v3
-        with:
-          token: ${{ secrets.NPM_TOKEN }}
-          package: packages/node-llama-win32-arm64
-      - name: Publish to NPM (vulkan)
-        if: github.event.inputs.publish == 'YES' || inputs.publish == 'YES'
-        uses: JS-DevTools/npm-publish@v3
-        with:
-          token: ${{ secrets.NPM_TOKEN }}
-          package: packages/node-llama-win32-arm64-vulkan
-
+          package: packages/${{ matrix.package }}

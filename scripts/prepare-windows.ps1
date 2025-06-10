@@ -1,6 +1,14 @@
 param (
-  [string]$target = "all"
+  [string]$arch = "native"
 )
+
+if ($arch -eq "native") {
+  if ([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -eq "Arm64") {
+    $arch = "arm64"
+  } else {
+    $arch = "x64"
+  }
+}
 
 $ErrorActionPreference='Stop'
 
@@ -15,11 +23,11 @@ if ($Arch -eq "X64") {
 
 $VULKAN_COMPONENTS = "com.lunarg.vulkan.sdl2 com.lunarg.vulkan.glm com.lunarg.vulkan.volk com.lunarg.vulkan.vma com.lunarg.vulkan.debug"
 
-if ($Arch -eq "X64" -and ($target -eq "all" -or $target -eq "arm64")) {
+if ($Arch -eq "X64" -and ($arch -eq "all" -or $arch -eq "arm64")) {
   $VULKAN_COMPONENTS += " com.lunarg.vulkan.arm64"
 }
 
-if ($Arch -eq "Arm64" -and ($target -eq "all" -or $target -eq "x86_64")) {
+if ($Arch -eq "Arm64" -and ($arch -eq "all" -or $arch -eq "x64")) {
   $VULKAN_COMPONENTS += " com.lunarg.vulkan.x64"
 }
 
@@ -40,7 +48,7 @@ if ($env:VULKAN_SDK -eq $null) {
 }
 
 # install CUDA
-if (($target -eq "all" -or $target -eq "x86_64") -and $env:CUDA_PATH -eq $null) {
+if (($target -eq "all" -or $target -eq "x64") -and $env:CUDA_PATH -eq $null) {
   choco install cuda --version=12.9.1.576 -y
   $env:PATH += ';C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9\bin'
   $env:PATH += ';C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9\libnvvp'
