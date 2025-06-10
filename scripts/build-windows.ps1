@@ -19,7 +19,7 @@ $cmakeArgs = "--CDTO_PACKAGE=ON"
 if ($toolchain -eq "clang-cl") {
   if ($arch -eq "x64") {
     $cmakeArgs += " --CDCMAKE_TOOLCHAIN_FILE=cmake/x86_64-windows-msvc-clang.toolchain.cmake"
-  } elseif ($arch -eq "arm64" -and $target -ne "vulkan") {
+  } elseif ($arch -eq "arm64") {
     $cmakeArgs += " --CDCMAKE_TOOLCHAIN_FILE=cmake/arm64-windows-msvc-clang.toolchain.cmake"
   }
 } else {
