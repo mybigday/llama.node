@@ -25,7 +25,10 @@ if ($toolchain -eq "clang-cl") {
   } elseif ($arch -eq "arm64") {
     $cmakeArgs.add("--CDCMAKE_TOOLCHAIN_FILE=$(Resolve-Path cmake/arm64-windows-msvc-clang.toolchain.cmake)")
   }
-} else {
+} elseif ($toolchain -eq "mingw-clang") {
+  if ((Get-Command aarch64-w64-mingw32-clang -ErrorAction SilentlyContinue) -eq $null) {
+    throw "mingw32-clang toolchain is not available"
+  }
   $cmakeArgs.add("-G")
   $cmakeArgs.add("Ninja")
   if ($arch -eq "x64") {
@@ -38,6 +41,8 @@ if ($toolchain -eq "clang-cl") {
   } else {
     $cmakeArgs.add("--CDGGML_VULKAN_SHADERS_GEN_TOOLCHAIN=$(Resolve-Path cmake/x86_64-w64-mingw32-clang.toolchain.cmake)")
   }
+} else {
+  throw "Unknown toolchain: $toolchain"
 }
 
 # General
