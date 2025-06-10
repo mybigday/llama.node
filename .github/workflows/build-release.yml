@@ -138,7 +138,7 @@ jobs:
       - name: set ccache path
         if: steps.run.outputs.should-run == 'true'
         run: |
-          echo "CCACHE_PATH=${{ github.workspace }}/.ccache" >> $GITHUB_ENV
+          echo "CCACHE_BASEDIR=${{ github.workspace }}/.ccache" >> $GITHUB_ENV
       - uses: actions/setup-node@v4
         if: steps.run.outputs.should-run == 'true'
         with:
