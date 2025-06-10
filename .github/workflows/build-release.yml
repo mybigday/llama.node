@@ -156,7 +156,6 @@ jobs:
       - name: Prepare & build (macOS)
         if: steps.run.outputs.should-run == 'true' && runner.os == 'macOS'
         run: |
-          bash ./scripts/prepare-macos.sh
           bash ./scripts/build-macos.sh
       - name: Prepare & build (Windows)
         if: steps.run.outputs.should-run == 'true' && runner.os == 'Windows'
