@@ -41,7 +41,7 @@ if ($toolchain -eq "mingw-clang") {
   } elseif ($nativeArch -eq "Arm64") {
     $name = "llvm-mingw-${version}-ucrt-aarch64"
   }
-  wget "https://github.com/mstorsjo/llvm-mingw/releases/download/${version}/${name}.zip" -O "llvm-mingw.zip"
+  Invoke-WebRequest "https://github.com/mstorsjo/llvm-mingw/releases/download/${version}/${name}.zip" -OutFile "llvm-mingw.zip"
   7z x "llvm-mingw.zip"
   $env:PATH += ";$(Resolve-Path $name\bin)"
 
