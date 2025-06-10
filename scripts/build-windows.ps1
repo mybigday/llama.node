@@ -26,13 +26,13 @@ if ($target -eq "all" -or $target -eq "arm64") {
 
 if ($target -eq "all" -or $target -eq "x86_64") {
   npx cmake-js rebuild -C -a x86_64 --CDTO_PACKAGE=ON $x86Args `
-    --CDVULKAN_SDK="$(Resolve-Path 'externals/win32-x64/Vulkan-SDK')" `
+    --CDVULKAN_SDK="$env:VULKAN_SDK" `
     --CDVARIANT=vulkan `
     --CDGGML_VULKAN=1
 }
 if ($target -eq "all" -or $target -eq "arm64") {
   npx cmake-js rebuild -C -a arm64 --CDTO_PACKAGE=ON $arm64Args `
-    --CDVULKAN_SDK="$(Resolve-Path 'externals/win32-arm64/Vulkan-SDK')" `
+    --CDVULKAN_SDK="$env:VULKAN_SDK" `
     --CDVARIANT=vulkan `
     --CDGGML_VULKAN=1
 }
