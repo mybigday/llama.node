@@ -46,6 +46,7 @@ jobs:
             container: nvidia/cuda:12.6.2-devel-ubuntu22.04
             target: cuda
             package: node-llama-linux-x64-cuda
+            need-fix-git: 'true'
           # Linux x86_64 Vulkan
           - os: ubuntu-22.04
             arch: x86_64
@@ -62,6 +63,7 @@ jobs:
             container: nvidia/cuda:12.6.2-devel-ubuntu22.04
             target: cuda
             package: node-llama-linux-arm64-cuda
+            need-fix-git: 'true'
           # Linux arm64 Vulkan
           - os: ubuntu-22.04-arm
             arch: arm64
@@ -120,7 +122,7 @@ jobs:
             echo "should-run=true" >> $GITHUB_OUTPUT
           fi
       - name: Upgrade git
-        if: ${{ matrix.container }} && ${{ steps.run.outputs.should-run }} == 'true'
+        if: ${{ steps.run.outputs.should-run }} == 'true' && ${{ matrix.need-fix-git }} == 'true'
         run: apt-get update && apt-get install -y git
       - uses: actions/checkout@v4
         with:
