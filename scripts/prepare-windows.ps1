@@ -43,6 +43,7 @@ if ($toolchain -eq "mingw-clang") {
   }
   Invoke-WebRequest -Uri "https://github.com/mstorsjo/llvm-mingw/releases/download/${version}/${name}.zip" -OutFile "llvm-mingw.zip"
   Expand-Archive -Path "llvm-mingw.zip" -DestinationPath .
+  $env:PATH += ";$(Resolve-Path $name\bin)"
   [System.Environment]::SetEnvironmentVariable(
     "PATH",
     "$(Resolve-Path $name\bin);$([System.Environment]::GetEnvironmentVariable('PATH', [System.EnvironmentVariableTarget]::User))",
