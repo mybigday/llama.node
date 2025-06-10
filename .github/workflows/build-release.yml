@@ -168,6 +168,7 @@ jobs:
         if: steps.run.outputs.should-run == 'true' && runner.os == 'Windows'
         shell: pwsh
         run: |
+          $ErrorActionPreference='Stop'
           pwsh ./scripts/prepare-windows.ps1 -arch ${{ matrix.arch }} -target ${{ matrix.target }} -toolchain ${{ matrix.toolchain }}
           $env:ChocolateyInstall = Convert-Path "$((Get-Command choco).Path)\..\.."
           Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
