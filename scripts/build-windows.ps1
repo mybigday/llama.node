@@ -39,7 +39,7 @@ if ($target -eq "all" -or $target -eq "arm64") {
 
 # CUDA
 
-if ($target -eq "all" -or $target -eq "x86_64") {
+if ($target -eq "all" -or $target -eq "x86_64" -and (Get-Command -Name "nvcc" -ErrorAction SilentlyContinue)) {
   npx cmake-js rebuild -C -a x86_64 --CDTO_PACKAGE=ON $x86Args `
     --CDVARIANT=cuda `
     --CDGGML_CUDA=1 `
