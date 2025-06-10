@@ -34,18 +34,22 @@ if (Get-Command ccache -ErrorAction SilentlyContinue) {
   choco install ccache -y
 }
 
-if ($toolchain -eq "mingw-clang" -and (Get-Command clang -ErrorAction SilentlyContinue) -eq $null) {
-  $version = "20250528"
-  if ($nativeArch -eq "X64") {
-    $name = "llvm-mingw-${version}-ucrt-x86_64"
-  } elseif ($nativeArch -eq "Arm64") {
-    $name = "llvm-mingw-${version}-ucrt-aarch64"
+if ($toolchain -eq "mingw-clang") {
+  if (Get-Command aarch64-w64-mingw32-clang -ErrorAction SilentlyContinue) -eq $null) {
+    $version = "20250528"
+    if ($nativeArch -eq "X64") {
+      $name = "llvm-mingw-${version}-ucrt-x86_64"
+    } elseif ($nativeArch -eq "Arm64") {
+      $name = "llvm-mingw-${version}-ucrt-aarch64"
+    }
+    Invoke-WebRequest -Uri "https://github.com/mstorsjo/llvm-mingw/releases/download/${version}/${name}.zip" -OutFile "llvm-mingw.zip"
+    Expand-Archive -Path "llvm-mingw.zip"
+    $env:PATH += ";$(Resolve-Path $name\bin)"
   }
-  Invoke-WebRequest -Uri "https://github.com/mstorsjo/llvm-mingw/releases/download/${version}/${name}.zip" -OutFile "llvm-mingw.zip"
-  Expand-Archive -Path "llvm-mingw.zip"
-  $env:PATH += ";$(Resolve-Path $name\bin)"
 
-  choco install ninja -y
+  if (Get-Command ninja -ErrorAction SilentlyContinue) -eq $null) {
+    choco install ninja -y
+  }
 }
 
 if ($env:GITHUB_ENV -ne $null) {
