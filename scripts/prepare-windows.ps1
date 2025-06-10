@@ -30,3 +30,7 @@ if (($arch -eq "all" -or $arch -eq "x64") -and $env:CUDA_PATH -eq $null -and ($t
 if ($env:GITHUB_ENV -ne $null) {
   Add-Content -Path $env:GITHUB_ENV -Value "PATH=$env:PATH"
 }
+
+if (Get-Command ccache -ErrorAction SilentlyContinue) {
+  choco install ccache -y
+}

@@ -50,6 +50,7 @@ if ($target -eq "all" -or $target -eq "vulkan") {
 if ($target -eq "all" -or $target -eq "cuda") {
   npx cmake-js rebuild -C -a $arch $cmakeArgs `
     --CDVARIANT=cuda `
+    --CDCMAKE_CUDA_COMPILER_LAUNCHER=ccache `
     --CDGGML_CUDA=1 `
     --CDGGML_CUDA_F16=1 `
     --CDCMAKE_CUDA_ARCHITECTURES="86;89;120" # See: https://developer.nvidia.com/cuda-gpus
