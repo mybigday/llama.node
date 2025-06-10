@@ -28,5 +28,13 @@ run_as_root apt-get update
 run_as_root apt-get install -qy lsb-release wget llvm clang lld cmake ninja-build libomp-dev ccache
 
 if [ "$TARGET" == "vulkan" ] && ! command -v glslc &> /dev/null; then
-  run_as_root apt-get install -qy shaderc
+  if ! run_as_root apt-get install -qy shaderc; then
+    # build from source
+    git clone https://github.com/google/shaderc.git --depth 1
+    pushd shaderc
+    cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DSHADERC_SKIP_TESTS=ON -DSHADERC_SKIP_EXAMPLES=ON
+    cmake --build build
+    run_as_root cmake --install build
+    popd
+  fi
 fi
