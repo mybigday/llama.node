@@ -33,7 +33,7 @@ if ($Arch -eq "Arm64" -and ($arch -eq "all" -or $arch -eq "x64")) {
 
 # install vulkan sdk
 if ($env:VULKAN_SDK -eq $null) {
-  wget $VULKAN_URL -O "vulkansdk.exe"
+  Invoke-WebRequest $VULKAN_URL -OutFile "vulkansdk.exe"
   .\vulkansdk.exe --accept-licenses --default-answer --confirm-command install $VULKAN_COMPONENTS
   rm vulkansdk.exe
 
@@ -48,7 +48,7 @@ if ($env:VULKAN_SDK -eq $null) {
 }
 
 # install CUDA
-if (($target -eq "all" -or $target -eq "x64") -and $env:CUDA_PATH -eq $null) {
+if (($arch -eq "all" -or $arch -eq "x64") -and $env:CUDA_PATH -eq $null) {
   choco install cuda --version=12.9.1.576 -y
   $env:PATH += ';C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9\bin'
   $env:PATH += ';C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9\libnvvp'
