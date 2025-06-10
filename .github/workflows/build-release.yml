@@ -143,7 +143,7 @@ jobs:
         if: steps.run.outputs.should-run == 'true'
         run: npm ci --ignore-scripts
       - name: Install Vulkan SDK
-        if: matrix.target == 'vulkan'
+        if: steps.run.outputs.should-run == 'true' && matrix.target == 'vulkan'
         uses: jakoch/install-vulkan-sdk-action@v1
         with:
           vulkan_version: '1.4.313.0'
