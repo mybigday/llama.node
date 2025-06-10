@@ -99,11 +99,6 @@ jobs:
             arch: arm64
             target: default
             package: node-llama-win32-arm64
-          # Windows arm64 CUDA
-          - os: windows-11-arm
-            arch: arm64
-            target: cuda
-            package: node-llama-win32-arm64-cuda
           # Windows arm64 Vulkan
           - os: windows-11-arm
             arch: arm64
