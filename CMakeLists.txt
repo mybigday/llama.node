@@ -34,6 +34,8 @@ string(REPLACE "arm" "arm" ARCH ${ARCH})
 string(REPLACE "arm64x" "arm64" ARCH ${ARCH})
 string(REPLACE "aarch64" "arm64" ARCH ${ARCH})
 
+option(TO_PACKAGE "Build as package" OFF)
+
 if(DEFINED VARIANT)
   set(VARIANT -${VARIANT})
 else()
@@ -152,6 +154,13 @@ target_link_libraries(${PROJECT_NAME} ${CMAKE_JS_LIB} llama ggml common mtmd ${C
 add_custom_target(copy_assets ALL DEPENDS ${PROJECT_NAME})
 
 if (TO_PACKAGE)
+  add_custom_command(TARGET copy_assets
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> ${PLATFORM_BINARY_DIR}/$<TARGET_FILE_NAME:${PROJECT_NAME}>
+    COMMENT "Deploy as package"
+  )
+endif()
+
+if (TO_PACKAGE)
   set(METAL_LIB_TARGET_PATH ${PLATFORM_BINARY_DIR})
 else()
   set(METAL_LIB_TARGET_PATH ${CMAKE_BINARY_DIR}/bin/default.metallib)
@@ -165,7 +174,7 @@ if (LLAMA_METAL)
   # copy ${CMAKE_BINARY_DIR}/bin/default.metallib  
   add_custom_command(
     TARGET copy_assets
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/bin/default.metallib ${PLATFORM_BINARY_DIR}/default.metallib
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/bin/default.metallib ${METAL_LIB_TARGET_PATH}
     COMMENT "Copying default.metallib to bin folder"
   )
   add_dependencies(copy_assets ggml-metal)
