@@ -31,8 +31,9 @@ if [ "$TARGET" == "vulkan" ] && ! command -v glslc &> /dev/null; then
   if ! run_as_root apt-get install -qy shaderc; then
     # build from source
     # SPIRV-Tools
-    git clone https://github.com/KhronosGroup/SPIRV-Tools.git --depth 1
+    git clone https://github.com/KhronosGroup/SPIRV-Tools.git --depth 1 --branch vulkan-sdk-1.4.313
     pushd SPIRV-Tools
+    git clone https://github.com/KhronosGroup/SPIRV-Headers.git --depth 1 --branch vulkan-sdk-1.4.313 external/spirv-headers
     cmake -B build -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX=/usr \
       -DSPIRV_SKIP_TESTS=ON \
