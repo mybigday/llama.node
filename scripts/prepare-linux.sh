@@ -25,7 +25,7 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 run_as_root apt-get update
-run_as_root apt-get install -qy lsb-release wget llvm clang lld cmake ninja-build
+run_as_root apt-get install -qy lsb-release wget llvm clang lld cmake ninja-build libomp-dev
 
 if [ $ARCH == "x86_64" ]; then
   if [ $TARGET == "vulkan" ]; then
