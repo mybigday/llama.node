@@ -1,5 +1,6 @@
 param (
-  [string]$arch = "native"
+  [string]$arch = "native",
+  [string]$target = "default"
 )
 
 if ($arch -eq "native") {
@@ -32,7 +33,7 @@ if ($Arch -eq "Arm64" -and ($arch -eq "all" -or $arch -eq "x64")) {
 }
 
 # install vulkan sdk
-if ($env:VULKAN_SDK -eq $null) {
+if ($env:VULKAN_SDK -eq $null -and ($target -eq "all" -or $target -eq "vulkan")) {
   Invoke-WebRequest $VULKAN_URL -OutFile "vulkansdk.exe"
   .\vulkansdk.exe --accept-licenses --default-answer --confirm-command install $VULKAN_COMPONENTS
   rm vulkansdk.exe
@@ -42,13 +43,13 @@ if ($env:VULKAN_SDK -eq $null) {
   $env:PATH = "C:\VulkanSDK\1.4.313.1\Bin;$env:PATH"
 
   if ($env:GITHUB_ENV -ne $null) {
-    Add-Content -Path $env:GITHUB_ENV -Value "VULKAN_SDK=$env:VULKAN_SDK" -Append
-    Add-Content -Path $env:GITHUB_ENV -Value "VK_SDK_PATH=$env:VK_SDK_PATH" -Append
+    Add-Content -Path $env:GITHUB_ENV -Value "VULKAN_SDK=$env:VULKAN_SDK"
+    Add-Content -Path $env:GITHUB_ENV -Value "VK_SDK_PATH=$env:VK_SDK_PATH"
   }
 }
 
 # install CUDA
-if (($arch -eq "all" -or $arch -eq "x64") -and $env:CUDA_PATH -eq $null) {
+if (($arch -eq "all" -or $arch -eq "x64") -and $env:CUDA_PATH -eq $null -and ($target -eq "all" -or $target -eq "cuda")) {
   choco install cuda --version=12.9.1.576 -y
   $env:PATH += ';C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9\bin'
   $env:PATH += ';C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9\libnvvp'
@@ -56,11 +57,11 @@ if (($arch -eq "all" -or $arch -eq "x64") -and $env:CUDA_PATH -eq $null) {
   $env:CUDA_PATH_V12_9 = 'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9'
 
   if ($env:GITHUB_ENV -ne $null) {
-    Add-Content -Path $env:GITHUB_ENV -Value "CUDA_PATH=$env:CUDA_PATH" -Append
-    Add-Content -Path $env:GITHUB_ENV -Value "CUDA_PATH_V12_9=$env:CUDA_PATH_V12_9" -Append
+    Add-Content -Path $env:GITHUB_ENV -Value "CUDA_PATH=$env:CUDA_PATH"
+    Add-Content -Path $env:GITHUB_ENV -Value "CUDA_PATH_V12_9=$env:CUDA_PATH_V12_9"
   }
 }
 
 if ($env:GITHUB_ENV -ne $null) {
-  Add-Content -Path $env:GITHUB_ENV -Value "PATH=$env:PATH" -Append
+  Add-Content -Path $env:GITHUB_ENV -Value "PATH=$env:PATH"
 }
