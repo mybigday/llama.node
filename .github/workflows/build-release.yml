@@ -152,7 +152,7 @@ jobs:
         uses: jakoch/install-vulkan-sdk-action@v1
         with:
           vulkan_version: '1.4.313.0'
-          install_runtime: false
+          install_runtime: true
           cache: true
           stripdown: true
       - name: Prepare & build (Linux)
