@@ -19,7 +19,7 @@ $Arch = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture
 if ($Arch -eq "X64") {
   $VULKAN_URL = "https://sdk.lunarg.com/sdk/download/1.4.313.1/windows/vulkansdk-windows-X64-1.4.313.1.exe"
 } else {
-  $VULKAN_URL = "https://sdk.lunarg.com/sdk/download/1.4.313.1/windows/vulkansdk-windows-ARM64-1.4.313.1.exe"
+  $VULKAN_URL = "https://sdk.lunarg.com/sdk/download/1.4.313.1/warm/vulkansdk-windows-ARM64-1.4.313.1.exe"
 }
 
 $VULKAN_COMPONENTS = "com.lunarg.vulkan.sdl2 com.lunarg.vulkan.glm com.lunarg.vulkan.volk com.lunarg.vulkan.vma com.lunarg.vulkan.debug"
