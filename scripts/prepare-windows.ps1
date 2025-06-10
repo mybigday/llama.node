@@ -35,7 +35,7 @@ if (Get-Command ccache -ErrorAction SilentlyContinue) {
 }
 
 if ($toolchain -eq "mingw-clang") {
-  if (Get-Command aarch64-w64-mingw32-clang -ErrorAction SilentlyContinue) -eq $null) {
+  if ((Get-Command aarch64-w64-mingw32-clang -ErrorAction SilentlyContinue) -eq $null) {
     $version = "20250528"
     if ($nativeArch -eq "X64") {
       $name = "llvm-mingw-${version}-ucrt-x86_64"
@@ -47,7 +47,7 @@ if ($toolchain -eq "mingw-clang") {
     $env:PATH += ";$(Resolve-Path $name\bin)"
   }
 
-  if (Get-Command ninja -ErrorAction SilentlyContinue) -eq $null) {
+  if ((Get-Command ninja -ErrorAction SilentlyContinue) -eq $null) {
     choco install ninja -y
   }
 }
