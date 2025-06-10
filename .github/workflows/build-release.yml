@@ -115,6 +115,7 @@ jobs:
         env:
           TRIGGER_TARGET: ${{ github.event.inputs.target || 'all' }}
           TARGET: ${{ matrix.package }}
+        shell: bash
         run: |
           if [ "$TRIGGER_TARGET" != "all" ] && [ "$TRIGGER_TARGET" != "$TARGET" ]; then
             echo "should-run=false" >> $GITHUB_OUTPUT
