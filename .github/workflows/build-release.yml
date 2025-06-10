@@ -166,8 +166,12 @@ jobs:
           bash ./scripts/build-macos.sh
       - name: Prepare & build (Windows)
         if: steps.run.outputs.should-run == 'true' && runner.os == 'Windows'
+        shell: pwsh
         run: |
           pwsh ./scripts/prepare-windows.ps1 -arch ${{ matrix.arch }} -target ${{ matrix.target }}
+          $env:ChocolateyInstall = Convert-Path "$((Get-Command choco).Path)\..\.."
+          Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
+          refreshenv
           pwsh ./scripts/build-windows.ps1 -arch ${{ matrix.arch }} -target ${{ matrix.target }}
       - name: Upload build artifacts
         if: steps.run.outputs.should-run == 'true' && (github.event.inputs.upload-artifacts == 'YES' || inputs.upload-artifacts == 'YES')
