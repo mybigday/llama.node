@@ -122,55 +122,55 @@ jobs:
             echo "should-run=true" >> $GITHUB_OUTPUT
           fi
       - name: Upgrade git
-        if: ${{ steps.run.outputs.should-run }} == 'true' && ${{ matrix.need-fix-git }} == 'true'
+        if: steps.run.outputs.should-run == 'true' && matrix.need-fix-git == 'true'
         run: apt-get update && apt-get install -y git
       - uses: actions/checkout@v4
         with:
           submodules: "true"
       - name: node_modules cache
-        if: ${{ steps.run.outputs.should-run }} == 'true'
+        if: steps.run.outputs.should-run == 'true'
         uses: actions/cache@v4
         with:
           path: node_modules
           key: ${{ runner.os }}-node_modules-${{ hashFiles('**/package-lock.json') }}
       - name: externals cache
-        if: ${{ steps.run.outputs.should-run }} == 'true'
+        if: steps.run.outputs.should-run == 'true'
         uses: actions/cache@v4
         with:
           path: externals
           key: ${{ runner.os }}-${{ runner.arch }}-externals-${{ hashFiles('scripts/prepare-*.sh') }}
       - uses: actions/setup-node@v4
-        if: ${{ steps.run.outputs.should-run }} == 'true'
+        if: steps.run.outputs.should-run == 'true'
         with:
           node-version: 20
           cache: "npm"
       - name: Install dependencies
-        if: ${{ steps.run.outputs.should-run }} == 'true'
+        if: steps.run.outputs.should-run == 'true'
         run: npm ci --ignore-scripts
       - name: Prepare & build (Linux)
-        if: ${{ steps.run.outputs.should-run }} == 'true' && ${{ runner.os }} == 'Linux'
+        if: steps.run.outputs.should-run == 'true' && runner.os == 'Linux'
         run: |
           bash ./scripts/prepare-linux.sh -a ${{ matrix.arch }} -t ${{ matrix.target }}
           bash ./scripts/build-linux.sh -a ${{ matrix.arch }} -t ${{ matrix.target }}
       - name: Prepare & build (macOS)
-        if: ${{ steps.run.outputs.should-run }} == 'true' && ${{ runner.os }} == 'macOS'
+        if: steps.run.outputs.should-run == 'true' && runner.os == 'macOS'
         run: |
           bash ./scripts/prepare-macos.sh
           bash ./scripts/build-macos.sh
       - name: Prepare & build (Windows)
-        if: ${{ steps.run.outputs.should-run }} == 'true' && ${{ runner.os }} == 'Windows'
+        if: steps.run.outputs.should-run == 'true' && runner.os == 'Windows'
         run: |
           pwsh ./scripts/prepare-windows.ps1 -arch ${{ matrix.arch }} -target ${{ matrix.target }}
           pwsh ./scripts/build-windows.ps1 -arch ${{ matrix.arch }} -target ${{ matrix.target }}
       - name: Upload build artifacts
-        if: ${{ steps.run.outputs.should-run }} == 'true' && (github.event.inputs.upload-artifacts == 'YES' || inputs.upload-artifacts == 'YES')
+        if: steps.run.outputs.should-run == 'true' && (github.event.inputs.upload-artifacts == 'YES' || inputs.upload-artifacts == 'YES')
         uses: actions/upload-artifact@v4
         with:
           name: bin-${{ matrix.package }}
           path: packages/${{ matrix.package }}
           retention-days: ${{ inputs.artifacts-retention-days }}
       - name: Publish to NPM
-        if: ${{ steps.run.outputs.should-run }} == 'true' && (github.event.inputs.publish == 'YES' || inputs.publish == 'YES')
+        if: steps.run.outputs.should-run == 'true' && (github.event.inputs.publish == 'YES' || inputs.publish == 'YES')
         uses: JS-DevTools/npm-publish@v3
         with:
           token: ${{ secrets.NPM_TOKEN }}
