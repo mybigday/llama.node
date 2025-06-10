@@ -121,6 +121,7 @@ jobs:
         if: steps.run.outputs.should-run == 'true' && matrix.need-fix-git == 'true'
         run: apt-get update && apt-get install -y git
       - uses: actions/checkout@v4
+        if: steps.run.outputs.should-run == 'true'
         with:
           submodules: "true"
       - name: ccache cache
