@@ -108,7 +108,7 @@ jobs:
       - name: Run this job?
         id: run
         env:
-          TRIGGER_TARGET: ${{ github.event.inputs.target || '*' }}
+          TRIGGER_TARGET: node-llama-${{ github.event.inputs.target || '*' }}
           TARGET: ${{ matrix.package }}
         shell: bash
         run: |
