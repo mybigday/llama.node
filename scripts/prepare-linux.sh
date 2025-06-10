@@ -26,3 +26,7 @@ done
 
 run_as_root apt-get update
 run_as_root apt-get install -qy lsb-release wget llvm clang lld cmake ninja-build libomp-dev ccache
+
+if [ "$TARGET" == "vulkan" ] && ! command -v glslc &> /dev/null; then
+  run_as_root apt-get install -qy shaderc
+fi
