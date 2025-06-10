@@ -84,26 +84,31 @@ jobs:
             arch: x64
             target: default
             package: node-llama-win32-x64
+            toolchain: clang-cl
           # Windows x64 CUDA
           - os: windows-latest
             arch: x64
             target: cuda
             package: node-llama-win32-x64-cuda
+            toolchain: clang-cl
           # Windows x64 Vulkan
           - os: windows-latest
             arch: x64
             target: vulkan
             package: node-llama-win32-x64-vulkan
+            toolchain: clang-cl
           # Windows arm64 default
           - os: windows-11-arm
             arch: arm64
             target: default
             package: node-llama-win32-arm64
+            toolchain: mingw-clang
           # Windows arm64 Vulkan
           - os: windows-11-arm
             arch: arm64
             target: vulkan
             package: node-llama-win32-arm64-vulkan
+            toolchain: mingw-clang
     steps:
       - name: Run this job?
         id: run
@@ -163,11 +168,11 @@ jobs:
         if: steps.run.outputs.should-run == 'true' && runner.os == 'Windows'
         shell: pwsh
         run: |
-          pwsh ./scripts/prepare-windows.ps1 -arch ${{ matrix.arch }} -target ${{ matrix.target }}
+          pwsh ./scripts/prepare-windows.ps1 -arch ${{ matrix.arch }} -target ${{ matrix.target }} -toolchain ${{ matrix.toolchain }}
           $env:ChocolateyInstall = Convert-Path "$((Get-Command choco).Path)\..\.."
           Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
           refreshenv
-          pwsh ./scripts/build-windows.ps1 -arch ${{ matrix.arch }} -target ${{ matrix.target }}
+          pwsh ./scripts/build-windows.ps1 -arch ${{ matrix.arch }} -target ${{ matrix.target }} -toolchain ${{ matrix.toolchain }}
       - name: Upload build artifacts
         if: steps.run.outputs.should-run == 'true' && (github.event.inputs.upload-artifacts == 'YES' || inputs.upload-artifacts == 'YES')
         uses: actions/upload-artifact@v4

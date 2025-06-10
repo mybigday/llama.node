@@ -135,13 +135,11 @@ file(
     "src/anyascii.c"
 )
 
-if (CLANG AND CMAKE_SYSTEM_NAME STREQUAL "Windows")
+if (NOT MSVC AND CMAKE_SYSTEM_NAME STREQUAL "Windows")
   file(GLOB WIN_DYNAMIC_LOAD_SRC "src/win_dynamic_load.c")
 
   add_library(win_dynamic_load ${WIN_DYNAMIC_LOAD_SRC})
-  if (NOT MSVC)
-    set_target_properties(win_dynamic_load PROPERTIES COMPILE_FLAGS "-Wno-implicit-function-declaration")
-  endif()
+  set_target_properties(win_dynamic_load PROPERTIES COMPILE_FLAGS "-Wno-implicit-function-declaration")
   
   unset(CMAKE_JS_SRC)
   unset(CMAKE_JS_LIB)
