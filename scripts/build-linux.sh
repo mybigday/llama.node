@@ -19,17 +19,17 @@ done
 
 if [ $ARCH == "x86_64" ]; then
   # default
-  if [ $TARGET == "all" -or $TARGET == "default" ]; then
+  if [ $TARGET == "all" ] || [ $TARGET == "default" ]; then
     npx cmake-js rebuild -C --CDTO_PACKAGE=ON
   fi
 
   # vulkan
-  if [ $TARGET == "all" -or $TARGET == "vulkan" ]; then
+  if [ $TARGET == "all" ] || [ $TARGET == "vulkan" ]; then
     npx cmake-js rebuild -C --CDTO_PACKAGE=ON --CDGGML_VULKAN=1 --CDVARIANT=vulkan
   fi
 
   # cuda
-  if [ $TARGET == "all" -or $TARGET == "cuda" ]; then
+  if [ $TARGET == "all" ] || [ $TARGET == "cuda" ]; then
     npx cmake-js rebuild -C --CDTO_PACKAGE=ON \
       --CDGGML_CUDA=1 \
       --CDVARIANT=cuda \
@@ -37,12 +37,12 @@ if [ $ARCH == "x86_64" ]; then
   fi
 else
   # default
-  if [ $TARGET == "all" -or $TARGET == "default" ]; then
+  if [ $TARGET == "all" ] || [ $TARGET == "default" ]; then
     npx cmake-js rebuild -C --CDTO_PACKAGE=ON --CDGGML_NATIVE=OFF
   fi
 
   # vulkan
-  if [ $TARGET == "all" -or $TARGET == "vulkan" ]; then
+  if [ $TARGET == "all" ] || [ $TARGET == "vulkan" ]; then
     npx cmake-js rebuild -C --CDTO_PACKAGE=ON \
     --CDGGML_NATIVE=OFF \
     --CDGGML_VULKAN=1 \
@@ -51,7 +51,7 @@ else
   fi
 
   # cuda
-  if [ $TARGET == "all" -or $TARGET == "cuda" ]; then
+  if [ $TARGET == "all" ] || [ $TARGET == "cuda" ]; then
     npx cmake-js rebuild -C --CDTO_PACKAGE=ON \
       --CDGGML_CUDA=1 \
       --CDVARIANT=cuda \
