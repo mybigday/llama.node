@@ -84,7 +84,7 @@ jobs:
             arch: x64
             target: default
             package: node-llama-win32-x64
-            toolchain: mingw-clang
+            toolchain: clang-cl
           # Windows x64 CUDA
           - os: windows-latest
             arch: x64
