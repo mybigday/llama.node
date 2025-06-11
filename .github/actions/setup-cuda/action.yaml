@@ -38,11 +38,11 @@ runs:
         $version_slug = $version.Replace('.', '_')
         $cuda_path = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${version}"
         if ($env:CACHE_HIT -eq 'true' -and (Test-Path .cuda)) {
-          New-Item -ItemType SymbolicLink -Path "${cuda_path}" -Target .cuda -Force
+          New-Item -ItemType SymbolicLink -Path "${cuda_path}" -Target (Resolve-Path .cuda).Path -Force
         } else {
           choco install cuda --version=${{ inputs.version }} -y
           Move-Item -Path "${cuda_path}" -Destination .cuda -Force
-          New-Item -ItemType SymbolicLink -Path "${cuda_path}" -Target .cuda -Force
+          New-Item -ItemType SymbolicLink -Path "${cuda_path}" -Target (Resolve-Path .cuda).Path -Force
         }
         Add-Content -Path $env:GITHUB_ENV -Value "CUDA_PATH=${cuda_path}"
         Add-Content -Path $env:GITHUB_ENV -Value "CUDA_PATH_V${version_slug}=${cuda_path}"
