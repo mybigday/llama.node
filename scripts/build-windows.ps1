@@ -53,35 +53,36 @@ if ($toolchain -eq "clang-cl") {
   throw "Unknown toolchain: $toolchain"
 }
 
-function invoke-build {
-  npx cmake-js rebuild $args
-  $code = $LASTEXITCODE
-  if ($code -ne 0) {
-    throw "cmake-js failed with code $code"
-  }
-}
-
 # General
 
 if ($target -eq "all" -or $target -eq "default") {
-  invoke-build -C -a $arch $cmakeArgs
+  npx cmake-js rebuild -C -a $arch $cmakeArgs
+  if ($LASTEXITCODE -ne 0) {
+    throw "build failed"
+  }
 }
 
 # Vulkan, might crash on some scenario
 
 if ($target -eq "all" -or $target -eq "vulkan") {
-  invoke-build -C -a $arch $cmakeArgs `
+  npx cmake-js rebuild -C -a $arch $cmakeArgs `
     --CDVULKAN_SDK="$env:VULKAN_SDK" `
     --CDVARIANT=vulkan `
     --CDGGML_VULKAN=1
+  if ($LASTEXITCODE -ne 0) {
+    throw "build failed"
+  }
 }
 
 # CUDA
 
 if ($target -eq "all" -or $target -eq "cuda") {
-  invoke-build -C -a $arch $cmakeArgs `
+  npx cmake-js rebuild -C -a $arch $cmakeArgs `
     --CDVARIANT=cuda `
     --CDGGML_CUDA=1 `
     --CDGGML_CUDA_F16=1 `
     --CDCMAKE_CUDA_ARCHITECTURES="86;89;120" # See: https://developer.nvidia.com/cuda-gpus
+  if ($LASTEXITCODE -ne 0) {
+    throw "build failed"
+  }
 }
