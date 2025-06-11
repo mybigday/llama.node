@@ -190,7 +190,6 @@ jobs:
           retention-days: ${{ inputs.artifacts-retention-days }}
       - name: Publish to NPM
         if: steps.run.outputs.should-run == 'true' && (github.event.inputs.publish == 'YES' || inputs.publish == 'YES')
-        uses: JS-DevTools/npm-publish@v3
-        with:
-          token: ${{ secrets.NPM_TOKEN }}
-          package: packages/${{ matrix.package }}
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm run publish-if-need packages/${{ matrix.package }}

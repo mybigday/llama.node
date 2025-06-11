@@ -16,7 +16,8 @@
     "prepare": "husky",
     "commitlint": "commitlint --edit",
     "release": "release-it",
-    "update-packages": "node scripts/update-packages.js"
+    "update-packages": "node scripts/update-packages.js",
+    "publish-if-need": "node scripts/publish-if-need.js"
   },
   "repository": {
     "type": "git",
@@ -111,8 +112,5 @@
     "semi": false,
     "singleQuote": true,
     "printWidth": 80
-  },
-  "hooks": {
-    "after:bump": "npm run update-packages"
   }
 }
