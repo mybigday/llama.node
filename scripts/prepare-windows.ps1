@@ -37,10 +37,9 @@ if ($toolchain -eq "mingw-clang") {
   Invoke-WebRequest -Uri "https://github.com/mstorsjo/llvm-mingw/releases/download/${version}/${name}.zip" -OutFile "llvm-mingw.zip"
   Expand-Archive -Path "llvm-mingw.zip" -DestinationPath .
   $env:Path += ";$(Resolve-Path $name\bin)"
+  if ($env:GITHUB_PATH -ne $null) {
+    Add-Content -Path $env:GITHUB_PATH -Value "$(Resolve-Path $name\bin)"
+  }
 
   choco install ninja -y
-}
-
-if ($env:GITHUB_ENV -ne $null) {
-  Add-Content -Path $env:GITHUB_ENV -Value "PATH=$env:Path"
 }
