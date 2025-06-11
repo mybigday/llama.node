@@ -174,7 +174,7 @@ if(CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)
   execute_process(COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF} /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS})
 endif()
 
-if (GGML_METAL)
+if (GGML_METAL AND NOT GGML_METAL_EMBED_LIBRARY)
   # copy ${CMAKE_BINARY_DIR}/bin/default.metallib  
   add_custom_command(
     TARGET copy_assets
