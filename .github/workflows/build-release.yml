@@ -156,7 +156,7 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Install Vulkan SDK
         if: steps.run.outputs.should-run == 'true' && matrix.target == 'vulkan'
-        uses: hans00/install-vulkan-sdk-action@patch-1-build
+        uses: jakoch/install-vulkan-sdk-action@v1.2.4
         with:
           vulkan_version: '1.4.313.0'
           install_runtime: true
