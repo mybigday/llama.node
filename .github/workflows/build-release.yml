@@ -84,7 +84,7 @@ jobs:
             arch: x64
             target: default
             package: node-llama-win32-x64
-            toolchain: clang-cl
+            toolchain: mingw-clang
           # Windows x64 CUDA
           - os: windows-latest
             arch: x64
@@ -96,7 +96,7 @@ jobs:
             arch: x64
             target: vulkan
             package: node-llama-win32-x64-vulkan
-            toolchain: clang-cl
+            toolchain: mingw-clang
           # Windows arm64 default
           - os: windows-latest
             arch: arm64
