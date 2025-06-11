@@ -296,5 +296,6 @@ export const loadModule = async (variant?: LibVariant): Promise<Module> => {
   }
 
   console.warn(`Not found package for your platform, fallback to local build`)
+  // @ts-ignore
   return (await import('../build/Release/index.node')) as Module
 }
