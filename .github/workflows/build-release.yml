@@ -170,10 +170,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
-          pwsh ./scripts/prepare-windows.ps1 -arch ${{ matrix.arch }} -target ${{ matrix.target }} -toolchain ${{ matrix.toolchain }}
-          $env:ChocolateyInstall = Convert-Path "$((Get-Command choco).Path)\..\.."
-          Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
-          refreshenv
+          . ./scripts/prepare-windows.ps1 -arch ${{ matrix.arch }} -target ${{ matrix.target }} -toolchain ${{ matrix.toolchain }}
           pwsh ./scripts/build-windows.ps1 -arch ${{ matrix.arch }} -target ${{ matrix.target }} -toolchain ${{ matrix.toolchain }}
       - name: Upload build artifacts
         if: steps.run.outputs.should-run == 'true' && (github.event.inputs.upload-artifacts == 'YES' || inputs.upload-artifacts == 'YES')
