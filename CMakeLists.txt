@@ -86,6 +86,10 @@ endif()
 # flags: -fPIC
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+if (MINGW)
+  add_definitions(-D_WIN32_WINNT=0x0601)
+endif()
+
 # VULKAN_SDK
 if (VULKAN_SDK)
   set(ENV{VULKAN_SDK} ${VULKAN_SDK})
