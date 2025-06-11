@@ -9,5 +9,8 @@
   },
   "npm": {
     "publish": false
+  },
+  "hooks": {
+    "after:bump": "npm run update-packages"
   }
 }
