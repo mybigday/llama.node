@@ -32,7 +32,8 @@
   },
   "homepage": "https://github.com/mybigday/llama.node#readme",
   "publishConfig": {
-    "registry": "https://registry.npmjs.org"
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
   },
   "files": [
     "index.node",
