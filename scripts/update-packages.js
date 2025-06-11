@@ -34,13 +34,3 @@ if (updatedMainPackage.optionalDependencies) {
   fs.writeFileSync('package.json', JSON.stringify(updatedMainPackage, null, 2));
   console.log('Updated optionalDependencies versions in main package.json');
 }
-
-// update package-lock.json, optionalDependencies
-const packageLock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
-if (packageLock.packages[''].optionalDependencies) {
-  Object.keys(packageLock.packages[''].optionalDependencies).forEach(dep => {
-    packageLock.packages[''].optionalDependencies[dep] = version;
-  });
-  fs.writeFileSync('package-lock.json', JSON.stringify(packageLock, null, 2));
-  console.log('Updated version in package-lock.json');
-}
