@@ -103,7 +103,7 @@ jobs:
             arch: arm64
             target: default
             package: node-llama-win32-arm64
-            toolchain: mingw-clang
+            toolchain: clang-cl
           # Windows arm64 Vulkan
           - os: windows-latest
             arch: arm64
