@@ -17,14 +17,10 @@ if ($arch -eq "native") {
 }
 
 # install CUDA
-if (($arch -eq "all" -or $arch -eq "x64") -and $env:CUDA_PATH -eq $null -and ($target -eq "all" -or $target -eq "cuda")) {
-  choco install cuda --version=12.9.1.576 -y
-
-  if ($env:ChocolateyInstall -eq $null) {
-    $env:ChocolateyInstall = Convert-Path "$((Get-Command choco).Path)\..\.."
+if (($arch -eq "all" -or $arch -eq "x64") -and ($target -eq "all" -or $target -eq "cuda")) {
+  if (-Not (Get-Command nvcc -ErrorAction SilentlyContinue)) {
+    throw "nvcc.exe not found, please install CUDA"
   }
-  Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
-  refreshenv
 }
 
 if (Get-Command ccache -ErrorAction SilentlyContinue) {

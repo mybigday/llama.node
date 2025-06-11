@@ -91,6 +91,7 @@ jobs:
             target: cuda
             package: node-llama-win32-x64-cuda
             toolchain: cl
+            cuda-version: '12.9.1.576'
           # Windows x64 Vulkan
           - os: windows-latest
             arch: x64
@@ -144,6 +145,12 @@ jobs:
         with:
           node-version: 20
           cache: "npm"
+      - name: Install CUDA
+        if: steps.run.outputs.should-run == 'true' && matrix.target == 'cuda' && matrix.cuda-version
+        uses: ./.github/actions/setup-cuda
+        with:
+          version: ${{ matrix.cuda-version }}
+          cache: true
       - name: Install dependencies
         if: steps.run.outputs.should-run == 'true'
         run: npm ci --ignore-scripts
