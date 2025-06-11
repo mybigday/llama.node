@@ -28,7 +28,7 @@ extern "C" {
 
 /**
  * Gets the ASCII transliteration of a Unicode code point
- * 
+ *
  * @param utf32 A Unicode code point
  * @param ascii A pointer for the result to be written to; not null-terminated
  * @return The number of chars in *ascii

@@ -63,8 +63,14 @@ endif()
 # Improve speed
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   if (MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /O2 /Ob2 /Oi /Ot /Oy /GL")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /O2 /Ob2 /Oi /Ot /Oy /GL")
+    if (NOT GGML_VULKAN)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /O2 /Ob2 /Oi /Ot /Oy /GL")
+      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /O2 /Ob2 /Oi /Ot /Oy /GL")
+      set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} /LTCG")
+    else()
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /O1 /Ob1 /bigobj")
+      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /O1 /Ob1 /bigobj")
+    endif()
   else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -funroll-loops -flto")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -funroll-loops -flto")
@@ -79,6 +85,10 @@ endif()
 
 # flags: -fPIC
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+if (MINGW)
+  add_definitions(-D_WIN32_WINNT=0x0601)
+endif()
 
 # VULKAN_SDK
 if (VULKAN_SDK)
@@ -129,13 +139,11 @@ file(
     "src/anyascii.c"
 )
 
-if (CLANG AND CMAKE_SYSTEM_NAME STREQUAL "Windows")
+if (NOT MSVC AND CMAKE_SYSTEM_NAME STREQUAL "Windows")
   file(GLOB WIN_DYNAMIC_LOAD_SRC "src/win_dynamic_load.c")
 
   add_library(win_dynamic_load ${WIN_DYNAMIC_LOAD_SRC})
-  if (NOT MSVC)
-    set_target_properties(win_dynamic_load PROPERTIES COMPILE_FLAGS "-Wno-implicit-function-declaration")
-  endif()
+  set_target_properties(win_dynamic_load PROPERTIES COMPILE_FLAGS "-Wno-implicit-function-declaration")
   
   unset(CMAKE_JS_SRC)
   unset(CMAKE_JS_LIB)
@@ -170,7 +178,7 @@ if(CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)
   execute_process(COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF} /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS})
 endif()
 
-if (LLAMA_METAL)
+if (GGML_METAL AND NOT GGML_METAL_EMBED_LIBRARY)
   # copy ${CMAKE_BINARY_DIR}/bin/default.metallib  
   add_custom_command(
     TARGET copy_assets
@@ -180,7 +188,7 @@ if (LLAMA_METAL)
   add_dependencies(copy_assets ggml-metal)
 endif()
 
-if (LLAMA_CLBLAST AND TO_PACKAGE)
+if (GGML_CLBLAST AND TO_PACKAGE)
   find_package(CLBlast)
   if (CLBlast_FOUND)
     message(STATUS "CLBlast found: ${CLBlast_DIR}")

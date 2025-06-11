@@ -1,0 +1,51 @@
+name: Setup CUDA
+
+inputs:
+  version:
+    description: "CUDA version"
+    required: true
+    default: "12.9.1.576"
+    type: string
+  cache:
+    description: "Cache CUDA"
+    required: true
+    default: true
+    type: boolean
+
+outputs:
+  cuda-path:
+    description: "CUDA path"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Cache CUDA
+      id: cache
+      if: inputs.cache
+      uses: actions/cache@v4
+      with:
+        path: .cuda
+        key: ${{ runner.os }}-cuda-${{ inputs.version }}
+        restore-keys: ${{ runner.os }}-cuda-${{ inputs.version }}
+    - name: Install CUDA (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        VERSION: ${{ inputs.version }}
+        CACHE_HIT: ${{ steps.cache.outputs.cache-hit || 'false' }}
+      run: |
+        $version = $env:VERSION.Split('.')[0..1] -join '.'
+        $version_slug = $version.Replace('.', '_')
+        $cuda_path = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${version}"
+        if ($env:CACHE_HIT -eq 'true' -and (Test-Path .cuda)) {
+          New-Item -ItemType SymbolicLink -Path "${cuda_path}" -Target (Resolve-Path .cuda).Path -Force
+        } else {
+          choco install cuda --version=${{ inputs.version }} -y
+          Move-Item -Path "${cuda_path}" -Destination .cuda -Force
+          New-Item -ItemType SymbolicLink -Path "${cuda_path}" -Target (Resolve-Path .cuda).Path -Force
+        }
+        Add-Content -Path $env:GITHUB_ENV -Value "CUDA_PATH=${cuda_path}"
+        Add-Content -Path $env:GITHUB_ENV -Value "CUDA_PATH_V${version_slug}=${cuda_path}"
+        Add-Content -Path $env:GITHUB_PATH -Value "${cuda_path}\bin"
+        Add-Content -Path $env:GITHUB_PATH -Value "${cuda_path}\libnvvp"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "cuda-path=${cuda_path}"
