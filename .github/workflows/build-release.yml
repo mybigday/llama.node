@@ -102,11 +102,11 @@ jobs:
             package: node-llama-win32-x64-vulkan
             toolchain: mingw-clang
           # Windows arm64 default
-          - os: windows-11-arm
+          - os: windows-latest
             arch: arm64
             target: default
             package: node-llama-win32-arm64
-            toolchain: clang-cl
+            toolchain: mingw-clang
           # Windows arm64 Vulkan
           - os: windows-latest
             arch: arm64
