@@ -90,7 +90,7 @@ jobs:
             arch: x64
             target: cuda
             package: node-llama-win32-x64-cuda
-            toolchain: clang-cl
+            toolchain: mingw-clang
           # Windows x64 Vulkan
           - os: windows-latest
             arch: x64
