@@ -37,7 +37,7 @@ if ($toolchain -eq "clang-cl") {
     $cmakeArgs.add("--CDCMAKE_TOOLCHAIN_FILE=$(Resolve-Path cmake/aarch64-w64-mingw32-clang.toolchain.cmake)")
   }
   if ($nativeArch -eq "Arm64") {
-    $cmakeArgs.add("--CDGGML_VULKAN_SHADERS_GEN_TOOLCHAIN=$(Resolve-Path cmake/aarch64-w64-mingw32-clang.toolchain.cmake)"))
+    $cmakeArgs.add("--CDGGML_VULKAN_SHADERS_GEN_TOOLCHAIN=$(Resolve-Path cmake/aarch64-w64-mingw32-clang.toolchain.cmake)")
     if ($arch -eq "x64" -and $target -eq "vulkan") {
       $cmakeArgs.add("--CDVulkan_LIBRARY:FILEPATH=$(Resolve-Path $env:VULKAN_SDK/Lib-X64/vulkan-1.lib)")
       $cmakeArgs.add("--CDVulkan_INCLUDE_DIR:PATH=$(Resolve-Path $env:VULKAN_SDK/Include)")
