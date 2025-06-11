@@ -10,6 +10,7 @@ jobs:
     uses: ./.github/workflows/build-release.yml
     with:
       publish: YES
+    secrets: inherit
   publish:
     permissions:
       contents: write

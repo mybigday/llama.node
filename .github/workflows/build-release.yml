@@ -26,6 +26,9 @@ on:
       publish:
         type: string
         default: 'NO'
+    secrets:
+      NPM_TOKEN:
+        required: true
 
 jobs:
   build:
