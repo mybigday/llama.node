@@ -147,7 +147,6 @@ jobs:
         if: steps.run.outputs.should-run == 'true'
         with:
           node-version: 20
-          cache: "npm"
       - name: Install CUDA
         if: steps.run.outputs.should-run == 'true' && matrix.target == 'cuda' && matrix.cuda-version
         uses: ./.github/actions/setup-cuda

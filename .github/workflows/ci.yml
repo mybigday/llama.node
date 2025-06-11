@@ -12,7 +12,6 @@ jobs:
     - uses: actions/setup-node@v4
       with:
         node-version: 20
-        cache: 'npm'
     - name: Install LLVM and Clang
       run: |
         curl -L https://apt.llvm.org/llvm.sh | ALL=1 sudo bash -s 18
