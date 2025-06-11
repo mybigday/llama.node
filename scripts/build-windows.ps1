@@ -49,7 +49,7 @@ if ($toolchain -eq "clang-cl") {
       $cmakeArgs.add("--CDVulkan_INCLUDE_DIR:PATH=$(Resolve-Path $env:VULKAN_SDK/Include)")
     }
   }
-} else if ($toolchain -ne "cl") {
+} elseif ($toolchain -ne "cl") {
   throw "Unknown toolchain: $toolchain"
 }
 
