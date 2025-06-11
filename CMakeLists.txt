@@ -90,6 +90,10 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 if (VULKAN_SDK)
   set(ENV{VULKAN_SDK} ${VULKAN_SDK})
   find_package(Vulkan REQUIRED)
+
+  if (WIN32 AND NOT MSVC AND NOT CMAKE_SYSTEM_PROCESSOR STREQUAL CMAKE_HOST_SYSTEM_PROCESSOR)
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -L${VULKAN_SDK}/Lib-ARM64")
+  endif()
 endif()
 
 set(LLAMA_BUILD_COMMON ON CACHE BOOL "Build common")
@@ -174,7 +178,7 @@ if(CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)
   execute_process(COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF} /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS})
 endif()
 
-if (LLAMA_METAL)
+if (GGML_METAL)
   # copy ${CMAKE_BINARY_DIR}/bin/default.metallib  
   add_custom_command(
     TARGET copy_assets
@@ -184,7 +188,7 @@ if (LLAMA_METAL)
   add_dependencies(copy_assets ggml-metal)
 endif()
 
-if (LLAMA_CLBLAST AND TO_PACKAGE)
+if (GGML_CLBLAST AND TO_PACKAGE)
   find_package(CLBlast)
   if (CLBlast_FOUND)
     message(STATUS "CLBlast found: ${CLBlast_DIR}")
