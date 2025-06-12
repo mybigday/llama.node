@@ -6,11 +6,12 @@
   "main": "lib/index.js",
   "scripts": {
     "bootstrap": "npm install --omit=optional",
-    "postinstall": "node scripts/build.js",
+    "postinstall": "node scripts/check.js",
     "pretest": "node scripts/download-test-models.js",
     "test": "jest",
-    "build": "tsc",
-    "prepack": "npm run build",
+    "build": "npx cmake-js build",
+    "build-js": "tsc",
+    "prepack": "npm run build-js",
     "prebuild-native": "node scripts/generate_win_dynamic_load.js 6",
     "build-native": "cmake-js compile",
     "clean": "rimraf build",
@@ -48,7 +49,7 @@
     ]
   },
   "files": [
-    "scripts/build.js",
+    "scripts/check.js",
     "scripts/llama.cpp.patch",
     "src/*.{cc,c,h,hpp}",
     "src/DecodeAudioTokenWorker.cpp",
