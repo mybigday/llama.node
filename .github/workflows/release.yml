@@ -35,7 +35,7 @@ jobs:
           path: bin
           pattern: bin-*
           merge-multiple: true
-      - run: npm run install --omit=optional --ignore-scripts
+      - run: npm install --omit=optional --ignore-scripts
       - run: npm run build
       - name: Publish to NPM
         env:
