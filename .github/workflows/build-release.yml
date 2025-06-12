@@ -155,7 +155,7 @@ jobs:
           cache: true
       - name: Install dependencies
         if: steps.run.outputs.should-run == 'true'
-        run: npm install --ignore-scripts
+        run: npm run install --omit=optional --ignore-scripts
       - name: Install Vulkan SDK
         if: steps.run.outputs.should-run == 'true' && matrix.target == 'vulkan'
         uses: jakoch/install-vulkan-sdk-action@v1.2.4
