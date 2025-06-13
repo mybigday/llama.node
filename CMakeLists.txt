@@ -35,7 +35,7 @@ string(REPLACE "arm64x" "arm64" ARCH ${ARCH})
 string(REPLACE "aarch64" "arm64" ARCH ${ARCH})
 
 option(TO_PACKAGE "Build as package" OFF)
-option(CLANG_USE_OMP "Use OpenMP in Clang" OFF)
+option(CLANG_USE_GOMP "Use GNU OpenMP in Clang" OFF)
 
 if(DEFINED VARIANT)
   set(VARIANT -${VARIANT})
@@ -98,11 +98,14 @@ if (VULKAN_SDK)
 endif()
 
 # Avoid libomp is not installed commonly
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT DEFINED GGML_OPENMP OR GGML_OPENMP AND NOT CLANG_USE_OMP)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT DEFINED GGML_OPENMP OR GGML_OPENMP AND CLANG_USE_GOMP)
   find_package(OpenMP)
   if (OpenMP_FOUND)
-    string(REPLACE "libomp" "libgomp" OpenMP_CXX_FLAGS "${OpenMP_CXX_FLAGS}")
-    string(REPLACE "libomp" "libgomp" OpenMP_C_FLAGS "${OpenMP_C_FLAGS}")
+    set(OpenMP_C_FLAGS "-fopenmp=libgomp")
+    set(OpenMP_CXX_FLAGS "-fopenmp=libgomp")
+    set(OpenMP_C_LIB_NAMES "libgomp")
+    set(OpenMP_CXX_LIB_NAMES "libgomp")
+    set(OpenMP_libgomp_LIBRARY "gomp")
   endif()
 endif()
 
