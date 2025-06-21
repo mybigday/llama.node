@@ -65,7 +65,7 @@ void LlamaCompletionWorker::Execute() {
 
   // Process media if any are provided
   if (!_media_paths.empty()) {
-    const auto *mtmd_ctx = _sess->get_mtmd_ctx();
+    auto *mtmd_ctx = _sess->get_mtmd_ctx();
 
     if (mtmd_ctx != nullptr) {
       // Process the media and get the tokens
