@@ -25,12 +25,16 @@ size_t findStoppingStrings(const std::string &text,
 
 LlamaCompletionWorker::LlamaCompletionWorker(
     const Napi::CallbackInfo &info, LlamaSessionPtr &sess,
-    Napi::Function callback, common_params params,
-    std::vector<std::string> stop_words, int32_t chat_format,
+    Napi::Function callback,
+    common_params params,
+    std::vector<std::string> stop_words,
+    int32_t chat_format,
+    std::string reasoning_format,
     const std::vector<std::string> &media_paths,
     const std::vector<llama_token> &guide_tokens)
     : AsyncWorker(info.Env()), Deferred(info.Env()), _sess(sess),
       _params(params), _stop_words(stop_words), _chat_format(chat_format),
+      _reasoning_format(reasoning_format),
       _media_paths(media_paths), _guide_tokens(guide_tokens) {
   if (!callback.IsEmpty()) {
     _tsfn = Napi::ThreadSafeFunction::New(info.Env(), callback,
@@ -234,8 +238,21 @@ void LlamaCompletionWorker::OnOK() {
   std::string content;
   if (!_stop) {
     try {
+      common_chat_syntax chat_syntax;
+      chat_syntax.format = static_cast<common_chat_format>(_chat_format);
+
+      if (_reasoning_format == "deepseek") {
+          chat_syntax.reasoning_format = COMMON_REASONING_FORMAT_DEEPSEEK;
+      } else if (_reasoning_format == "deepseek-legacy") {
+          chat_syntax.reasoning_format = COMMON_REASONING_FORMAT_DEEPSEEK_LEGACY;
+      } else {
+          chat_syntax.reasoning_format = COMMON_REASONING_FORMAT_NONE;
+      }
       common_chat_msg message = common_chat_parse(
-          _result.text, static_cast<common_chat_format>(_chat_format));
+          _result.text,
+          false,
+          chat_syntax
+      );
       if (!message.reasoning_content.empty()) {
         reasoning_content = message.reasoning_content;
       }
