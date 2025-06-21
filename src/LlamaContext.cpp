@@ -10,7 +10,7 @@
 #include "ggml.h"
 #include "gguf.h"
 #include "json-schema-to-grammar.h"
-#include "json.hpp"
+#include <nlohmann/json.hpp>
 #include "llama-impl.h"
 
 #include <atomic>
@@ -521,8 +521,6 @@ common_chat_params getFormattedChatWithJinja(
   if (!json_schema.empty()) {
     inputs.json_schema = json::parse(json_schema);
   }
-  inputs.extract_reasoning =
-      sess->params().reasoning_format != COMMON_REASONING_FORMAT_NONE;
 
   // If chat_template is provided, create new one and use it (probably slow)
   if (!chat_template.empty()) {

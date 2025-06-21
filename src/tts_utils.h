@@ -6,7 +6,7 @@
 #include <thread>
 #include <vector>
 
-#include "json.hpp"
+#include <nlohmann/json.hpp>
 
 enum tts_type { UNKNOWN = -1, OUTETTS_V0_2 = 1, OUTETTS_V0_3 = 2 };
 
