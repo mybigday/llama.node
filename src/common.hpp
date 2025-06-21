@@ -98,7 +98,7 @@ public:
   inline std::mutex &get_mutex() { return mutex; }
 
   // Getter for the multimodal context
-  inline const mtmd_context *get_mtmd_ctx() const { return _mtmd_ctx; }
+  inline mtmd_context *get_mtmd_ctx() { return _mtmd_ctx; }
 
   // Setter for the multimodal context
   inline void set_mtmd_ctx(mtmd_context *ctx) { _mtmd_ctx = ctx; }
