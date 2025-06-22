@@ -20,6 +20,7 @@ public:
                         Napi::Function callback, common_params params,
                         std::vector<std::string> stop_words,
                         int32_t chat_format,
+                        std::string reasoning_format,
                         const std::vector<std::string> &media_paths = {},
                         const std::vector<llama_token> &guide_tokens = {});
 
@@ -41,6 +42,7 @@ private:
   common_params _params;
   std::vector<std::string> _stop_words;
   int32_t _chat_format;
+  std::string _reasoning_format;
   std::vector<std::string> _media_paths;
   std::vector<llama_token> _guide_tokens;
   std::function<void()> _onComplete;

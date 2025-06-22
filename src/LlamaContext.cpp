@@ -10,7 +10,7 @@
 #include "ggml.h"
 #include "gguf.h"
 #include "json-schema-to-grammar.h"
-#include "json.hpp"
+#include <nlohmann/json.hpp>
 #include "llama-impl.h"
 
 #include <atomic>
@@ -222,14 +222,6 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   }
 
   params.chat_template = get_option<std::string>(options, "chat_template", "");
-
-  std::string reasoning_format =
-      get_option<std::string>(options, "reasoning_format", "none");
-  if (reasoning_format == "deepseek") {
-    params.reasoning_format = COMMON_REASONING_FORMAT_DEEPSEEK;
-  } else {
-    params.reasoning_format = COMMON_REASONING_FORMAT_NONE;
-  }
 
   params.n_ctx = get_option<int32_t>(options, "n_ctx", 512);
   params.n_batch = get_option<int32_t>(options, "n_batch", 2048);
@@ -521,8 +513,6 @@ common_chat_params getFormattedChatWithJinja(
   if (!json_schema.empty()) {
     inputs.json_schema = json::parse(json_schema);
   }
-  inputs.extract_reasoning =
-      sess->params().reasoning_format != COMMON_REASONING_FORMAT_NONE;
 
   // If chat_template is provided, create new one and use it (probably slow)
   if (!chat_template.empty()) {
@@ -695,6 +685,7 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   }
 
   int32_t chat_format = get_option<int32_t>(options, "chat_format", 0);
+  std::string reasoning_format = get_option<std::string>(options, "reasoning_format", "none");
 
   common_params params = _sess->params();
   auto grammar_from_params = get_option<std::string>(options, "grammar", "");
@@ -904,7 +895,7 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
 
   auto *worker =
       new LlamaCompletionWorker(info, _sess, callback, params, stop_words,
-                                chat_format, media_paths, guide_tokens);
+                                chat_format, reasoning_format, media_paths, guide_tokens);
   worker->Queue();
   _wip = worker;
   worker->OnComplete([this]() { _wip = nullptr; });

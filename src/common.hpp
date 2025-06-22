@@ -6,6 +6,7 @@
 #include "llama.h"
 #include "tools/mtmd/clip.h"
 #include "tools/mtmd/mtmd.h"
+#include "tools/mtmd/mtmd-helper.h"
 #include <memory>
 #include <mutex>
 #include <napi.h>
@@ -97,7 +98,7 @@ public:
   inline std::mutex &get_mutex() { return mutex; }
 
   // Getter for the multimodal context
-  inline const mtmd_context *get_mtmd_ctx() const { return _mtmd_ctx; }
+  inline mtmd_context *get_mtmd_ctx() { return _mtmd_ctx; }
 
   // Setter for the multimodal context
   inline void set_mtmd_ctx(mtmd_context *ctx) { _mtmd_ctx = ctx; }
@@ -219,7 +220,7 @@ struct TokenizeResult {
 };
 
 static TokenizeResult
-tokenizeWithMedia(const mtmd_context *mtmd_ctx, const std::string &prompt,
+tokenizeWithMedia(mtmd_context *mtmd_ctx, const std::string &prompt,
                   const std::vector<std::string> &media_paths) {
   if (mtmd_ctx == nullptr) {
     throw std::runtime_error("Multimodal context is not initialized");
@@ -263,7 +264,7 @@ tokenizeWithMedia(const mtmd_context *mtmd_ctx, const std::string &prompt,
         std::vector<uint8_t> media_data = base64_decode(base64_data);
 
         // Load bitmap from memory buffer using direct initialization
-        mtmd::bitmap bmp(mtmd_helper_bitmap_init_from_buf(media_data.data(),
+        mtmd::bitmap bmp(mtmd_helper_bitmap_init_from_buf(mtmd_ctx, media_data.data(),
                                                           media_data.size()));
         if (!bmp.ptr) {
           bitmaps.entries.clear();
@@ -300,7 +301,7 @@ tokenizeWithMedia(const mtmd_context *mtmd_ctx, const std::string &prompt,
       fclose(file);
 
       // Create bitmap directly
-      mtmd::bitmap bmp(mtmd_helper_bitmap_init_from_file(media_path.c_str()));
+      mtmd::bitmap bmp(mtmd_helper_bitmap_init_from_file(mtmd_ctx, media_path.c_str()));
       if (!bmp.ptr) {
         bitmaps.entries.clear();
         throw std::runtime_error("Failed to load media");
@@ -388,7 +389,7 @@ tokenizeWithMedia(const mtmd_context *mtmd_ctx, const std::string &prompt,
 
 // Process media and add them to the tokenized input
 static llama_pos
-processMediaPrompt(llama_context *ctx, const mtmd_context *mtmd_ctx,
+processMediaPrompt(llama_context *ctx, mtmd_context *mtmd_ctx,
                    LlamaSessionPtr sess, const common_params &params,
                    const std::vector<std::string> &media_paths) {
   if (mtmd_ctx == nullptr) {

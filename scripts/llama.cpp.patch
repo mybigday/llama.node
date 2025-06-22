@@ -1,18 +1,19 @@
 diff --git a/src/llama.cpp/common/chat.cpp b/src/llama.cpp/common/chat.cpp
-index f138c7bc..e177fe92 100644
+index 7d9aaeb1..a7b68d4a 100644
 --- a/src/llama.cpp/common/chat.cpp
 +++ b/src/llama.cpp/common/chat.cpp
-@@ -1,8 +1,6 @@
- #include "chat.h"
- #include "json-schema-to-grammar.h"
+@@ -6,9 +6,6 @@
  #include "log.h"
--#include "minja/chat-template.hpp"
--#include "minja/minja.hpp"
+ #include "regex-partial.h"
  
- #include <optional>
- 
-@@ -15,14 +13,6 @@ static std::string format_time(const std::chrono::system_clock::time_point & now
-     return res;
+-#include <minja/chat-template.hpp>
+-#include <minja/minja.hpp>
+-
+ #include <cstdio>
+ #include <exception>
+ #include <iostream>
+@@ -121,14 +118,6 @@ std::vector<common_chat_msg_diff> common_chat_msg_diff::compute_diffs(const comm
+     return diffs;
  }
  
 -typedef minja::chat_template common_chat_template;
@@ -27,17 +28,17 @@ index f138c7bc..e177fe92 100644
      json messages;
      json tools;
 diff --git a/src/llama.cpp/common/chat.h b/src/llama.cpp/common/chat.h
-index d26a09c2..cb92721a 100644
+index 9f59e6b0..9b7fe724 100644
 --- a/src/llama.cpp/common/chat.h
 +++ b/src/llama.cpp/common/chat.h
-@@ -6,8 +6,16 @@
- #include <chrono>
+@@ -8,7 +8,16 @@
  #include <string>
  #include <vector>
-+#include "minja/chat-template.hpp"
-+#include "minja/minja.hpp"
  
 -struct common_chat_templates;
++#include <minja/chat-template.hpp>
++#include <minja/minja.hpp>
++
 +typedef minja::chat_template common_chat_template;
 +
 +struct common_chat_templates {
@@ -49,10 +50,10 @@ index d26a09c2..cb92721a 100644
  struct common_chat_tool_call {
      std::string name;
 diff --git a/src/llama.cpp/common/common.cpp b/src/llama.cpp/common/common.cpp
-index 94f545f8..a55df8aa 100644
+index e4e71ad1..091ddda4 100644
 --- a/src/llama.cpp/common/common.cpp
 +++ b/src/llama.cpp/common/common.cpp
-@@ -1062,6 +1062,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
+@@ -1101,6 +1101,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
          mparams.n_gpu_layers = params.n_gpu_layers;
      }
  
@@ -61,10 +62,10 @@ index 94f545f8..a55df8aa 100644
      mparams.split_mode      = params.split_mode;
      mparams.tensor_split    = params.tensor_split;
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index 0a9dc059..996afcd8 100644
+index e08a59ea..d120b67d 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
-@@ -217,6 +217,7 @@ enum common_reasoning_format {
+@@ -223,6 +223,7 @@ enum common_reasoning_format {
  };
  
  struct common_params {
@@ -73,11 +74,11 @@ index 0a9dc059..996afcd8 100644
      int32_t n_ctx                 =  4096; // context size
      int32_t n_batch               =  2048; // logical batch size for prompt processing (must be >=32 to use BLAS)
 diff --git a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
-index 9a3085be..8218cc16 100644
+index 71b1d67b..093cd6f9 100644
 --- a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
 +++ b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
-@@ -90,7 +90,7 @@ function(ggml_add_cpu_backend_variant_impl tag_name)
-         message(STATUS "ARM detected")
+@@ -104,7 +104,7 @@ function(ggml_add_cpu_backend_variant_impl tag_name)
+             )
  
          if (MSVC AND NOT CMAKE_C_COMPILER_ID STREQUAL "Clang")
 -            message(FATAL_ERROR "MSVC is not supported for ARM, use clang")
@@ -86,10 +87,10 @@ index 9a3085be..8218cc16 100644
              check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
              if (NOT "${GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E}" STREQUAL "")
 diff --git a/src/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt b/src/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
-index 662f1377..f9f99698 100644
+index 39f022f3..7ae9047e 100644
 --- a/src/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
 +++ b/src/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
-@@ -122,7 +122,7 @@ if (Vulkan_FOUND)
+@@ -110,7 +110,7 @@ if (Vulkan_FOUND)
      endif()
  
      # Set up toolchain for host compilation whether cross-compiling or not
@@ -98,10 +99,10 @@ index 662f1377..f9f99698 100644
          if (GGML_VULKAN_SHADERS_GEN_TOOLCHAIN)
              set(HOST_CMAKE_TOOLCHAIN_FILE ${GGML_VULKAN_SHADERS_GEN_TOOLCHAIN})
          else()
-@@ -144,7 +144,7 @@ if (Vulkan_FOUND)
+@@ -130,7 +130,7 @@ if (Vulkan_FOUND)
+ 
      include(ExternalProject)
  
-     # Add toolchain file if cross-compiling
 -    if (CMAKE_CROSSCOMPILING)
 +    if (CMAKE_CROSSCOMPILING OR NOT CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL CMAKE_SYSTEM_PROCESSOR)
          list(APPEND VULKAN_SHADER_GEN_CMAKE_ARGS -DCMAKE_TOOLCHAIN_FILE=${HOST_CMAKE_TOOLCHAIN_FILE})

@@ -22,7 +22,6 @@ export type ChatMessage = {
 export type LlamaModelOptions = {
   model: string
   chat_template?: string
-  reasoning_format?: string
   embedding?: boolean
   embd_normalize?: number
   pooling_type?: 'none' | 'mean' | 'cls' | 'last' | 'rank'
@@ -74,6 +73,7 @@ export type CompletionResponseFormat = {
 export type LlamaCompletionOptions = {
   messages?: ChatMessage[]
   jinja?: boolean
+  reasoning_format?: string
   chat_template?: string
   response_format?: CompletionResponseFormat
   tools?: object
