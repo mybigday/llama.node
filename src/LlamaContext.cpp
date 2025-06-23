@@ -499,7 +499,9 @@ common_chat_params getFormattedChatWithJinja(
     const common_chat_templates_ptr &templates, const std::string &messages,
     const std::string &chat_template, const std::string &json_schema,
     const std::string &tools, const bool &parallel_tool_calls,
-    const std::string &tool_choice) {
+    const std::string &tool_choice,
+    const bool &enable_thinking
+) {
   common_chat_templates_inputs inputs;
   inputs.messages = common_chat_msgs_parse_oaicompat(json::parse(messages));
   auto useTools = !tools.empty();
@@ -513,6 +515,7 @@ common_chat_params getFormattedChatWithJinja(
   if (!json_schema.empty()) {
     inputs.json_schema = json::parse(json_schema);
   }
+  inputs.enable_thinking = enable_thinking;
 
   // If chat_template is provided, create new one and use it (probably slow)
   if (!chat_template.empty()) {
@@ -586,12 +589,11 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
     auto parallel_tool_calls =
         get_option<bool>(params, "parallel_tool_calls", false);
     auto tool_choice = get_option<std::string>(params, "tool_choice", "");
+    auto enable_thinking = get_option<bool>(params, "enable_thinking", false);
 
     auto chatParams = getFormattedChatWithJinja(
         _sess, _templates, messages, chat_template, json_schema_str, tools_str,
-        parallel_tool_calls, tool_choice);
-
-    console_log(env, std::string("format: ") + std::to_string(chatParams.format));
+        parallel_tool_calls, tool_choice, enable_thinking);
 
     Napi::Object result = Napi::Object::New(env);
     result.Set("prompt", chatParams.prompt);
@@ -612,6 +614,7 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
       grammar_triggers.Set(i, triggerObj);
     }
     result.Set("grammar_triggers", grammar_triggers);
+    result.Set("thinking_forced_open", chatParams.thinking_forced_open);
     // preserved_tokens: string[]
     Napi::Array preserved_tokens = Napi::Array::New(env);
     for (size_t i = 0; i < chatParams.preserved_tokens.size(); i++) {
@@ -685,6 +688,7 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   }
 
   int32_t chat_format = get_option<int32_t>(options, "chat_format", 0);
+  bool thinking_forced_open = get_option<bool>(options, "thinking_forced_open", false);
   std::string reasoning_format = get_option<std::string>(options, "reasoning_format", "none");
 
   common_params params = _sess->params();
@@ -793,14 +797,16 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
           get_option<bool>(options, "parallel_tool_calls", false);
       auto tool_choice =
           get_option<std::string>(options, "tool_choice", "none");
+      auto enable_thinking = get_option<bool>(options, "enable_thinking", true);
 
       auto chatParams = getFormattedChatWithJinja(
           _sess, _templates, json_stringify(messages), chat_template,
-          json_schema_str, tools_str, parallel_tool_calls, tool_choice);
+          json_schema_str, tools_str, parallel_tool_calls, tool_choice, enable_thinking);
 
       params.prompt = chatParams.prompt;
 
       chat_format = chatParams.format;
+      thinking_forced_open = chatParams.thinking_forced_open;
 
       for (const auto &token : chatParams.preserved_tokens) {
         auto ids =
@@ -895,7 +901,7 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
 
   auto *worker =
       new LlamaCompletionWorker(info, _sess, callback, params, stop_words,
-                                chat_format, reasoning_format, media_paths, guide_tokens);
+                                chat_format, thinking_forced_open, reasoning_format, media_paths, guide_tokens);
   worker->Queue();
   _wip = worker;
   worker->OnComplete([this]() { _wip = nullptr; });

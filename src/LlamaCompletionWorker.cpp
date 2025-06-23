@@ -29,11 +29,13 @@ LlamaCompletionWorker::LlamaCompletionWorker(
     common_params params,
     std::vector<std::string> stop_words,
     int32_t chat_format,
+    bool thinking_forced_open,
     std::string reasoning_format,
     const std::vector<std::string> &media_paths,
     const std::vector<llama_token> &guide_tokens)
     : AsyncWorker(info.Env()), Deferred(info.Env()), _sess(sess),
       _params(params), _stop_words(stop_words), _chat_format(chat_format),
+      _thinking_forced_open(thinking_forced_open),
       _reasoning_format(reasoning_format),
       _media_paths(media_paths), _guide_tokens(guide_tokens) {
   if (!callback.IsEmpty()) {
@@ -241,6 +243,7 @@ void LlamaCompletionWorker::OnOK() {
     try {
       common_chat_syntax chat_syntax;
       chat_syntax.format = static_cast<common_chat_format>(_chat_format);
+      chat_syntax.thinking_forced_open = _thinking_forced_open;
 
       if (_reasoning_format == "deepseek") {
           chat_syntax.reasoning_format = COMMON_REASONING_FORMAT_DEEPSEEK;

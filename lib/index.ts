@@ -158,7 +158,8 @@ class LlamaContextWrapper {
       response_format?: CompletionResponseFormat
       tools?: object
       parallel_tool_calls?: object
-      tool_choice?: string
+      tool_choice?: string,
+      enable_thinking?: boolean,
     },
   ): FormattedChatResult {
     const {
@@ -178,6 +179,7 @@ class LlamaContextWrapper {
       tools: params?.tools,
       parallel_tool_calls: params?.parallel_tool_calls,
       tool_choice: params?.tool_choice,
+      enable_thinking: params?.enable_thinking ?? true,
     })
 
     if (!useJinja) {
