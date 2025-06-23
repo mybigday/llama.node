@@ -461,7 +461,7 @@ processMediaPrompt(llama_context *ctx, mtmd_context *mtmd_ctx,
   }
 
   // Clear all KV cache entries after position n_past
-  llama_kv_self_seq_rm(ctx, 0, n_past, -1);
+  llama_memory_seq_rm(llama_get_memory(ctx), 0, n_past, -1);
 
   size_t num_chunks = mtmd_input_chunks_size(chunks);
 

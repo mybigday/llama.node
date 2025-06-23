@@ -8,7 +8,7 @@ EmbeddingWorker::EmbeddingWorker(const Napi::CallbackInfo &info,
       _params(params) {}
 
 void EmbeddingWorker::Execute() {
-  llama_kv_self_clear(_sess->context());
+  llama_memory_clear(llama_get_memory(_sess->context()), true);
   auto tokens = ::common_tokenize(_sess->context(), _text, true);
   // add SEP if not present
   auto vocab = llama_model_get_vocab(_sess->model());
