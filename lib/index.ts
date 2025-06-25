@@ -9,6 +9,8 @@ import type {
   LlamaCompletionResult,
   TokenizeResult,
   EmbeddingResult,
+  RerankParams,
+  RerankResult,
   CompletionResponseFormat,
 } from './binding'
 
@@ -224,6 +226,18 @@ class LlamaContextWrapper {
 
   embedding(text: string): Promise<EmbeddingResult> {
     return this.ctx.embedding(text)
+  }
+
+  rerank(query: string, documents: string[], params?: RerankParams): Promise<Array<RerankResult & { document: string }>> {
+    return this.ctx.rerank(query, documents, params).then((results: RerankResult[]) => {
+      // Sort by score descending and add document text for convenience
+      return results
+        .map((result: RerankResult) => ({
+          ...result,
+          document: documents[result.index],
+        }))
+        .sort((a: RerankResult & { document: string }, b: RerankResult & { document: string }) => b.score - a.score)
+    })
   }
 
   saveSession(path: string): Promise<void> {

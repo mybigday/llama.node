@@ -140,6 +140,8 @@ file(
     "src/DetokenizeWorker.h"
     "src/EmbeddingWorker.cpp"
     "src/EmbeddingWorker.h"
+    "src/RerankWorker.cpp"
+    "src/RerankWorker.h"
     "src/LoadSessionWorker.cpp"
     "src/LoadSessionWorker.h"
     "src/SaveSessionWorker.cpp"

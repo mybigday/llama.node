@@ -3,6 +3,7 @@
 #include "DetokenizeWorker.h"
 #include "DisposeWorker.h"
 #include "EmbeddingWorker.h"
+#include "RerankWorker.h"
 #include "LlamaCompletionWorker.h"
 #include "LoadSessionWorker.h"
 #include "SaveSessionWorker.h"
@@ -110,6 +111,8 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
            static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::Embedding>(
            "embedding", static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::Rerank>(
+           "rerank", static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::SaveSession>(
            "saveSession",
            static_cast<napi_property_attributes>(napi_enumerable)),
@@ -978,6 +981,40 @@ Napi::Value LlamaContext::Embedding(const Napi::CallbackInfo &info) {
   embdParams.embd_normalize = get_option<int32_t>(options, "embd_normalize", 2);
   auto text = info[0].ToString().Utf8Value();
   auto *worker = new EmbeddingWorker(info, _sess, text, embdParams);
+  worker->Queue();
+  return worker->Promise();
+}
+
+// rerank(query: string, documents: string[], params?: object): Promise<RerankResult[]>
+Napi::Value LlamaContext::Rerank(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (info.Length() < 2 || !info[0].IsString() || !info[1].IsArray()) {
+    Napi::TypeError::New(env, "Query string and documents array expected").ThrowAsJavaScriptException();
+  }
+  if (_sess == nullptr) {
+    Napi::TypeError::New(env, "Context is disposed")
+        .ThrowAsJavaScriptException();
+  }
+  
+  auto query = info[0].ToString().Utf8Value();
+  auto documents_array = info[1].As<Napi::Array>();
+  
+  // Convert documents array to vector
+  std::vector<std::string> documents;
+  for (size_t i = 0; i < documents_array.Length(); i++) {
+    documents.push_back(documents_array.Get(i).ToString().Utf8Value());
+  }
+  
+  auto options = Napi::Object::New(env);
+  if (info.Length() >= 3 && info[2].IsObject()) {
+    options = info[2].As<Napi::Object>();
+  }
+
+  common_params rerankParams;
+  rerankParams.embedding = true;
+  rerankParams.embd_normalize = get_option<int32_t>(options, "normalize", -1);
+  
+  auto *worker = new RerankWorker(info, _sess, query, documents, rerankParams);
   worker->Queue();
   return worker->Promise();
 }

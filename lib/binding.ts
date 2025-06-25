@@ -159,6 +159,15 @@ export type EmbeddingResult = {
   embedding: Float32Array
 }
 
+export type RerankParams = {
+  normalize?: number
+}
+
+export type RerankResult = {
+  score: number
+  index: number
+}
+
 export interface LlamaContext {
   new (options: LlamaModelOptions): LlamaContext
   getSystemInfo(): string
@@ -182,6 +191,7 @@ export interface LlamaContext {
   tokenize(text: string, media_paths?: string[]): Promise<TokenizeResult>
   detokenize(tokens: number[]): Promise<string>
   embedding(text: string): Promise<EmbeddingResult>
+  rerank(query: string, documents: string[], params?: RerankParams): Promise<RerankResult[]>
   saveSession(path: string): Promise<void>
   loadSession(path: string): Promise<void>
   release(): Promise<void>
