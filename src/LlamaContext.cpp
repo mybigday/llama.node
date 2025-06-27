@@ -586,7 +586,7 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
                 : "{}";
       }
     }
-    auto tools_str = params.Has("tools")
+    auto tools_str = !is_nil(params.Get("tools"))
                          ? json_stringify(params.Get("tools").As<Napi::Array>())
                          : "";
     auto parallel_tool_calls =
@@ -594,9 +594,15 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
     auto tool_choice = get_option<std::string>(params, "tool_choice", "");
     auto enable_thinking = get_option<bool>(params, "enable_thinking", false);
 
-    auto chatParams = getFormattedChatWithJinja(
-        _sess, _templates, messages, chat_template, json_schema_str, tools_str,
-        parallel_tool_calls, tool_choice, enable_thinking);
+    common_chat_params chatParams;
+    try {
+      chatParams = getFormattedChatWithJinja(
+          _sess, _templates, messages, chat_template, json_schema_str, tools_str,
+          parallel_tool_calls, tool_choice, enable_thinking);
+    } catch (const std::exception &e) {
+      Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+      return env.Undefined();
+    }
 
     Napi::Object result = Napi::Object::New(env);
     result.Set("prompt", chatParams.prompt);
@@ -793,7 +799,7 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
     auto jinja = get_option<bool>(options, "jinja", false);
     if (jinja) {
       auto tools_str =
-          options.Has("tools")
+          !is_nil(options.Get("tools"))
               ? json_stringify(options.Get("tools").As<Napi::Array>())
               : "";
       auto parallel_tool_calls =
@@ -802,9 +808,16 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
           get_option<std::string>(options, "tool_choice", "none");
       auto enable_thinking = get_option<bool>(options, "enable_thinking", true);
 
-      auto chatParams = getFormattedChatWithJinja(
-          _sess, _templates, json_stringify(messages), chat_template,
-          json_schema_str, tools_str, parallel_tool_calls, tool_choice, enable_thinking);
+      common_chat_params chatParams;
+      
+      try {
+        chatParams = getFormattedChatWithJinja(
+            _sess, _templates, json_stringify(messages), chat_template,
+            json_schema_str, tools_str, parallel_tool_calls, tool_choice, enable_thinking);
+      } catch (const std::exception &e) {
+        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+        return env.Undefined();
+      }
 
       params.prompt = chatParams.prompt;
 
