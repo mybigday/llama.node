@@ -1,6 +1,6 @@
 {
   "name": "@fugood/node-llama-darwin-x64",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Native module for An another Node binding of llama.cpp (darwin-x64)",
   "main": "index.node",
   "os": [
