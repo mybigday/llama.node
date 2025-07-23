@@ -1291,14 +1291,16 @@ tts_type LlamaContext::getTTSType(Napi::Env env, nlohmann::json speaker) {
   return OUTETTS_V0_2;
 }
 
-// initVocoder(path: string): boolean
+// initVocoder(params?: object): boolean
 Napi::Value LlamaContext::InitVocoder(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   if (info.Length() < 1 || !info[0].IsObject()) {
-    Napi::TypeError::New(env, "Object is expected for vocoder path")
+    Napi::TypeError::New(env, "Object is expected for vocoder options")
         .ThrowAsJavaScriptException();
   }
-  auto vocoder_path = info[0].As<Napi::Object>().Get("path").ToString().Utf8Value();
+  auto options = info[0].As<Napi::Object>();
+  auto vocoder_path = options.Get("path").ToString().Utf8Value();
+  auto n_batch = get_option<int32_t>(options, "n_batch", _sess->params().n_batch);
   if (vocoder_path.empty()) {
     Napi::TypeError::New(env, "vocoder path is required")
         .ThrowAsJavaScriptException();
@@ -1314,6 +1316,7 @@ Napi::Value LlamaContext::InitVocoder(const Napi::CallbackInfo &info) {
   _vocoder.params.model.path = vocoder_path;
   _vocoder.params.embedding = true;
   _vocoder.params.ctx_shift = false;
+  _vocoder.params.n_batch = n_batch;
   _vocoder.params.n_ubatch = _vocoder.params.n_batch;
   common_init_result result = common_init_from_params(_vocoder.params);
   if (result.model == nullptr || result.context == nullptr) {

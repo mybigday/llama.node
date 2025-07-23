@@ -286,7 +286,7 @@ class LlamaContextWrapper {
     return this.ctx.getMultimodalSupport()
   }
 
-  initVocoder(options: { path: string }): Promise<boolean> {
+  initVocoder(options: { path: string, n_batch?: number }): Promise<boolean> {
     return this.ctx.initVocoder(options)
   }
 
