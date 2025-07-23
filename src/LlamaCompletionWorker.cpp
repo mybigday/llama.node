@@ -127,9 +127,6 @@ void LlamaCompletionWorker::Execute() {
   const int max_len = _params.n_predict < 0 ? 0 : _params.n_predict;
   _sess->tokens_ptr()->reserve(_sess->tokens_ptr()->size() + max_len);
 
-  printf("_has_vocoder: %d\n", _has_vocoder);
-  printf("_tts_type: %d\n", _tts_type);
-
   auto embd = _sess->tokens_ptr();
   for (int i = 0; i < max_len || _stop; i++) {
     // check if we need to remove some tokens
