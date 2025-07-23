@@ -129,7 +129,7 @@ void LlamaCompletionWorker::Execute() {
   _sess->tokens_ptr()->reserve(_sess->tokens_ptr()->size() + max_len);
 
   auto embd = _sess->tokens_ptr();
-  for (int i = 0; i < max_len || _stop; i++) {
+  for (int i = 0; !_params.vocab_only || i < max_len || _stop; i++) {
     // check if we need to remove some tokens
     if (embd->size() >= _params.n_ctx) {
       if (!_params.ctx_shift) {
