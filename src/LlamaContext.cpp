@@ -904,9 +904,27 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   // guide_tokens
   std::vector<llama_token> guide_tokens;
   if (options.Has("guide_tokens")) {
-    auto guide_tokens_array = options.Get("guide_tokens").As<Napi::Array>();
-    for (size_t i = 0; i < guide_tokens_array.Length(); i++) {
-      guide_tokens.push_back(guide_tokens_array.Get(i).ToNumber().Int32Value());
+    auto guide_tokens_value = options.Get("guide_tokens");
+    if (guide_tokens_value.IsArray()) {
+      auto guide_tokens_array = guide_tokens_value.As<Napi::Array>();
+      for (size_t i = 0; i < guide_tokens_array.Length(); i++) {
+        guide_tokens.push_back(guide_tokens_array.Get(i).ToNumber().Int32Value());
+      }
+    } else if (guide_tokens_value.IsTypedArray()) {
+      auto guide_tokens_typed_array = guide_tokens_value.As<Napi::TypedArray>();
+      if (guide_tokens_typed_array.TypedArrayType() == napi_int32_array) {
+        auto guide_tokens_int32_array = guide_tokens_value.As<Napi::Int32Array>();
+        size_t length = guide_tokens_int32_array.ElementLength();
+        const int32_t* data = guide_tokens_int32_array.Data();
+        guide_tokens.resize(length);
+        memcpy(guide_tokens.data(), data, length * sizeof(int32_t));
+      } else {
+        Napi::TypeError::New(env, "guide_tokens must be Array<number> or Int32Array").ThrowAsJavaScriptException();
+        return env.Undefined();
+      }
+    } else {
+      Napi::TypeError::New(env, "guide_tokens must be Array<number> or Int32Array").ThrowAsJavaScriptException();
+      return env.Undefined();
     }
   }
 

@@ -120,7 +120,7 @@ export type LlamaCompletionOptions = {
    * Guide tokens to use for audio completion.
    * Help prevent hallucinations by forcing the TTS to use the correct words.
    */
-  guide_tokens?: Int32Array
+  guide_tokens?: number[] | Int32Array
 }
 
 export type LlamaCompletionResult = {
