@@ -1,5 +1,6 @@
 #include "LlamaCompletionWorker.h"
 #include "LlamaContext.h"
+#include <limits>
 
 size_t findStoppingStrings(const std::string &text,
                            const size_t last_token_size,
@@ -124,7 +125,7 @@ void LlamaCompletionWorker::Execute() {
     _sess->set_tokens(std::move(prompt_tokens));
   }
 
-  const int max_len = _params.n_predict < 0 ? 0 : _params.n_predict;
+  const int max_len = _params.n_predict < 0 ? std::numeric_limits<int>::max() : _params.n_predict;
   _sess->tokens_ptr()->reserve(_sess->tokens_ptr()->size() + max_len);
 
   auto embd = _sess->tokens_ptr();
