@@ -32,12 +32,15 @@ LlamaCompletionWorker::LlamaCompletionWorker(
     bool thinking_forced_open,
     std::string reasoning_format,
     const std::vector<std::string> &media_paths,
-    const std::vector<llama_token> &guide_tokens)
+    const std::vector<llama_token> &guide_tokens,
+    bool has_vocoder,
+    tts_type tts_type_val)
     : AsyncWorker(info.Env()), Deferred(info.Env()), _sess(sess),
       _params(params), _stop_words(stop_words), _chat_format(chat_format),
       _thinking_forced_open(thinking_forced_open),
       _reasoning_format(reasoning_format),
-      _media_paths(media_paths), _guide_tokens(guide_tokens) {
+      _media_paths(media_paths), _guide_tokens(guide_tokens),
+      _has_vocoder(has_vocoder), _tts_type(tts_type_val) {
   if (!callback.IsEmpty()) {
     _tsfn = Napi::ThreadSafeFunction::New(info.Env(), callback,
                                           "LlamaCompletionCallback", 0, 1);
@@ -124,6 +127,9 @@ void LlamaCompletionWorker::Execute() {
   const int max_len = _params.n_predict < 0 ? 0 : _params.n_predict;
   _sess->tokens_ptr()->reserve(_sess->tokens_ptr()->size() + max_len);
 
+  printf("_has_vocoder: %d\n", _has_vocoder);
+  printf("_tts_type: %d\n", _tts_type);
+
   auto embd = _sess->tokens_ptr();
   for (int i = 0; i < max_len || _stop; i++) {
     // check if we need to remove some tokens
@@ -153,8 +159,7 @@ void LlamaCompletionWorker::Execute() {
     // For multimodal input, n_past might already be set
     // Only decode text tokens if we have any input left
     if (n_input > 0) {
-      int ret =
-          llama_decode(ctx, llama_batch_get_one(embd->data() + n_cur, n_input));
+      int ret = llama_decode(ctx, llama_batch_get_one(embd->data() + n_cur, n_input));
       if (ret < 0) {
         SetError("Failed to decode token, code: " + std::to_string(ret));
         break;
@@ -171,6 +176,15 @@ void LlamaCompletionWorker::Execute() {
     }
     _next_token_uses_guide_token = (new_token_id == 198);
     common_sampler_accept(sampling.get(), new_token_id, true);
+    
+    // Collect audio tokens for TTS if vocoder is enabled
+    if (_has_vocoder) {
+      if ((_tts_type == OUTETTS_V0_2 || _tts_type == OUTETTS_V0_3) && 
+          (new_token_id >= 151672 && new_token_id <= 155772)) {
+        _result.audio_tokens.push_back(new_token_id);
+      }
+    }
+    
     // prepare the next batch
     embd->emplace_back(new_token_id);
     auto token = common_token_to_piece(ctx, new_token_id);
@@ -289,6 +303,15 @@ void LlamaCompletionWorker::OnOK() {
   }
   if (!content.empty()) {
     result.Set("content", Napi::String::New(env, content.c_str()));
+  }
+
+  // Add audio_tokens if vocoder is enabled and we have audio tokens
+  if (_has_vocoder && !_result.audio_tokens.empty()) {
+    auto audio_tokens = Napi::Array::New(env, _result.audio_tokens.size());
+    for (size_t i = 0; i < _result.audio_tokens.size(); i++) {
+      audio_tokens.Set(i, Napi::Number::New(env, _result.audio_tokens[i]));
+    }
+    result.Set("audio_tokens", audio_tokens);
   }
 
   auto ctx = _sess->context();

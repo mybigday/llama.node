@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.hpp"
+#include "tts_utils.h"
 #include <atomic>
 #include <functional>
 #include <napi.h>
@@ -23,7 +24,9 @@ public:
                         bool thinking_forced_open,
                         std::string reasoning_format,
                         const std::vector<std::string> &media_paths = {},
-                        const std::vector<llama_token> &guide_tokens = {});
+                        const std::vector<llama_token> &guide_tokens = {},
+                        bool has_vocoder = false,
+                        tts_type tts_type_val = UNKNOWN);
 
   ~LlamaCompletionWorker();
 
@@ -52,6 +55,8 @@ private:
   bool _stop = false;
   Napi::ThreadSafeFunction _tsfn;
   bool _next_token_uses_guide_token = true;
+  bool _has_vocoder;
+  tts_type _tts_type;
   struct {
     size_t tokens_evaluated = 0;
     size_t tokens_predicted = 0;
@@ -62,5 +67,6 @@ private:
     bool stopped_words = false;
     std::string stopping_word;
     bool stopped_limited = false;
+    std::vector<llama_token> audio_tokens;
   } _result;
 };

@@ -917,7 +917,8 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
 
   auto *worker =
       new LlamaCompletionWorker(info, _sess, callback, params, stop_words,
-                                chat_format, thinking_forced_open, reasoning_format, media_paths, guide_tokens);
+                                chat_format, thinking_forced_open, reasoning_format, media_paths, guide_tokens,
+                                _has_vocoder, _tts_type);
   worker->Queue();
   _wip = worker;
   worker->OnComplete([this]() { _wip = nullptr; });
