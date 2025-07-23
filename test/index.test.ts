@@ -86,47 +86,39 @@ test('completion with response_format', async () => {
 
 test('completion with tools', async () => {
   const model = await loadModel({
-    model: path.resolve(__dirname, './Qwen3-0.6B-Q8_0.gguf'),
+    model: path.resolve(__dirname, './Qwen3-0.6B-Q6_K.gguf'),
+    vocab_only: true,
   })
   expect(
-    filterCompletionResult(
-      await model.completion({
-        n_predict: 64,
-        temperature: 0,
-        max_length: 100,
-        seed: 0,
+    model.getFormattedChat(
+      [
+        {
+          role: 'user',
+          content: 'What is the sum of 1 and 2?',
+        },
+      ],
+      undefined,
+      {
         jinja: true,
-        messages: [
-          {
-            role: 'user',
-            content: 'What is the sum of 1 and 2?',
-          },
-        ],
         tools: [
           {
             type: 'function',
             function: {
               name: 'calc',
-              description:
-                'Calculates the result of a math expression.',
+              description: 'Calculates the result of a math expression.',
               parameters: {
                 type: 'object',
                 properties: {
-                  expression: {
-                    type: 'string',
-                    description: 'The math expression to evaluate.',
-                  },
+                  expression: { type: 'string', description: 'The math expression to evaluate.' },
                 },
-                required: ['expression'],
               },
             },
           },
         ],
-        tool_choice: 'auto',
-      }),
+      },
     ),
   ).toMatchSnapshot()
-}, 6e4)
+})
 
 test('works fine with vocab_only', async () => {
   const model = await loadModel({

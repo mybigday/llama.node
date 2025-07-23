@@ -84,8 +84,8 @@ async function main() {
       url: 'https://huggingface.co/ggml-org/WavTokenizer/resolve/main/WavTokenizer-Large-75-Q5_1.gguf?download=true',
     },
     {
-      path: path.join(testDir, 'Qwen3-0.6B-Q8_0.gguf'),
-      url: 'https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q8_0.gguf?download=true',
+      path: path.join(testDir, 'Qwen3-0.6B-Q6_K.gguf'),
+      url: 'https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q6_K.gguf?download=true',
     },
     {
       path: path.join(testDir, 'SmolVLM-256M-Instruct-Q8_0.gguf'),
