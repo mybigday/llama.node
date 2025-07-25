@@ -80,10 +80,6 @@ async function main() {
       url: 'https://huggingface.co/tensorblock/tiny-random-llama-GGUF/resolve/main/tiny-random-llama-Q4_0.gguf?download=true',
     },
     {
-      path: path.join(testDir, 'WavTokenizer.gguf'),
-      url: 'https://huggingface.co/ggml-org/WavTokenizer/resolve/main/WavTokenizer-Large-75-Q5_1.gguf?download=true',
-    },
-    {
       path: path.join(testDir, 'Qwen3-0.6B-Q6_K.gguf'),
       url: 'https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q6_K.gguf?download=true',
     },
@@ -104,6 +100,15 @@ async function main() {
     //   path: path.join(testDir, 'mmproj-ultravox-v0_5-llama-3_2-1b-f16.gguf'),
     //   url: 'https://huggingface.co/ggml-org/ultravox-v0_5-llama-3_2-1b-GGUF/resolve/main/mmproj-ultravox-v0_5-llama-3_2-1b-f16.gguf?download=true'
     // }
+    // // TTS
+    // {
+    //   path: path.join(testDir, 'OuteTTS-0.3-500M-Q4_K_M.gguf'),
+    //   url: 'https://huggingface.co/OuteAI/OuteTTS-0.3-500M-GGUF/resolve/main/OuteTTS-0.3-500M-Q4_K_M.gguf?download=true',
+    // },
+    // {
+    //   path: path.join(testDir, 'WavTokenizer.gguf'),
+    //   url: 'https://huggingface.co/ggml-org/WavTokenizer/resolve/main/WavTokenizer-Large-75-Q5_1.gguf?download=true',
+    // },
   ]
 
   for (const file of files) {

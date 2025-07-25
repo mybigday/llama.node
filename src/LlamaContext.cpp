@@ -1433,6 +1433,10 @@ LlamaContext::GetAudioCompletionGuideTokens(const Napi::CallbackInfo &info) {
   if (tmp.size() > 0) {
     result.push_back(tmp[0]);
   }
+
+  // Add Audio End, forcing stop generation
+  result.push_back(common_tokenize(vocab, "<|audio_end|>", false, true)[0]);
+
   auto tokens = Napi::Int32Array::New(env, result.size());
   memcpy(tokens.Data(), result.data(), result.size() * sizeof(int32_t));
   return tokens;
