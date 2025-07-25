@@ -1363,7 +1363,7 @@ Napi::Value LlamaContext::IsVocoderEnabled(const Napi::CallbackInfo &info) {
   return Napi::Boolean::New(env, _has_vocoder);
 }
 
-// getFormattedAudioCompletion(speaker: string|null, text: string): string
+// getFormattedAudioCompletion(speaker: string|null, text: string): object
 Napi::Value
 LlamaContext::GetFormattedAudioCompletion(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
@@ -1390,9 +1390,16 @@ LlamaContext::GetFormattedAudioCompletion(const Napi::CallbackInfo &info) {
     audio_text = audio_text_from_speaker(speaker, type);
     audio_data = audio_data_from_speaker(speaker, type);
   }
-  return Napi::String::New(env, "<|im_start|>\n" + audio_text +
-                                    process_text(text, type) +
-                                    "<|text_end|>\n" + audio_data + "\n");
+  std::string prompt = "<|im_start|>\n" + audio_text +
+                       process_text(text, type) +
+                       "<|text_end|>\n" + audio_data + "\n";
+  Napi::Object result = Napi::Object::New(env);
+  result.Set("prompt", prompt);
+  const char *grammar = get_tts_grammar(type);
+  if (grammar != nullptr) {
+    result.Set("grammar", grammar);
+  }
+  return result;
 }
 
 // getAudioCompletionGuideTokens(text: string): Int32Array

@@ -304,7 +304,10 @@ class LlamaContextWrapper {
     return this.ctx.isVocoderEnabled()
   }
 
-  getFormattedAudioCompletion(speaker: string|null, text: string): string {
+  getFormattedAudioCompletion(speaker: string|null, text: string): {
+    prompt: string
+    grammar?: string
+  } {
     return this.ctx.getFormattedAudioCompletion(speaker, text)
   }
 

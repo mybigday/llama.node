@@ -357,3 +357,15 @@ std::vector<float> embd_to_audio(const float *embd, const int n_codes,
 
   return audio;
 }
+
+const char *get_tts_grammar(const tts_type type) {
+  switch (type) {
+    case OUTETTS_V0_1:
+      return OUTETTS_V1_GRAMMAR;
+    case OUTETTS_V0_2:
+    case OUTETTS_V0_3:
+      return OUTETTS_V2_GRAMMAR;
+    default:
+      return nullptr;
+  }
+}

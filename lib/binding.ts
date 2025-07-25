@@ -327,7 +327,10 @@ export interface LlamaContext {
    * @param text Text to complete
    * @returns Formatted audio completion
    */
-  getFormattedAudioCompletion(speaker: string|null, text: string): string
+  getFormattedAudioCompletion(speaker: string|null, text: string): {
+    prompt: string
+    grammar?: string
+  }
 
   /**
    * Get guide tokens for audio completion
