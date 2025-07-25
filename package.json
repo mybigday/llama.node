@@ -9,6 +9,7 @@
     "postinstall": "node scripts/check.js",
     "pretest": "node scripts/download-test-models.js",
     "test": "jest",
+    "typecheck": "tsc --noEmit",
     "build": "npx cmake-js build",
     "build-js": "tsc",
     "prepack": "npm run build-js",

@@ -1,6 +1,3 @@
-import * as path from 'path'
-
-
 export type MessagePart = {
   type: string,
   text?: string,
@@ -65,9 +62,9 @@ export type CompletionResponseFormat = {
   type: 'text' | 'json_object' | 'json_schema'
   json_schema?: {
     strict?: boolean
-    schema: object
+    schema: Record<string, any>
   }
-  schema?: object // for json_object type
+  schema?: Record<string, any> // for json_object type
 }
 
 export type LlamaCompletionOptions = {
@@ -76,7 +73,7 @@ export type LlamaCompletionOptions = {
   reasoning_format?: string
   chat_template?: string
   response_format?: CompletionResponseFormat
-  tools?: object
+  tools?: Tool[]
   parallel_tool_calls?: boolean
   tool_choice?: string
   enable_thinking?: boolean
@@ -107,7 +104,7 @@ export type LlamaCompletionOptions = {
   stop?: string[]
   grammar?: string
   grammar_lazy?: boolean
-  grammar_triggers?: { type: number; word: string; at_start: boolean }[]
+  grammar_triggers?: { type: number; value: string; token?: number }[]
   preserved_tokens?: string[]
   /**
    * Path(s) to media file(s) to process before generating text.
@@ -169,21 +166,101 @@ export type RerankResult = {
   index: number
 }
 
+export type ModelInfo = {
+  desc: string
+  nEmbd: number
+  nParams: number
+  size: number
+  chatTemplates: {
+    llamaChat: boolean
+    minja: {
+      default: boolean
+      defaultCaps: {
+        tools: boolean
+        toolCalls: boolean
+        toolResponses: boolean
+        systemRole: boolean
+        parallelToolCalls: boolean
+        toolCallId: boolean
+      }
+      toolUse: boolean
+      toolUseCaps?: {
+        tools: boolean
+        toolCalls: boolean
+        toolResponses: boolean
+        systemRole: boolean
+        parallelToolCalls: boolean
+        toolCallId: boolean
+      }
+    }
+  }
+  metadata: Record<string, string>
+  isChatTemplateSupported: boolean
+}
+
+export type GGUFModelInfo = {
+  version?: number
+  alignment?: number
+  data_offset?: number
+  [key: string]: string | number | undefined
+}
+
+export type FormattedChatResult = {
+  type: 'jinja' | 'llama-chat'
+  prompt: string
+  has_media: boolean
+  media_paths?: Array<string>
+}
+
+export type JinjaFormattedChatResult = {
+  prompt: string
+  chat_format: number
+  grammar: string
+  grammea_lazy: boolean
+  grammar_triggers: Array<{
+    type: number
+    value: string
+    token: number
+  }>
+  thinking_forced_open: boolean
+  preserved_tokens: string[]
+  additional_stops: string[]
+}
+
+export type Tool = {
+  type: 'function'
+  function: {
+    name: string
+    description: string
+    parameters: Record<string, any>
+  }
+}
+
+export type ToolCall = {
+  type: 'function'
+  function: {
+    name: string
+    arguments: string
+  }
+  id?: string
+}
+
 export interface LlamaContext {
   new (options: LlamaModelOptions): LlamaContext
   getSystemInfo(): string
-  getModelInfo(): object
+  getModelInfo(): ModelInfo
   getFormattedChat(
     messages: ChatMessage[],
     chat_template?: string,
     params?: {
       jinja?: boolean
       response_format?: CompletionResponseFormat
-      tools?: object
-      parallel_tool_calls?: object
+      tools?: Tool[]
+      parallel_tool_calls?: boolean
       tool_choice?: string
+      enable_thinking?: boolean
     },
-  ): object | string
+  ): JinjaFormattedChatResult | string
   completion(
     options: LlamaCompletionOptions,
     callback?: (token: LlamaCompletionToken) => void,
@@ -197,51 +274,50 @@ export interface LlamaContext {
   loadSession(path: string): Promise<void>
   release(): Promise<void>
   applyLoraAdapters(adapters: { path: string; scaled: number }[]): void
-  removeLoraAdapters(adapters: { path: string }[]): void
+  removeLoraAdapters(): void
   getLoadedLoraAdapters(): { path: string; scaled: number }[]
   /**
    * Initialize multimodal support with a mmproj file
-   * @param mmproj_path Path to the multimodal projector file
-   * @returns Promise resolving to true if initialization was successful
+   * @param options Object containing path and optional use_gpu flag
+   * @returns boolean indicating if initialization was successful
    */
-  initMultimodal(options: { path: string; use_gpu?: boolean }): Promise<boolean>
+  initMultimodal(options: { path: string; use_gpu?: boolean }): boolean
 
   /**
    * Check if multimodal support is enabled
-   * @returns Promise resolving to true if multimodal is enabled
+   * @returns boolean indicating if multimodal is enabled
    */
-  isMultimodalEnabled(): Promise<boolean>
+  isMultimodalEnabled(): boolean
 
   /**
    * Get multimodal support capabilities
-   * @returns Promise resolving to an object with vision and audio support
+   * @returns Object with vision and audio support
    */
-  getMultimodalSupport(): Promise<{
+  getMultimodalSupport(): {
     vision: boolean
     audio: boolean
-  }>
+  }
 
   /**
    * Release multimodal support
    */
-  releaseMultimodal(): Promise<void>
+  releaseMultimodal(): void
 
   /**
    * Load a vocoder model
-   * @param path Path to the vocoder model
-   * @returns Promise resolving to true if loading was successful
+   * @param options Object containing path and optional n_batch
+   * @returns boolean indicating if loading was successful
    */
-  initVocoder(options: { path: string, n_batch?: number }): Promise<boolean>
+  initVocoder(options: { path: string, n_batch?: number }): boolean
 
   /**
    * Unload the vocoder model
-   * @returns Promise resolving to true if unloading was successful
    */
-  releaseVocoder(): Promise<void>
+  releaseVocoder(): void
 
   /**
    * Check if the vocoder model is enabled
-   * @returns Promise resolving to true if the vocoder model is enabled
+   * @returns boolean indicating if the vocoder model is enabled
    */
   isVocoderEnabled(): boolean
 
@@ -263,12 +339,12 @@ export interface LlamaContext {
   /**
    * Decode audio tokens to audio data
    * @param tokens Tokens to decode
-   * @returns Decoded audio tokens
+   * @returns Promise resolving to decoded audio tokens
    */
-  decodeAudioTokens(tokens: Int32Array): Promise<Float32Array>
+  decodeAudioTokens(tokens: number[]|Int32Array): Promise<Float32Array>
 
   // static
-  loadModelInfo(path: string, skip: string[]): Promise<Object>
+  loadModelInfo(path: string, skip: string[]): Promise<GGUFModelInfo>
   toggleNativeLog(
     enable: boolean,
     callback: (level: string, text: string) => void,

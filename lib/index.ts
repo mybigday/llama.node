@@ -12,6 +12,10 @@ import type {
   RerankParams,
   RerankResult,
   CompletionResponseFormat,
+  ModelInfo,
+  JinjaFormattedChatResult,
+  Tool,
+  GGUFModelInfo,
 } from './binding'
 
 export * from './binding'
@@ -72,9 +76,9 @@ export type FormattedChatResult = {
 }
 
 class LlamaContextWrapper {
-  ctx: any
+  ctx: LlamaContext
 
-  constructor(nativeCtx: any) {
+  constructor(nativeCtx: LlamaContext) {
     this.ctx = nativeCtx
   }
 
@@ -82,7 +86,7 @@ class LlamaContextWrapper {
     return this.ctx.getSystemInfo()
   }
 
-  getModelInfo(): object {
+  getModelInfo(): ModelInfo {
     return this.ctx.getModelInfo()
   }
 
@@ -158,8 +162,8 @@ class LlamaContextWrapper {
     params?: {
       jinja?: boolean
       response_format?: CompletionResponseFormat
-      tools?: object
-      parallel_tool_calls?: object
+      tools?: Tool[]
+      parallel_tool_calls?: boolean
       tool_choice?: string,
       enable_thinking?: boolean,
     },
@@ -175,9 +179,9 @@ class LlamaContextWrapper {
     if (template) tmpl = template // Force replace if provided
     const jsonSchema = getJsonSchema(params?.response_format)
 
-    const result = this.ctx.getFormattedChat(chat, tmpl, {
+    const result = this.ctx.getFormattedChat(chat!, tmpl, {
       jinja: useJinja,
-      json_schema: jsonSchema,
+      response_format: params?.response_format,
       tools: params?.tools,
       parallel_tool_calls: params?.parallel_tool_calls,
       tool_choice: params?.tool_choice,
@@ -192,11 +196,13 @@ class LlamaContextWrapper {
         media_paths,
       }
     }
-    const jinjaResult = result
-    jinjaResult.type = 'jinja'
-    jinjaResult.has_media = has_media
-    jinjaResult.media_paths = media_paths
-    return jinjaResult
+    const jinjaResult = result as JinjaFormattedChatResult
+    return {
+      type: 'jinja',
+      has_media,
+      media_paths,
+      ...jinjaResult,
+    }
   }
 
   completion(
@@ -256,8 +262,8 @@ class LlamaContextWrapper {
     return this.ctx.applyLoraAdapters(adapters)
   }
 
-  removeLoraAdapters(adapters: { path: string }[]): void {
-    return this.ctx.removeLoraAdapters(adapters)
+  removeLoraAdapters(): void {
+    this.ctx.removeLoraAdapters()
   }
 
   getLoadedLoraAdapters(): { path: string; scaled: number }[] {
@@ -267,31 +273,31 @@ class LlamaContextWrapper {
   initMultimodal(options: {
     path: string
     use_gpu?: boolean
-  }): Promise<boolean> {
+  }): boolean {
     return this.ctx.initMultimodal(options)
   }
 
-  isMultimodalEnabled(): Promise<boolean> {
+  isMultimodalEnabled(): boolean {
     return this.ctx.isMultimodalEnabled()
   }
 
-  releaseMultimodal(): Promise<void> {
-    return this.ctx.releaseMultimodal()
+  releaseMultimodal(): void {
+    this.ctx.releaseMultimodal()
   }
 
-  getMultimodalSupport(): Promise<{
+  getMultimodalSupport(): {
     vision: boolean
     audio: boolean
-  }> {
+  } {
     return this.ctx.getMultimodalSupport()
   }
 
-  initVocoder(options: { path: string, n_batch?: number }): Promise<boolean> {
+  initVocoder(options: { path: string, n_batch?: number }): boolean {
     return this.ctx.initVocoder(options)
   }
 
-  releaseVocoder(): Promise<void> {
-    return this.ctx.releaseVocoder()
+  releaseVocoder(): void {
+    this.ctx.releaseVocoder()
   }
 
   isVocoderEnabled(): boolean {
@@ -332,7 +338,7 @@ const modelInfoSkip = [
   'tokenizer.ggml.scores',
 ]
 
-export const loadLlamaModelInfo = async (path: string): Promise<Object> => {
+export const loadLlamaModelInfo = async (path: string): Promise<GGUFModelInfo> => {
   const variant = 'default'
   mods[variant] ??= await loadModule(variant)
   refreshNativeLogSetup()
