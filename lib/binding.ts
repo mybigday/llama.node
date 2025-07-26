@@ -50,6 +50,11 @@ export type LlamaModelOptions = {
    * Enable context shifting to handle prompts larger than context size
    */
   ctx_shift?: boolean
+  /**
+   * Use a unified buffer across the input sequences when computing the attention.
+   * Try to disable when n_seq_max > 1 for improved performance when the sequences do not share a large prefix.
+   */
+  kv_unified?: boolean
   use_mlock?: boolean
   use_mmap?: boolean
   vocab_only?: boolean
