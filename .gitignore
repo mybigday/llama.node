@@ -10,3 +10,4 @@ tmp.sess
 /externals/
 *.node
 package-lock.json
+*-result.wav
