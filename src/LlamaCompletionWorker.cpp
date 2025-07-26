@@ -157,26 +157,10 @@ void LlamaCompletionWorker::Execute() {
     // For multimodal input, n_past might already be set
     // Only decode text tokens if we have any input left
     if (n_input > 0) {
-      // Decode tokens in batches using n_batch as chunk size
-      int n_past_batch = n_cur;
-      int n_remaining = n_input;
-      
-      while (n_remaining > 0) {
-        int n_eval = n_remaining;
-        if (n_eval > _params.n_batch) {
-          n_eval = _params.n_batch;
-        }
-        
-        int ret = llama_decode(ctx, llama_batch_get_one(embd->data() + n_past_batch, n_eval));
-        if (ret < 0) {
-          SetError("Failed to decode token batch, code: " + std::to_string(ret) + 
-                   ", n_eval: " + std::to_string(n_eval) + 
-                   ", n_past_batch: " + std::to_string(n_past_batch));
-          break;
-        }
-        
-        n_past_batch += n_eval;
-        n_remaining -= n_eval;
+      int ret = llama_decode(ctx, llama_batch_get_one(embd->data() + n_cur, n_input));
+      if (ret < 0) {
+        SetError("Failed to decode token, code: " + std::to_string(ret));
+        break;
       }
     }
 
