@@ -271,6 +271,8 @@ void LlamaCompletionWorker::OnOK() {
     try {
       common_chat_syntax chat_syntax;
       chat_syntax.format = static_cast<common_chat_format>(_chat_format);
+      result.Set("chat_format", Napi::Number::New(env, _chat_format));
+
       chat_syntax.thinking_forced_open = _thinking_forced_open;
 
       if (_reasoning_format == "deepseek") {

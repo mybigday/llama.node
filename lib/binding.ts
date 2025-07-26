@@ -129,6 +129,7 @@ export type LlamaCompletionResult = {
   text: string
   reasoning_content?: string
   content?: string
+  chat_format: number
   tokens_predicted: number
   tokens_evaluated: number
   truncated: boolean
