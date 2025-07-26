@@ -110,7 +110,7 @@ void LlamaCompletionWorker::Execute() {
   } else {
     // Text-only path
     std::vector<llama_token> prompt_tokens =
-        ::common_tokenize(ctx, _params.prompt, add_bos);
+        ::common_tokenize(ctx, _params.prompt, add_bos, true);
     n_input = prompt_tokens.size();
 
     if (_sess->tokens_ptr()->size() > 0) {
@@ -177,7 +177,7 @@ void LlamaCompletionWorker::Execute() {
     
     // Collect audio tokens for TTS if vocoder is enabled
     if (_has_vocoder) {
-      if ((_tts_type == OUTETTS_V0_2 || _tts_type == OUTETTS_V0_3) && 
+      if ((_tts_type == OUTETTS_V0_1 || _tts_type == OUTETTS_V0_2 || _tts_type == OUTETTS_V0_3) && 
           (new_token_id >= 151672 && new_token_id <= 155772)) {
         _result.audio_tokens.push_back(new_token_id);
       }

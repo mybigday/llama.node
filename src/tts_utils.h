@@ -66,7 +66,7 @@ looks<|t_0.27|><|code_start|><|1281|><|1266|><|1755|><|572|><|248|><|1751|><|125
 lovely<|t_0.56|><|code_start|><|634|><|596|><|1766|><|1556|><|1306|><|1285|><|1481|><|1721|><|1123|><|438|><|1246|><|1251|><|795|><|659|><|1381|><|1658|><|217|><|1772|><|562|><|952|><|107|><|1129|><|1112|><|467|><|550|><|1079|><|840|><|1615|><|1469|><|1380|><|168|><|917|><|836|><|1827|><|437|><|583|><|67|><|595|><|1087|><|1646|><|1493|><|1677|><|code_end|>)";
 
 static const char *OUTETTS_V1_GRAMMAR = R"(
-root       ::= NL? wordAudioBlock* audioEnd NL eos?
+root       ::= NL? wordAudioBlock+ audioEnd NL eos?
 wordAudioBlock ::= WORD codeBlock NL
 codeBlock ::= TIME CODE{1,144}
 eos      ::= "<|im_end|>"
@@ -82,9 +82,9 @@ DECIMAL    ::= [0-9]+ "." [0-9]+
 )";
 
 static const char *OUTETTS_V2_GRAMMAR = R"(
-root       ::= NL? content* audioEnd NL eos?
+root       ::= NL? content+ audioEnd NL eos?
 content ::= wordAudioBlock | emotionBlock
-wordAudioBlock ::= punch? WORD punch? codeBlock space NL
+wordAudioBlock ::= WORD punch* codeBlock space NL
 codeBlock ::= TIME CODE{1,144}
 emotionBlock ::= emotionStart TEXT emotionEnd space NL
 TEXT ::= [A-Za-z0-9 .,?!]+

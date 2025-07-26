@@ -1479,7 +1479,7 @@ Napi::Value LlamaContext::DecodeAudioTokens(const Napi::CallbackInfo &info) {
         .ThrowAsJavaScriptException();
     return env.Undefined();
   }
-  if (type == OUTETTS_V0_3 || type == OUTETTS_V0_2) {
+  if (type == OUTETTS_V0_1 || type == OUTETTS_V0_2 || type == OUTETTS_V0_3) {
     tokens.erase(
         std::remove_if(tokens.begin(), tokens.end(),
                        [](llama_token t) { return t < 151672 || t > 155772; }),
