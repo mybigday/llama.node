@@ -7,7 +7,7 @@ import speaker from './speaker.json'
 const modelPath = path.resolve(__dirname, './OuteTTS-0.3-500M-Q4_K_M.gguf');
 const vocoderPath = path.resolve(__dirname, './WavTokenizer.gguf');
 
-(modelPath && vocoderPath ? test : test.skip)('TTS', async () => {
+(fs.existsSync(modelPath) ? test : test.skip)('TTS', async () => {
   const model = await loadModel({
     model: modelPath,
     n_ctx: 8192,
