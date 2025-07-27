@@ -2,6 +2,7 @@
 
 exports[`basic completion 1`] = `
 {
+  "chat_format": 0,
   "content": "<removed>",
   "context_full": false,
   "stopped_eos": false,
@@ -70,6 +71,7 @@ exports[`basic completion: model info 1`] = `
 
 exports[`completion with response_format: json_object 1`] = `
 {
+  "chat_format": 0,
   "content": "<removed>",
   "context_full": false,
   "stopped_eos": true,
@@ -87,6 +89,7 @@ exports[`completion with response_format: json_object 1`] = `
 
 exports[`completion with response_format: json_schema 1`] = `
 {
+  "chat_format": 0,
   "content": "<removed>",
   "context_full": false,
   "stopped_eos": false,
@@ -653,6 +656,7 @@ Hi<|im_end|>
 
 exports[`works fine with vocab_only: empty result 1`] = `
 {
+  "chat_format": 0,
   "context_full": false,
   "stopped_eos": false,
   "stopped_limited": true,
