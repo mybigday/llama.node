@@ -134,6 +134,7 @@ export type LlamaCompletionResult = {
   tokens_evaluated: number
   truncated: boolean
   context_full: boolean
+  interrupted: boolean
   audio_tokens?: Array<number>
   timings: {
     prompt_n: number

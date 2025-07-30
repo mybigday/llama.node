@@ -34,7 +34,7 @@ public:
 
   void OnComplete(std::function<void()> cb) { _onComplete = cb; }
 
-  void SetStop() { _stop = true; }
+  void SetStop() { _interrupted = true; }
 
 protected:
   void Execute() override;
@@ -52,7 +52,7 @@ private:
   std::vector<llama_token> _guide_tokens;
   std::function<void()> _onComplete;
   bool _has_callback = false;
-  bool _stop = false;
+  bool _interrupted = false;
   Napi::ThreadSafeFunction _tsfn;
   bool _next_token_uses_guide_token = true;
   bool _has_vocoder;

@@ -129,7 +129,7 @@ void LlamaCompletionWorker::Execute() {
   _sess->tokens_ptr()->reserve(_sess->tokens_ptr()->size() + max_len);
 
   auto embd = _sess->tokens_ptr();
-  for (int i = 0; (i < max_len || _stop) && !_params.vocab_only; i++) {
+  for (int i = 0; (i < max_len || _interrupted) && !_params.vocab_only; i++) {
     // check if we need to remove some tokens
     if (embd->size() >= _params.n_ctx) {
       if (!_params.ctx_shift) {
@@ -256,6 +256,7 @@ void LlamaCompletionWorker::OnOK() {
                                                    _result.tokens_predicted));
   result.Set("truncated", Napi::Boolean::New(env, _result.truncated));
   result.Set("context_full", Napi::Boolean::New(env, _result.context_full));
+  result.Set("interrupted", Napi::Boolean::New(env, _interrupted));
   result.Set("text", Napi::String::New(env, _result.text.c_str()));
   result.Set("stopped_eos", Napi::Boolean::New(env, _result.stopped_eos));
   result.Set("stopped_words", Napi::Boolean::New(env, _result.stopped_words));
@@ -267,7 +268,7 @@ void LlamaCompletionWorker::OnOK() {
   Napi::Array tool_calls = Napi::Array::New(Napi::AsyncWorker::Env());
   std::string reasoning_content = "";
   std::string content;
-  if (!_stop) {
+  if (!_interrupted) {
     try {
       common_chat_syntax chat_syntax;
       chat_syntax.format = static_cast<common_chat_format>(_chat_format);
