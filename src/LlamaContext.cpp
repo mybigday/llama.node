@@ -248,6 +248,7 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
       get_option<std::string>(options, "cache_type_v", "f16").c_str());
   params.ctx_shift = get_option<bool>(options, "ctx_shift", true);
   params.kv_unified = get_option<bool>(options, "kv_unified", false);
+  params.swa_full = get_option<bool>(options, "swa_full", false);
 
   params.use_mlock = get_option<bool>(options, "use_mlock", false);
   params.use_mmap = get_option<bool>(options, "use_mmap", true);

@@ -55,6 +55,10 @@ export type LlamaModelOptions = {
    * Try to disable when n_seq_max > 1 for improved performance when the sequences do not share a large prefix.
    */
   kv_unified?: boolean
+  /**
+   * Use full-size SWA cache (https://github.com/ggml-org/llama.cpp/pull/13194#issuecomment-2868343055)
+   */
+  swa_full?: boolean
   use_mlock?: boolean
   use_mmap?: boolean
   vocab_only?: boolean
