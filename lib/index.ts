@@ -166,6 +166,9 @@ class LlamaContextWrapper {
       parallel_tool_calls?: boolean
       tool_choice?: string,
       enable_thinking?: boolean,
+      add_generation_prompt?: boolean,
+      now?: string | number,
+      chat_template_kwargs?: Record<string, string>,
     },
   ): FormattedChatResult {
     const {
@@ -186,6 +189,9 @@ class LlamaContextWrapper {
       parallel_tool_calls: params?.parallel_tool_calls,
       tool_choice: params?.tool_choice,
       enable_thinking: params?.enable_thinking ?? true,
+      add_generation_prompt: params?.add_generation_prompt,
+      now: params?.now,
+      chat_template_kwargs: params?.chat_template_kwargs,
     })
 
     if (!useJinja) {

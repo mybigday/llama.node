@@ -106,6 +106,8 @@ export type LlamaCompletionOptions = {
   dry_base?: number
   dry_allowed_length?: number
   dry_penalty_last_n?: number
+  dry_sequence_breakers?: string[]
+  top_n_sigma?: number
   n_predict?: number
   max_length?: number
   max_tokens?: number
@@ -115,6 +117,9 @@ export type LlamaCompletionOptions = {
   grammar_lazy?: boolean
   grammar_triggers?: { type: number; value: string; token?: number }[]
   preserved_tokens?: string[]
+  json_schema?: string
+  logit_bias?: number[][]
+  ignore_eos?: boolean
   /**
    * Path(s) to media file(s) to process before generating text.
    * When provided, the media will be processed and added to the context.
@@ -270,6 +275,9 @@ export interface LlamaContext {
       parallel_tool_calls?: boolean
       tool_choice?: string
       enable_thinking?: boolean
+      add_generation_prompt?: boolean
+      now?: string | number
+      chat_template_kwargs?: Record<string, string>
     },
   ): JinjaFormattedChatResult | string
   completion(

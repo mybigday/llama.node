@@ -505,7 +505,10 @@ common_chat_params getFormattedChatWithJinja(
     const std::string &chat_template, const std::string &json_schema,
     const std::string &tools, const bool &parallel_tool_calls,
     const std::string &tool_choice,
-    const bool &enable_thinking
+    const bool &enable_thinking,
+    const bool &add_generation_prompt,
+    const std::string &now_str,
+    const std::map<std::string, std::string> &chat_template_kwargs
 ) {
   common_chat_templates_inputs inputs;
   inputs.messages = common_chat_msgs_parse_oaicompat(json::parse(messages));
@@ -521,6 +524,21 @@ common_chat_params getFormattedChatWithJinja(
     inputs.json_schema = json::parse(json_schema);
   }
   inputs.enable_thinking = enable_thinking;
+  inputs.add_generation_prompt = add_generation_prompt;
+  
+  // Handle now parameter - parse timestamp or use current time
+  if (!now_str.empty()) {
+    try {
+      // Try to parse as timestamp (seconds since epoch)
+      auto timestamp = std::stoll(now_str);
+      inputs.now = std::chrono::system_clock::from_time_t(timestamp);
+    } catch (...) {
+      // If parsing fails, use current time
+      inputs.now = std::chrono::system_clock::now();
+    }
+  }
+  
+  inputs.chat_template_kwargs = chat_template_kwargs;
 
   // If chat_template is provided, create new one and use it (probably slow)
   if (!chat_template.empty()) {
@@ -595,12 +613,26 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
         get_option<bool>(params, "parallel_tool_calls", false);
     auto tool_choice = get_option<std::string>(params, "tool_choice", "");
     auto enable_thinking = get_option<bool>(params, "enable_thinking", false);
+    auto add_generation_prompt = get_option<bool>(params, "add_generation_prompt", true);
+    auto now_str = get_option<std::string>(params, "now", "");
+    
+    std::map<std::string, std::string> chat_template_kwargs;
+    if (params.Has("chat_template_kwargs") && params.Get("chat_template_kwargs").IsObject()) {
+      auto kwargs_obj = params.Get("chat_template_kwargs").As<Napi::Object>();
+      auto props = kwargs_obj.GetPropertyNames();
+      for (uint32_t i = 0; i < props.Length(); i++) {
+        auto key = props.Get(i).ToString().Utf8Value();
+        auto val = kwargs_obj.Get(key).ToString().Utf8Value();
+        chat_template_kwargs[key] = val;
+      }
+    }
 
     common_chat_params chatParams;
     try {
       chatParams = getFormattedChatWithJinja(
           _sess, _templates, messages, chat_template, json_schema_str, tools_str,
-          parallel_tool_calls, tool_choice, enable_thinking);
+          parallel_tool_calls, tool_choice, enable_thinking,
+          add_generation_prompt, now_str, chat_template_kwargs);
     } catch (const std::exception &e) {
       Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
       return env.Undefined();
@@ -809,13 +841,27 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
       auto tool_choice =
           get_option<std::string>(options, "tool_choice", "none");
       auto enable_thinking = get_option<bool>(options, "enable_thinking", true);
+      auto add_generation_prompt = get_option<bool>(options, "add_generation_prompt", true);
+      auto now_str = get_option<std::string>(options, "now", "");
+      
+      std::map<std::string, std::string> chat_template_kwargs;
+      if (options.Has("chat_template_kwargs") && options.Get("chat_template_kwargs").IsObject()) {
+        auto kwargs_obj = options.Get("chat_template_kwargs").As<Napi::Object>();
+        auto props = kwargs_obj.GetPropertyNames();
+        for (uint32_t i = 0; i < props.Length(); i++) {
+          auto key = props.Get(i).ToString().Utf8Value();
+          auto val = kwargs_obj.Get(key).ToString().Utf8Value();
+          chat_template_kwargs[key] = val;
+        }
+      }
 
       common_chat_params chatParams;
       
       try {
         chatParams = getFormattedChatWithJinja(
             _sess, _templates, json_stringify(messages), chat_template,
-            json_schema_str, tools_str, parallel_tool_calls, tool_choice, enable_thinking);
+            json_schema_str, tools_str, parallel_tool_calls, tool_choice, enable_thinking,
+            add_generation_prompt, now_str, chat_template_kwargs);
       } catch (const std::exception &e) {
         Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
         return env.Undefined();
