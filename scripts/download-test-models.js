@@ -84,6 +84,10 @@ async function main() {
       url: 'https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q6_K.gguf?download=true',
     },
     {
+      path: path.join(testDir, 'flan-t5-small.Q4_0.gguf'),
+      url: 'https://huggingface.co/Felladrin/gguf-flan-t5-small/resolve/main/flan-t5-small.Q4_0.gguf?download=true',
+    },
+    {
       path: path.join(testDir, 'SmolVLM-256M-Instruct-Q8_0.gguf'),
       url: 'https://huggingface.co/ggml-org/SmolVLM-256M-Instruct-GGUF/resolve/main/SmolVLM-256M-Instruct-Q8_0.gguf?download=true',
     },
