@@ -114,6 +114,9 @@ set(LLAMA_BUILD_COMMON ON CACHE BOOL "Build common")
 set(LLAMA_CURL OFF CACHE BOOL "Build curl")
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
+
+add_definitions(-DGGML_MAX_NAME=80)
+
 add_subdirectory("src/llama.cpp")
 add_subdirectory("src/llama.cpp/tools/mtmd")
 

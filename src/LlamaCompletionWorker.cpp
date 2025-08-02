@@ -64,6 +64,7 @@ void LlamaCompletionWorker::Execute() {
   size_t n_input = 0;
   const auto model = _sess->model();
   auto vocab = llama_model_get_vocab(model);
+  const bool is_enc_dec = llama_model_has_encoder(model);
 
   const bool add_bos = llama_vocab_get_add_bos(vocab);
   auto ctx = _sess->context();
@@ -110,7 +111,7 @@ void LlamaCompletionWorker::Execute() {
   } else {
     // Text-only path
     std::vector<llama_token> prompt_tokens =
-        ::common_tokenize(ctx, _params.prompt, add_bos, true);
+        ::common_tokenize(ctx, _params.prompt, add_bos || is_enc_dec, true);
     n_input = prompt_tokens.size();
 
     if (_sess->tokens_ptr()->size() > 0) {
@@ -126,9 +127,47 @@ void LlamaCompletionWorker::Execute() {
   }
 
   const int max_len = _params.n_predict < 0 ? std::numeric_limits<int>::max() : _params.n_predict;
-  _sess->tokens_ptr()->reserve(_sess->tokens_ptr()->size() + max_len);
-
   auto embd = _sess->tokens_ptr();
+  embd->reserve(embd->size() + max_len);
+
+  if (is_enc_dec) {
+    if (n_input > 0) {
+      // Decode tokens in batches using n_batch as chunk size
+      int n_past_batch = n_cur;
+      int n_remaining = n_input;
+      
+      while (n_remaining > 0) {
+        int n_eval = n_remaining;
+        if (n_eval > _params.n_batch) {
+          n_eval = _params.n_batch;
+        }
+
+        int ret = llama_encode(ctx, llama_batch_get_one(embd->data() + n_past_batch, n_eval));
+        if (ret < 0) {
+          SetError("Failed to encode token batch, code: " + std::to_string(ret) + 
+                   ", n_eval: " + std::to_string(n_eval) + 
+                   ", n_past_batch: " + std::to_string(n_past_batch));
+          _sess->get_mutex().unlock();
+          return;
+        }
+
+        n_past_batch += n_eval;
+        n_remaining -= n_eval;
+        n_cur += n_eval;
+      }
+    }
+    _result.tokens_evaluated += n_input;
+
+    llama_token decode_bos = llama_model_decoder_start_token(model);
+    if (decode_bos == LLAMA_TOKEN_NULL) {
+      decode_bos = llama_vocab_bos(vocab);
+    }
+
+    embd->emplace_back(decode_bos);
+    common_sampler_accept(sampling.get(), decode_bos, false);
+    n_input = 1;
+  }
+
   for (int i = 0; (i < max_len || _interrupted) && !_params.vocab_only; i++) {
     // check if we need to remove some tokens
     if (embd->size() >= _params.n_ctx) {
@@ -166,13 +205,14 @@ void LlamaCompletionWorker::Execute() {
         if (n_eval > _params.n_batch) {
           n_eval = _params.n_batch;
         }
-        
+
         int ret = llama_decode(ctx, llama_batch_get_one(embd->data() + n_past_batch, n_eval));
         if (ret < 0) {
           SetError("Failed to decode token batch, code: " + std::to_string(ret) + 
                    ", n_eval: " + std::to_string(n_eval) + 
                    ", n_past_batch: " + std::to_string(n_past_batch));
-          break;
+          _sess->get_mutex().unlock();
+          return;
         }
         
         n_past_batch += n_eval;

@@ -39,6 +39,18 @@ test('basic completion', async () => {
   await model.release()
 })
 
+test('completion with t5-like model', async () => {
+  const model = await loadModel({
+    model: path.resolve(__dirname, './flan-t5-small.Q4_0.gguf'),
+  })
+  const result = await model.completion({
+    prompt: 'translate English to German: How old are you?',
+    n_predict: 16,
+    seed: 0,
+  })
+  expect(filterCompletionResult(result)).toMatchSnapshot()
+})
+
 test('completion with response_format', async () => {
   const model = await loadModel({
     model: path.resolve(__dirname, './tiny-random-llama.gguf'),
