@@ -65,6 +65,14 @@ export type LlamaModelOptions = {
   lora?: string
   lora_scaled?: number
   lora_list?: { path: string; scaled: number }[]
+  /**
+   * RoPE base frequency, use 0 to use model default (recommended)
+   */
+  rope_freq_base?: number
+  /**
+   * RoPE frequency scaling factor, use 0 to use model default (recommended)
+   */
+  rope_freq_scale?: number
 }
 
 export type CompletionResponseFormat = {

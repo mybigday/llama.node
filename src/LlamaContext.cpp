@@ -250,6 +250,9 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   params.kv_unified = get_option<bool>(options, "kv_unified", false);
   params.swa_full = get_option<bool>(options, "swa_full", false);
 
+  params.rope_freq_base = get_option<float>(options, "rope_freq_base", 0.0f);
+  params.rope_freq_scale = get_option<float>(options, "rope_freq_scale", 0.0f);
+
   params.use_mlock = get_option<bool>(options, "use_mlock", false);
   params.use_mmap = get_option<bool>(options, "use_mmap", true);
   params.numa =
