@@ -5,20 +5,22 @@ index 114dbfcc..6771bd43 100644
 @@ -6,9 +6,6 @@
  #include "log.h"
  #include "regex-partial.h"
- 
+
 -#include <minja/chat-template.hpp>
 -#include <minja/minja.hpp>
 -
  #include <cstdio>
  #include <exception>
  #include <iostream>
-@@ -123,14 +120,6 @@ std::vector<common_chat_msg_diff> common_chat_msg_diff::compute_diffs(const comm
+@@ -123,16 +120,6 @@
      return diffs;
  }
- 
+
 -typedef minja::chat_template common_chat_template;
 -
 -struct common_chat_templates {
+-    bool add_bos;
+-    bool add_eos;
 -    bool has_explicit_template; // Model had builtin template or template overridde was specified.
 -    std::unique_ptr<common_chat_template> template_default; // always set (defaults to chatml)
 -    std::unique_ptr<common_chat_template> template_tool_use;
@@ -31,24 +33,27 @@ diff --git a/common/chat.h b/common/chat.h
 index ca807c14..56649863 100644
 --- a/src/llama.cpp/common/chat.h
 +++ b/src/llama.cpp/common/chat.h
-@@ -9,7 +9,16 @@
+@@ -9,8 +9,19 @@
  #include <vector>
  #include <map>
- 
+
 -struct common_chat_templates;
-+#include <minja/chat-template.hpp>
-+#include <minja/minja.hpp>
-+
++#include "minja/chat-template.hpp"
++#include "minja/minja.hpp"
+
 +typedef minja::chat_template common_chat_template;
 +
 +struct common_chat_templates {
++    bool add_bos;
++    bool add_eos;
 +    bool has_explicit_template; // Model had builtin template or template overridde was specified.
 +    std::unique_ptr<common_chat_template> template_default; // always set (defaults to chatml)
 +    std::unique_ptr<common_chat_template> template_tool_use;
 +};
- 
++
  struct common_chat_tool_call {
      std::string name;
+     std::string arguments;
 diff --git a/src/llama.cpp/common/common.cpp b/src/llama.cpp/common/common.cpp
 index e4e71ad1..091ddda4 100644
 --- a/src/llama.cpp/common/common.cpp
