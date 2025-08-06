@@ -1,21 +1,21 @@
 diff --git a/src/llama.cpp/common/chat.cpp b/src/llama.cpp/common/chat.cpp
-index 114dbfcc..6771bd43 100644
+index 60805ab3..71b4236a 100644
 --- a/src/llama.cpp/common/chat.cpp
 +++ b/src/llama.cpp/common/chat.cpp
 @@ -6,9 +6,6 @@
  #include "log.h"
  #include "regex-partial.h"
-
+ 
 -#include <minja/chat-template.hpp>
 -#include <minja/minja.hpp>
 -
  #include <cstdio>
  #include <exception>
  #include <iostream>
-@@ -123,16 +120,6 @@
+@@ -123,16 +120,6 @@ std::vector<common_chat_msg_diff> common_chat_msg_diff::compute_diffs(const comm
      return diffs;
  }
-
+ 
 -typedef minja::chat_template common_chat_template;
 -
 -struct common_chat_templates {
@@ -29,18 +29,18 @@ index 114dbfcc..6771bd43 100644
  struct templates_params {
      json messages;
      json tools;
-diff --git a/common/chat.h b/common/chat.h
-index ca807c14..56649863 100644
+diff --git a/src/llama.cpp/common/chat.h b/src/llama.cpp/common/chat.h
+index b014f9f0..3a868797 100644
 --- a/src/llama.cpp/common/chat.h
 +++ b/src/llama.cpp/common/chat.h
-@@ -9,8 +9,19 @@
+@@ -9,7 +9,18 @@
  #include <vector>
  #include <map>
-
+ 
 -struct common_chat_templates;
 +#include "minja/chat-template.hpp"
 +#include "minja/minja.hpp"
-
++
 +typedef minja::chat_template common_chat_template;
 +
 +struct common_chat_templates {
@@ -50,15 +50,14 @@ index ca807c14..56649863 100644
 +    std::unique_ptr<common_chat_template> template_default; // always set (defaults to chatml)
 +    std::unique_ptr<common_chat_template> template_tool_use;
 +};
-+
+ 
  struct common_chat_tool_call {
      std::string name;
-     std::string arguments;
 diff --git a/src/llama.cpp/common/common.cpp b/src/llama.cpp/common/common.cpp
-index e4e71ad1..091ddda4 100644
+index c6962d1d..ba5a4786 100644
 --- a/src/llama.cpp/common/common.cpp
 +++ b/src/llama.cpp/common/common.cpp
-@@ -1101,6 +1101,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
+@@ -1116,6 +1116,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
          mparams.n_gpu_layers = params.n_gpu_layers;
      }
  
@@ -67,10 +66,10 @@ index e4e71ad1..091ddda4 100644
      mparams.split_mode      = params.split_mode;
      mparams.tensor_split    = params.tensor_split;
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index 8922090e..3c2d1a6a 100644
+index 6c1c7ee2..c3eb0552 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
-@@ -224,6 +224,7 @@ enum common_reasoning_format {
+@@ -242,6 +242,7 @@ enum common_reasoning_format {
  };
  
  struct common_params {
@@ -79,10 +78,10 @@ index 8922090e..3c2d1a6a 100644
      int32_t n_ctx                 =  4096; // context size
      int32_t n_batch               =  2048; // logical batch size for prompt processing (must be >=32 to use BLAS)
 diff --git a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
-index 671fad4d..93fc3cd7 100644
+index f188d163..0c33acad 100644
 --- a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
 +++ b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
-@@ -104,7 +104,7 @@ function(ggml_add_cpu_backend_variant_impl tag_name)
+@@ -106,7 +106,7 @@ function(ggml_add_cpu_backend_variant_impl tag_name)
              )
  
          if (MSVC AND NOT CMAKE_C_COMPILER_ID STREQUAL "Clang")
