@@ -71,7 +71,7 @@ test('multimodal with images', async () => {
   expect(result).toMatchObject({
     tokens_predicted: expect.any(Number),
     tokens_evaluated: expect.any(Number),
-    text: expect.stringMatching(/[A-Za-z0-9\s\.\:\-\,\!\?]+<end_of_utterance>$/),
+    text: expect.stringMatching(/[A-Za-z0-9\s\.\:\-\,\!\?]+$/),
   })
 
   console.log(result)

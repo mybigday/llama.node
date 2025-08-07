@@ -81,10 +81,10 @@ exports[`completion with response_format: json_object 1`] = `
   "stopped_words": false,
   "stopping_word": "",
   "text": "{}
-		              			<|eot_id|>",
+		              			",
   "timings": "Timings: (8) keys",
-  "tokens_evaluated": 4,
-  "tokens_predicted": 4,
+  "tokens_evaluated": 3,
+  "tokens_predicted": 3,
   "truncated": false,
 }
 `;
@@ -118,10 +118,10 @@ exports[`completion with t5-like model 1`] = `
   "stopped_limited": false,
   "stopped_words": false,
   "stopping_word": "",
-  "text": " How old sind er?</s>",
+  "text": " How old sind er?",
   "timings": "Timings: (8) keys",
-  "tokens_evaluated": 18,
-  "tokens_predicted": 7,
+  "tokens_evaluated": 17,
+  "tokens_predicted": 6,
   "truncated": false,
 }
 `;
