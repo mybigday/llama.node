@@ -17,6 +17,7 @@ import type {
   Tool,
   GGUFModelInfo,
 } from './binding'
+import { BUILD_NUMBER, BUILD_COMMIT } from './version'
 
 export * from './binding'
 
@@ -352,4 +353,9 @@ export const loadLlamaModelInfo = async (path: string): Promise<GGUFModelInfo> =
   mods[variant] ??= await loadModule(variant)
   refreshNativeLogSetup()
   return mods[variant].LlamaContext.loadModelInfo(path, modelInfoSkip)
+}
+
+export const BuildInfo = {
+  number: BUILD_NUMBER,
+  commit: BUILD_COMMIT,
 }
