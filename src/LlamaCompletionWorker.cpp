@@ -222,6 +222,13 @@ void LlamaCompletionWorker::Execute() {
 
     // sample the next token
     llama_token new_token_id = common_sampler_sample(sampling.get(), ctx, -1);
+
+    // is it an end of generation?
+    if (llama_vocab_is_eog(vocab, new_token_id)) {
+      _result.stopped_eos = true;
+      break;
+    }
+
     if (_next_token_uses_guide_token && !_guide_tokens.empty() &&
         !llama_vocab_is_control(vocab, new_token_id) &&
         !llama_vocab_is_eog(vocab, new_token_id)) {
@@ -258,12 +265,6 @@ void LlamaCompletionWorker::Execute() {
         delete value;
         jsCallback.Call({obj});
       });
-    }
-    // is it an end of generation?
-    if (llama_vocab_is_eog(vocab, new_token_id)) {
-      _result.stopped_eos = true;
-      // TODO: EOS token should be cut
-      break;
     }
     // check for stop words
     if (!_stop_words.empty()) {
