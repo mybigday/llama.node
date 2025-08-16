@@ -636,6 +636,15 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
           _sess, _templates, messages, chat_template, json_schema_str, tools_str,
           parallel_tool_calls, tool_choice, enable_thinking,
           add_generation_prompt, now_str, chat_template_kwargs);
+    } catch (const nlohmann::json_abi_v3_12_0::detail::parse_error& e) {
+      Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+      return env.Undefined();
+    } catch (const std::invalid_argument& e) {
+      Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+      return env.Undefined();
+    } catch (const std::runtime_error& e) {
+      Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+      return env.Undefined();
     } catch (const std::exception &e) {
       Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
       return env.Undefined();
