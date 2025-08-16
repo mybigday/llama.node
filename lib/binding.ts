@@ -167,6 +167,10 @@ export type LlamaCompletionResult = {
 
 export type LlamaCompletionToken = {
   token: string
+  content?: string
+  reasoning_content?: string
+  tool_calls?: ToolCall[]
+  accumulated_text?: string
 }
 
 export type TokenizeResult = {

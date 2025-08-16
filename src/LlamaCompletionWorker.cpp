@@ -55,6 +55,32 @@ LlamaCompletionWorker::~LlamaCompletionWorker() {
   }
 }
 
+LlamaCompletionWorker::PartialOutput LlamaCompletionWorker::getPartialOutput(const std::string &generated_text) {
+  PartialOutput result;
+  
+  try {
+    common_chat_syntax chat_syntax;
+    chat_syntax.format = static_cast<common_chat_format>(_chat_format);
+    chat_syntax.thinking_forced_open = _thinking_forced_open;
+    
+    // Set reasoning format using the common function
+    chat_syntax.reasoning_format = common_reasoning_format_from_name(_reasoning_format);
+    
+    chat_syntax.parse_tool_calls = true;
+    
+    // Use is_partial=true for streaming partial output
+    common_chat_msg parsed_msg = common_chat_parse(generated_text, true, chat_syntax);
+    
+    result.content = parsed_msg.content;
+    result.reasoning_content = parsed_msg.reasoning_content;
+    result.tool_calls = parsed_msg.tool_calls;
+  } catch (const std::exception &e) {
+    // If parsing fails, leave content empty - this is expected for partial content
+  }
+  
+  return result;
+}
+
 void LlamaCompletionWorker::Execute() {
   _sess->get_mutex().lock();
   const auto t_main_start = ggml_time_us();
@@ -257,12 +283,46 @@ void LlamaCompletionWorker::Execute() {
     if (_has_callback) {
       // TODO: When we got possible stop words (startsWith)
       // we should avoid calling the callback, wait for the next token
-      const char *c_token = strdup(token.c_str());
-      _tsfn.BlockingCall(c_token, [](Napi::Env env, Napi::Function jsCallback,
-                                     const char *value) {
+      struct TokenData {
+        std::string token;
+        std::string content;
+        std::string reasoning_content;
+        std::vector<common_chat_tool_call> tool_calls;
+        std::string accumulated_text;
+      };
+      
+      auto partial = getPartialOutput(_result.text);
+      TokenData *token_data = new TokenData{token, partial.content, partial.reasoning_content, partial.tool_calls, _result.text};
+      
+      _tsfn.BlockingCall(token_data, [](Napi::Env env, Napi::Function jsCallback,
+                                        TokenData *data) {
         auto obj = Napi::Object::New(env);
-        obj.Set("token", Napi::String::New(env, value));
-        delete value;
+        obj.Set("token", Napi::String::New(env, data->token));
+        if (!data->content.empty()) {
+          obj.Set("content", Napi::String::New(env, data->content));
+        }
+        if (!data->reasoning_content.empty()) {
+          obj.Set("reasoning_content", Napi::String::New(env, data->reasoning_content));
+        }
+        if (!data->tool_calls.empty()) {
+          Napi::Array tool_calls = Napi::Array::New(env);
+          for (size_t i = 0; i < data->tool_calls.size(); i++) {
+            const auto &tc = data->tool_calls[i];
+            Napi::Object tool_call = Napi::Object::New(env);
+            tool_call.Set("type", "function");
+            Napi::Object function = Napi::Object::New(env);
+            function.Set("name", tc.name);
+            function.Set("arguments", tc.arguments);
+            tool_call.Set("function", function);
+            if (!tc.id.empty()) {
+              tool_call.Set("id", tc.id);
+            }
+            tool_calls.Set(i, tool_call);
+          }
+          obj.Set("tool_calls", tool_calls);
+        }
+        obj.Set("accumulated_text", Napi::String::New(env, data->accumulated_text));
+        delete data;
         jsCallback.Call({obj});
       });
     }
@@ -317,15 +377,7 @@ void LlamaCompletionWorker::OnOK() {
 
       chat_syntax.thinking_forced_open = _thinking_forced_open;
 
-      if (_reasoning_format == "deepseek") {
-          chat_syntax.reasoning_format = COMMON_REASONING_FORMAT_DEEPSEEK;
-      } else if (_reasoning_format == "deepseek-legacy") {
-          chat_syntax.reasoning_format = COMMON_REASONING_FORMAT_DEEPSEEK_LEGACY;
-      } else if (_reasoning_format == "auto") {
-          chat_syntax.reasoning_format = COMMON_REASONING_FORMAT_AUTO;
-      } else {
-          chat_syntax.reasoning_format = COMMON_REASONING_FORMAT_NONE;
-      }
+      chat_syntax.reasoning_format = common_reasoning_format_from_name(_reasoning_format);
       common_chat_msg message = common_chat_parse(
           _result.text,
           false,

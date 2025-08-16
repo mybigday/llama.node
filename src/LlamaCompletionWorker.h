@@ -42,6 +42,14 @@ protected:
   void OnError(const Napi::Error &err) override;
 
 private:
+  struct PartialOutput {
+    std::string content = "";
+    std::string reasoning_content = "";
+    std::vector<common_chat_tool_call> tool_calls;
+  };
+
+  PartialOutput getPartialOutput(const std::string &generated_text);
+
   LlamaSessionPtr _sess;
   common_params _params;
   std::vector<std::string> _stop_words;
