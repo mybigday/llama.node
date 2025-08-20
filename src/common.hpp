@@ -461,7 +461,14 @@ processMediaPrompt(llama_context *ctx, mtmd_context *mtmd_ctx,
   }
 
   // Clear all KV cache entries after position n_past
-  llama_memory_seq_rm(llama_get_memory(ctx), 0, n_past, -1);
+  auto * kv = llama_get_memory(ctx);
+  bool clear_result = llama_memory_seq_rm(kv, 0, n_past, -1);
+  if (!clear_result) {
+    fprintf(stdout, "[DEBUG] llama_memory_seq_rm failed (likely using a non-Transformer model)! Trying full clear...");
+    llama_memory_clear(kv, false);
+    n_past = 0;
+    new_n_past = n_past;
+  }
 
   size_t num_chunks = mtmd_input_chunks_size(chunks);
 
