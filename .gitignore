@@ -11,3 +11,6 @@ tmp.sess
 *.node
 package-lock.json
 *-result.wav
+
+local-plan/
+local-plan-done/
