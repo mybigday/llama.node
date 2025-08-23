@@ -165,11 +165,11 @@ class LlamaContextWrapper {
       response_format?: CompletionResponseFormat
       tools?: Tool[]
       parallel_tool_calls?: boolean
-      tool_choice?: string,
-      enable_thinking?: boolean,
-      add_generation_prompt?: boolean,
-      now?: string | number,
-      chat_template_kwargs?: Record<string, string>,
+      tool_choice?: string
+      enable_thinking?: boolean
+      add_generation_prompt?: boolean
+      now?: string | number
+      chat_template_kwargs?: Record<string, string>
     },
   ): FormattedChatResult {
     const {
@@ -192,7 +192,15 @@ class LlamaContextWrapper {
       enable_thinking: params?.enable_thinking ?? true,
       add_generation_prompt: params?.add_generation_prompt,
       now: params?.now,
-      chat_template_kwargs: params?.chat_template_kwargs,
+      chat_template_kwargs: params?.chat_template_kwargs
+        ? Object.entries(params.chat_template_kwargs).reduce(
+            (acc, [key, value]) => {
+              acc[key] = JSON.stringify(value) // Each value is a stringified JSON object
+              return acc
+            },
+            {} as Record<string, any>,
+          )
+        : undefined,
     })
 
     if (!useJinja) {
@@ -218,18 +226,24 @@ class LlamaContextWrapper {
   ): Promise<LlamaCompletionResult> {
     const { messages, media_paths = options.media_paths } =
       this._formatMediaChat(options.messages)
-    return this.ctx.completion({
-      ...options,
-      messages,
-      media_paths: options.media_paths || media_paths,
-    }, callback || (() => {}))
+    return this.ctx.completion(
+      {
+        ...options,
+        messages,
+        media_paths: options.media_paths || media_paths,
+      },
+      callback || (() => {}),
+    )
   }
 
   stopCompletion(): void {
     return this.ctx.stopCompletion()
   }
 
-  tokenize(text: string, { media_paths }: { media_paths?: string[] } = {}): Promise<TokenizeResult> {
+  tokenize(
+    text: string,
+    { media_paths }: { media_paths?: string[] } = {},
+  ): Promise<TokenizeResult> {
     return this.ctx.tokenize(text, media_paths)
   }
 
@@ -241,16 +255,27 @@ class LlamaContextWrapper {
     return this.ctx.embedding(text)
   }
 
-  rerank(query: string, documents: string[], params?: RerankParams): Promise<Array<RerankResult & { document: string }>> {
-    return this.ctx.rerank(query, documents, params).then((results: RerankResult[]) => {
-      // Sort by score descending and add document text for convenience
-      return results
-        .map((result: RerankResult) => ({
-          ...result,
-          document: documents[result.index],
-        }))
-        .sort((a: RerankResult & { document: string }, b: RerankResult & { document: string }) => b.score - a.score)
-    })
+  rerank(
+    query: string,
+    documents: string[],
+    params?: RerankParams,
+  ): Promise<Array<RerankResult & { document: string }>> {
+    return this.ctx
+      .rerank(query, documents, params)
+      .then((results: RerankResult[]) => {
+        // Sort by score descending and add document text for convenience
+        return results
+          .map((result: RerankResult) => ({
+            ...result,
+            document: documents[result.index],
+          }))
+          .sort(
+            (
+              a: RerankResult & { document: string },
+              b: RerankResult & { document: string },
+            ) => b.score - a.score,
+          )
+      })
   }
 
   saveSession(path: string): Promise<void> {
@@ -277,10 +302,7 @@ class LlamaContextWrapper {
     return this.ctx.getLoadedLoraAdapters()
   }
 
-  initMultimodal(options: {
-    path: string
-    use_gpu?: boolean
-  }): boolean {
+  initMultimodal(options: { path: string; use_gpu?: boolean }): boolean {
     return this.ctx.initMultimodal(options)
   }
 
@@ -299,7 +321,7 @@ class LlamaContextWrapper {
     return this.ctx.getMultimodalSupport()
   }
 
-  initVocoder(options: { path: string, n_batch?: number }): boolean {
+  initVocoder(options: { path: string; n_batch?: number }): boolean {
     return this.ctx.initVocoder(options)
   }
 
@@ -311,7 +333,10 @@ class LlamaContextWrapper {
     return this.ctx.isVocoderEnabled()
   }
 
-  getFormattedAudioCompletion(speaker: string|null, text: string): {
+  getFormattedAudioCompletion(
+    speaker: string | null,
+    text: string,
+  ): {
     prompt: string
     grammar?: string
   } {
@@ -322,7 +347,7 @@ class LlamaContextWrapper {
     return this.ctx.getAudioCompletionGuideTokens(text)
   }
 
-  decodeAudioTokens(tokens: number[]|Int32Array): Promise<Float32Array> {
+  decodeAudioTokens(tokens: number[] | Int32Array): Promise<Float32Array> {
     return this.ctx.decodeAudioTokens(tokens)
   }
 }
@@ -348,7 +373,9 @@ const modelInfoSkip = [
   'tokenizer.ggml.scores',
 ]
 
-export const loadLlamaModelInfo = async (path: string): Promise<GGUFModelInfo> => {
+export const loadLlamaModelInfo = async (
+  path: string,
+): Promise<GGUFModelInfo> => {
   const variant = 'default'
   mods[variant] ??= await loadModule(variant)
   refreshNativeLogSetup()

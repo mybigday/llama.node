@@ -259,7 +259,6 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   params.numa =
       static_cast<ggml_numa_strategy>(get_option<uint32_t>(options, "numa", 0));
 
-  // n-cpu-moe parameter support
   int n_cpu_moe = get_option<int32_t>(options, "n_cpu_moe", 0);
   if (n_cpu_moe > 0) {
     static std::list<std::string> buft_overrides;
