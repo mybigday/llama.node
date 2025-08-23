@@ -59,6 +59,10 @@ export type LlamaModelOptions = {
    * Use full-size SWA cache (https://github.com/ggml-org/llama.cpp/pull/13194#issuecomment-2868343055)
    */
   swa_full?: boolean
+  /**
+   * Number of layers to keep MoE weights on CPU
+   */
+  n_cpu_moe?: number
   use_mlock?: boolean
   use_mmap?: boolean
   vocab_only?: boolean

@@ -15,6 +15,7 @@
 #include "llama-impl.h"
 
 #include <atomic>
+#include <list>
 #include <mutex>
 #include <queue>
 
@@ -257,6 +258,17 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   params.use_mmap = get_option<bool>(options, "use_mmap", true);
   params.numa =
       static_cast<ggml_numa_strategy>(get_option<uint32_t>(options, "numa", 0));
+
+  // n-cpu-moe parameter support
+  int n_cpu_moe = get_option<int32_t>(options, "n_cpu_moe", 0);
+  if (n_cpu_moe > 0) {
+    static std::list<std::string> buft_overrides;
+    for (int i = 0; i < n_cpu_moe; ++i) {
+      buft_overrides.push_back(string_format("blk\\.%d\\.ffn_(up|down|gate)_exps", i));
+      params.tensor_buft_overrides.push_back({buft_overrides.back().c_str(), ggml_backend_cpu_buffer_type()});
+    }
+    params.tensor_buft_overrides.push_back({nullptr, nullptr});
+  }
 
   llama_backend_init();
   llama_numa_init(params.numa);
