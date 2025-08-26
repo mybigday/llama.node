@@ -26,7 +26,8 @@ public:
                         const std::vector<std::string> &media_paths = {},
                         const std::vector<llama_token> &guide_tokens = {},
                         bool has_vocoder = false,
-                        tts_type tts_type_val = UNKNOWN);
+                        tts_type tts_type_val = UNKNOWN,
+                        const std::string &prefill_text = "");
 
   ~LlamaCompletionWorker();
 
@@ -58,6 +59,7 @@ private:
   std::string _reasoning_format;
   std::vector<std::string> _media_paths;
   std::vector<llama_token> _guide_tokens;
+  std::string _prefill_text;
   std::function<void()> _onComplete;
   bool _has_callback = false;
   bool _interrupted = false;

@@ -100,6 +100,11 @@ export type LlamaCompletionOptions = {
   enable_thinking?: boolean
   thinking_forced_open?: boolean
   prompt?: string
+  /**
+   * Text to prefill the response with.
+   * This text will be added to the beginning of the generated response.
+   */
+  prefill_text?: string
   temperature?: number
   top_k?: number
   top_p?: number

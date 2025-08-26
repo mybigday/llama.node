@@ -35,12 +35,14 @@ LlamaCompletionWorker::LlamaCompletionWorker(
     const std::vector<std::string> &media_paths,
     const std::vector<llama_token> &guide_tokens,
     bool has_vocoder,
-    tts_type tts_type_val)
+    tts_type tts_type_val,
+    const std::string &prefill_text)
     : AsyncWorker(info.Env()), Deferred(info.Env()), _sess(sess),
       _params(params), _stop_words(stop_words), _chat_format(chat_format),
       _thinking_forced_open(thinking_forced_open),
       _reasoning_format(reasoning_format),
       _media_paths(media_paths), _guide_tokens(guide_tokens),
+      _prefill_text(prefill_text),
       _has_vocoder(has_vocoder), _tts_type(tts_type_val) {
   if (!callback.IsEmpty()) {
     _tsfn = Napi::ThreadSafeFunction::New(info.Env(), callback,
@@ -68,8 +70,11 @@ LlamaCompletionWorker::PartialOutput LlamaCompletionWorker::getPartialOutput(con
     
     chat_syntax.parse_tool_calls = true;
     
+    // Combine prefill_text with generated_text for parsing
+    std::string full_text = _prefill_text + generated_text;
+    
     // Use is_partial=true for streaming partial output
-    common_chat_msg parsed_msg = common_chat_parse(generated_text, true, chat_syntax);
+    common_chat_msg parsed_msg = common_chat_parse(full_text, true, chat_syntax);
     
     result.content = parsed_msg.content;
     result.reasoning_content = parsed_msg.reasoning_content;
@@ -155,6 +160,7 @@ void LlamaCompletionWorker::Execute() {
   const int max_len = _params.n_predict < 0 ? std::numeric_limits<int>::max() : _params.n_predict;
   auto embd = _sess->tokens_ptr();
   embd->reserve(embd->size() + max_len);
+
 
   if (is_enc_dec) {
     if (n_input > 0) {
@@ -378,8 +384,11 @@ void LlamaCompletionWorker::OnOK() {
       chat_syntax.thinking_forced_open = _thinking_forced_open;
 
       chat_syntax.reasoning_format = common_reasoning_format_from_name(_reasoning_format);
+      
+      // Combine prefill_text with generated_text for final parsing
+      std::string full_text = _prefill_text + _result.text;
       common_chat_msg message = common_chat_parse(
-          _result.text,
+          full_text,
           false,
           chat_syntax
       );

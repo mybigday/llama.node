@@ -935,6 +935,8 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
         json_schema_to_grammar(json::parse(json_schema_str));
   }
 
+  std::string prefill_text = get_option<std::string>(options, "prefill_text", "");
+
   params.n_predict = get_option<int32_t>(options, "n_predict", -1);
   params.sampling.temp = get_option<float>(options, "temperature", 0.80f);
   params.sampling.top_k = get_option<int32_t>(options, "top_k", 40);
@@ -1007,7 +1009,7 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   auto *worker =
       new LlamaCompletionWorker(info, _sess, callback, params, stop_words,
                                 chat_format, thinking_forced_open, reasoning_format, media_paths, guide_tokens,
-                                _has_vocoder, _tts_type);
+                                _has_vocoder, _tts_type, prefill_text);
   worker->Queue();
   _wip = worker;
   worker->OnComplete([this]() { _wip = nullptr; });
