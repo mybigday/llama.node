@@ -1,22 +1,21 @@
 diff --git a/src/llama.cpp/common/chat.cpp b/src/llama.cpp/common/chat.cpp
-index 23d3828f9..ca48af00c 100644
+index 111b4a21b..16ce87672 100644
 --- a/src/llama.cpp/common/chat.cpp
 +++ b/src/llama.cpp/common/chat.cpp
 @@ -6,9 +6,6 @@
  #include "log.h"
  #include "regex-partial.h"
-
+ 
 -#include <minja/chat-template.hpp>
 -#include <minja/minja.hpp>
 -
  #include <cstdio>
  #include <exception>
  #include <iostream>
-@@ -122,16 +119,6 @@
-     }
+@@ -123,16 +120,6 @@ std::vector<common_chat_msg_diff> common_chat_msg_diff::compute_diffs(const comm
      return diffs;
  }
--
+ 
 -typedef minja::chat_template common_chat_template;
 -
 -struct common_chat_templates {
@@ -26,20 +25,20 @@ index 23d3828f9..ca48af00c 100644
 -    std::unique_ptr<common_chat_template> template_default; // always set (defaults to chatml)
 -    std::unique_ptr<common_chat_template> template_tool_use;
 -};
-
+-
  struct templates_params {
      json messages;
-@@ -784,8 +771,7 @@
+     json tools;
+@@ -784,8 +771,7 @@ static std::string apply(
      if (additional_context) {
          tmpl_inputs.extra_context.merge_patch(*additional_context);
      }
 -    // TODO: add flag to control date/time, if only for testing purposes.
 -    // tmpl_inputs.now = std::chrono::system_clock::now();
 +    tmpl_inputs.now = inputs.now;
-
+ 
      minja::chat_template_options tmpl_opts;
      // To avoid double BOS / EOS tokens, we're manually removing begining / trailing tokens
-
 diff --git a/src/llama.cpp/common/chat.h b/src/llama.cpp/common/chat.h
 index d1e480c91..437e64e29 100644
 --- a/src/llama.cpp/common/chat.h
@@ -65,10 +64,10 @@ index d1e480c91..437e64e29 100644
  struct common_chat_tool_call {
      std::string name;
 diff --git a/src/llama.cpp/common/common.cpp b/src/llama.cpp/common/common.cpp
-index 67dd5404f..909a97c66 100644
+index fdce1dcde..55aac3412 100644
 --- a/src/llama.cpp/common/common.cpp
 +++ b/src/llama.cpp/common/common.cpp
-@@ -1117,6 +1117,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
+@@ -1103,6 +1103,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
          mparams.n_gpu_layers = params.n_gpu_layers;
      }
  
@@ -77,10 +76,10 @@ index 67dd5404f..909a97c66 100644
      mparams.split_mode      = params.split_mode;
      mparams.tensor_split    = params.tensor_split;
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index 75596e6b3..0e04694c8 100644
+index 390dda5e5..f259ca785 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
-@@ -267,6 +267,7 @@ struct lr_opt {
+@@ -270,6 +270,7 @@ struct lr_opt {
  struct ggml_opt_optimizer_params common_opt_lr_pars(void * userdata);
  
  struct common_params {
