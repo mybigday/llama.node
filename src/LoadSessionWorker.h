@@ -1,9 +1,10 @@
 #include "common.hpp"
+#include "rn-llama.h"
 
 class LoadSessionWorker : public Napi::AsyncWorker,
                           public Napi::Promise::Deferred {
 public:
-  LoadSessionWorker(const Napi::CallbackInfo &info, LlamaSessionPtr &sess);
+  LoadSessionWorker(const Napi::CallbackInfo &info, rnllama::llama_rn_context* rn_ctx);
 
 protected:
   void Execute();
@@ -12,6 +13,6 @@ protected:
 
 private:
   std::string _path;
-  LlamaSessionPtr _sess;
+  rnllama::llama_rn_context* _rn_ctx;
   size_t count = 0;
 };

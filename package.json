@@ -115,6 +115,9 @@
     ],
     "testMatch": [
       "**/*.test.ts"
+    ],
+    "testPathIgnorePatterns": [
+      "<rootDir>/src/llama.rn/"
     ]
   },
   "prettier": {

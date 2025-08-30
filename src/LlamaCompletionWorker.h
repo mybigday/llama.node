@@ -1,7 +1,7 @@
 #pragma once
 
 #include "common.hpp"
-#include "tts_utils.h"
+#include "rn-llama.h"
 #include <atomic>
 #include <functional>
 #include <napi.h>
@@ -17,7 +17,7 @@ struct CompletionResult {
 class LlamaCompletionWorker : public Napi::AsyncWorker,
                               public Napi::Promise::Deferred {
 public:
-  LlamaCompletionWorker(const Napi::CallbackInfo &info, LlamaSessionPtr &sess,
+  LlamaCompletionWorker(const Napi::CallbackInfo &info, rnllama::llama_rn_context* rn_ctx,
                         Napi::Function callback, common_params params,
                         std::vector<std::string> stop_words,
                         int32_t chat_format,
@@ -26,7 +26,7 @@ public:
                         const std::vector<std::string> &media_paths = {},
                         const std::vector<llama_token> &guide_tokens = {},
                         bool has_vocoder = false,
-                        tts_type tts_type_val = UNKNOWN,
+                        rnllama::tts_type tts_type_val = rnllama::UNKNOWN,
                         const std::string &prefill_text = "");
 
   ~LlamaCompletionWorker();
@@ -43,15 +43,8 @@ protected:
   void OnError(const Napi::Error &err) override;
 
 private:
-  struct PartialOutput {
-    std::string content = "";
-    std::string reasoning_content = "";
-    std::vector<common_chat_tool_call> tool_calls;
-  };
 
-  PartialOutput getPartialOutput(const std::string &generated_text);
-
-  LlamaSessionPtr _sess;
+  rnllama::llama_rn_context* _rn_ctx;
   common_params _params;
   std::vector<std::string> _stop_words;
   int32_t _chat_format;
@@ -66,7 +59,7 @@ private:
   Napi::ThreadSafeFunction _tsfn;
   bool _next_token_uses_guide_token = true;
   bool _has_vocoder;
-  tts_type _tts_type;
+  rnllama::tts_type _tts_type;
   struct {
     size_t tokens_evaluated = 0;
     size_t tokens_predicted = 0;

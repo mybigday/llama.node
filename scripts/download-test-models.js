@@ -103,7 +103,7 @@ async function main() {
     // {
     //   path: path.join(testDir, 'mmproj-ultravox-v0_5-llama-3_2-1b-f16.gguf'),
     //   url: 'https://huggingface.co/ggml-org/ultravox-v0_5-llama-3_2-1b-GGUF/resolve/main/mmproj-ultravox-v0_5-llama-3_2-1b-f16.gguf?download=true'
-    // }
+    // },
     // // TTS
     // {
     //   path: path.join(testDir, 'OuteTTS-0.3-500M-Q4_K_M.gguf'),

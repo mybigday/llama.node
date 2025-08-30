@@ -1,9 +1,10 @@
 #include "common.hpp"
+#include "rn-llama.h"
 
 class SaveSessionWorker : public Napi::AsyncWorker,
                           public Napi::Promise::Deferred {
 public:
-  SaveSessionWorker(const Napi::CallbackInfo &info, LlamaSessionPtr &sess);
+  SaveSessionWorker(const Napi::CallbackInfo &info, rnllama::llama_rn_context* rn_ctx);
 
 protected:
   void Execute();
@@ -12,5 +13,5 @@ protected:
 
 private:
   std::string _path;
-  LlamaSessionPtr _sess;
+  rnllama::llama_rn_context* _rn_ctx;
 };

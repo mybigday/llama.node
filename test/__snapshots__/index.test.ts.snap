@@ -13,7 +13,7 @@ exports[`basic completion 1`] = `
   "text": "wallwallwallwallwallwallwallwallwallwall",
   "timings": "Timings: (8) keys",
   "tokens_evaluated": 18,
-  "tokens_predicted": 10,
+  "tokens_predicted": 9,
   "truncated": false,
 }
 `;
@@ -83,7 +83,7 @@ exports[`completion with response_format: json_object 1`] = `
   "text": "{}
 		              			",
   "timings": "Timings: (8) keys",
-  "tokens_evaluated": 3,
+  "tokens_evaluated": 12,
   "tokens_predicted": 3,
   "truncated": false,
 }
@@ -103,7 +103,7 @@ exports[`completion with response_format: json_schema 1`] = `
  				 				 				 				",
   "timings": "Timings: (8) keys",
   "tokens_evaluated": 13,
-  "tokens_predicted": 5,
+  "tokens_predicted": 4,
   "truncated": false,
 }
 `;
@@ -118,10 +118,10 @@ exports[`completion with t5-like model 1`] = `
   "stopped_limited": false,
   "stopped_words": false,
   "stopping_word": "",
-  "text": " How old sind er?",
+  "text": " How old sind ?",
   "timings": "Timings: (8) keys",
-  "tokens_evaluated": 17,
-  "tokens_predicted": 6,
+  "tokens_evaluated": 16,
+  "tokens_predicted": 5,
   "truncated": false,
 }
 `;
@@ -246,6 +246,9 @@ exports[`loadModelInfo 1`] = `
 
 exports[`tokeneize & detokenize & getFormattedChat 1`] = `
 {
+  "bitmap_hashes": [],
+  "chunk_pos": [],
+  "chunk_pos_media": [],
   "has_media": false,
   "tokens": Int32Array [
     12805,
@@ -366,6 +369,9 @@ exports[`works fine with vocab_only: model info 1`] = `
 
 exports[`works fine with vocab_only: tokenize 1`] = `
 {
+  "bitmap_hashes": [],
+  "chunk_pos": [],
+  "chunk_pos_media": [],
   "has_media": false,
   "tokens": Int32Array [
     12805,
