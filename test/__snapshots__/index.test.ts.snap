@@ -118,10 +118,10 @@ exports[`completion with t5-like model 1`] = `
   "stopped_limited": false,
   "stopped_words": false,
   "stopping_word": "",
-  "text": " How old sind ?",
+  "text": " How old sind er?",
   "timings": "Timings: (8) keys",
-  "tokens_evaluated": 16,
-  "tokens_predicted": 5,
+  "tokens_evaluated": 17,
+  "tokens_predicted": 6,
   "truncated": false,
 }
 `;
