@@ -145,6 +145,12 @@ file(
     "src/LoadSessionWorker.h"
     "src/SaveSessionWorker.cpp"
     "src/SaveSessionWorker.h"
+    "src/TokenizeWorker.cpp"
+    "src/TokenizeWorker.h"
+    "src/DetokenizeWorker.cpp"
+    "src/DetokenizeWorker.h"
+    "src/DecodeAudioTokenWorker.cpp"
+    "src/DecodeAudioTokenWorker.h"
     "src/rn-llama/*"
 )
 

@@ -5,6 +5,9 @@
 #include "LlamaCompletionWorker.h"
 #include "LoadSessionWorker.h"
 #include "SaveSessionWorker.h"
+#include "TokenizeWorker.h"
+#include "DetokenizeWorker.h"
+#include "DecodeAudioTokenWorker.h"
 #include "ggml.h"
 #include "gguf.h"
 #include "json-schema-to-grammar.h"
@@ -946,34 +949,10 @@ Napi::Value LlamaContext::Tokenize(const Napi::CallbackInfo &info) {
       media_paths.push_back(media_paths_array.Get(i).ToString().Utf8Value());
     }
   }
-  // Use rn-llama tokenize API directly
-  auto result = _rn_ctx->tokenize(text, media_paths);
   
-  Napi::Object ret = Napi::Object::New(env);
-  auto tokens = Napi::Int32Array::New(env, result.tokens.size());
-  memcpy(tokens.Data(), result.tokens.data(), result.tokens.size() * sizeof(int32_t));
-  ret.Set("tokens", tokens);
-  ret.Set("has_media", Napi::Boolean::New(env, result.has_media));
-  
-  auto bitmap_hashes = Napi::Array::New(env, result.bitmap_hashes.size());
-  for (size_t i = 0; i < result.bitmap_hashes.size(); i++) {
-    bitmap_hashes.Set(i, Napi::String::New(env, result.bitmap_hashes[i]));
-  }
-  ret.Set("bitmap_hashes", bitmap_hashes);
-  
-  auto chunk_pos = Napi::Array::New(env, result.chunk_pos.size());
-  for (size_t i = 0; i < result.chunk_pos.size(); i++) {
-    chunk_pos.Set(i, Napi::Number::New(env, result.chunk_pos[i]));
-  }
-  ret.Set("chunk_pos", chunk_pos);
-  
-  auto chunk_pos_media = Napi::Array::New(env, result.chunk_pos_media.size());
-  for (size_t i = 0; i < result.chunk_pos_media.size(); i++) {
-    chunk_pos_media.Set(i, Napi::Number::New(env, result.chunk_pos_media[i]));
-  }
-  ret.Set("chunk_pos_media", chunk_pos_media);
-  
-  return ret;
+  auto *worker = new TokenizeWorker(info, _rn_ctx, text, media_paths);
+  worker->Queue();
+  return worker->Promise();
 }
 
 // detokenize(tokens: number[]): Promise<string>
@@ -991,22 +970,10 @@ Napi::Value LlamaContext::Detokenize(const Napi::CallbackInfo &info) {
   for (size_t i = 0; i < tokens.Length(); i++) {
     token_ids.push_back(tokens.Get(i).ToNumber().Int32Value());
   }
-  // Use direct detokenize through rn-llama context
-  if (!_rn_ctx->model) {
-    Napi::TypeError::New(env, "Model not loaded").ThrowAsJavaScriptException();
-  }
-  const llama_vocab *vocab = llama_model_get_vocab(_rn_ctx->model);
-  std::string result;
-  result.resize(std::max(result.capacity(), token_ids.size()));
-  int32_t n_chars = llama_detokenize(vocab, token_ids.data(), (int32_t)token_ids.size(), &result[0], (int32_t)result.size(), false, false);
-  if (n_chars < 0) {
-    result.resize(-n_chars);
-    n_chars = llama_detokenize(vocab, token_ids.data(), (int32_t)token_ids.size(), &result[0], (int32_t)result.size(), false, false);
-  }
-  if (n_chars >= 0) {
-    result.resize(n_chars);
-  }
-  return Napi::String::New(env, result);
+  
+  auto *worker = new DetokenizeWorker(info, _rn_ctx, token_ids);
+  worker->Queue();
+  return worker->Promise();
 }
 
 // embedding(text: string): Promise<EmbeddingResult>
@@ -1374,24 +1341,8 @@ Napi::Value LlamaContext::DecodeAudioTokens(const Napi::CallbackInfo &info) {
         .ThrowAsJavaScriptException();
     return env.Undefined();
   }
-  if (!_rn_ctx->tts_wrapper) {
-    Napi::Error::New(env, "Vocoder not initialized")
-        .ThrowAsJavaScriptException();
-    return env.Undefined();
-  }
   
-  // Convert to llama_token vector - rn-tts handles token adjustment internally
-  std::vector<llama_token> llama_tokens;
-  for (const auto& token : tokens) {
-    llama_tokens.push_back(token);
-  }
-  
-  // Use the rn-tts API instead of directly accessing the worker
-  auto audio_data = _rn_ctx->tts_wrapper->decodeAudioTokens(_rn_ctx, llama_tokens);
-  
-  // Create Float32Array and copy the data
-  auto result = Napi::Float32Array::New(env, audio_data.size());
-  memcpy(result.Data(), audio_data.data(), audio_data.size() * sizeof(float));
-  
-  return result;
+  auto *worker = new DecodeAudioTokenWorker(info, _rn_ctx, tokens);
+  worker->Queue();
+  return worker->Promise();
 }
