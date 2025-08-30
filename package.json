@@ -13,7 +13,7 @@
     "build": "npx cmake-js build",
     "build-js": "tsc",
     "prepack": "npm run build-js",
-    "prebuild-native": "node scripts/generate_win_dynamic_load.js 6",
+    "prebuild-native": "node scripts/copy-rn-llama-source.js && node scripts/generate_win_dynamic_load.js 6",
     "build-native": "cmake-js compile",
     "clean": "rimraf build",
     "prepare": "husky",
