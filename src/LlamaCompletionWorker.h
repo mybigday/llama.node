@@ -1,7 +1,7 @@
 #pragma once
 
 #include "common.hpp"
-#include "rn-llama.h"
+#include "rn-llama/rn-llama.h"
 #include <atomic>
 #include <functional>
 #include <napi.h>

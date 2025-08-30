@@ -1,5 +1,5 @@
 #include "DisposeWorker.h"
-#include "rn-completion.h"
+#include "rn-llama/rn-completion.h"
 
 DisposeWorker::DisposeWorker(const Napi::CallbackInfo &info,
                              rnllama::llama_rn_context* rn_ctx, rnllama::llama_rn_context** parent_ptr)

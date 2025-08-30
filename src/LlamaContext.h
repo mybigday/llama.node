@@ -1,9 +1,9 @@
 #include "common.hpp"
 #include "tools/mtmd/clip.h"
 #include "tools/mtmd/mtmd.h"
-#include "rn-llama.h"
-#include "rn-completion.h"
-#include "rn-tts.h"
+#include "rn-llama/rn-llama.h"
+#include "rn-llama/rn-completion.h"
+#include "rn-llama/rn-tts.h"
 
 using namespace rnllama;
 

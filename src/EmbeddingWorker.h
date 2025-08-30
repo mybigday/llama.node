@@ -1,5 +1,5 @@
 #include "common.hpp"
-#include "rn-llama.h"
+#include "rn-llama/rn-llama.h"
 #include <vector>
 
 struct EmbeddingResult {

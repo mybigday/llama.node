@@ -145,15 +145,7 @@ file(
     "src/LoadSessionWorker.h"
     "src/SaveSessionWorker.cpp"
     "src/SaveSessionWorker.h"
-    "src/anyascii.h"
-    "src/anyascii.c"
-    "src/rn-llama.cpp"
-    "src/rn-llama.h"
-    "src/rn-completion.cpp"
-    "src/rn-completion.h"
-    "src/rn-mtmd.hpp"
-    "src/rn-tts.cpp"
-    "src/rn-tts.h"
+    "src/rn-llama/*"
 )
 
 if (NOT MSVC AND CMAKE_SYSTEM_NAME STREQUAL "Windows")

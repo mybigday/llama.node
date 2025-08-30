@@ -1,6 +1,6 @@
 #include "LlamaCompletionWorker.h"
 #include "LlamaContext.h"
-#include "rn-completion.h"
+#include "rn-llama/rn-completion.h"
 #include <limits>
 
 

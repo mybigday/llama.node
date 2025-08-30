@@ -14,7 +14,10 @@ echo -e "${GREEN}Starting copy of llama.rn source files...${NC}"
 
 # Define source and destination directories
 SRC_DIR="src/llama.rn/cpp"
-DEST_DIR="src"
+DEST_DIR="src/rn-llama"
+
+mkdir -p "$DEST_DIR"
+rm -rf "$DEST_DIR"/*
 
 # Files to copy from llama.rn/cpp
 FILES_TO_COPY=(
