@@ -35,7 +35,7 @@ jobs:
           path: bin
           pattern: bin-*
           merge-multiple: true
-      - run: npm install --omit=optional
+      - run: npm run copy-rn-llama-source && npm install --omit=optional
       - run: npm run build
       - name: Publish to NPM
         env:

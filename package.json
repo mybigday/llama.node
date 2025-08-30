@@ -5,7 +5,8 @@
   "description": "An another Node binding of llama.cpp",
   "main": "lib/index.js",
   "scripts": {
-    "bootstrap": "npm install --omit=optional",
+    "copy-rn-llama-source": "node scripts/copy-rn-llama-source.js",
+    "bootstrap": "npm run copy-rn-llama-source && npm install --omit=optional",
     "postinstall": "node scripts/check.js",
     "pretest": "node scripts/download-test-models.js",
     "test": "jest",
@@ -13,7 +14,7 @@
     "build": "npx cmake-js build",
     "build-js": "tsc",
     "prepack": "npm run build-js",
-    "prebuild-native": "node scripts/copy-rn-llama-source.js && node scripts/generate_win_dynamic_load.js 6",
+    "prebuild-native": "node scripts/generate_win_dynamic_load.js 6",
     "build-native": "cmake-js compile",
     "clean": "rimraf build",
     "prepare": "husky",
