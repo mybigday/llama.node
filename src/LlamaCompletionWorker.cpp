@@ -100,7 +100,7 @@ void LlamaCompletionWorker::Execute() {
     
     // Main completion loop
     int token_count = 0;
-    int max_tokens = _params.n_predict > 0 ? _params.n_predict : 100; // Safety limit
+    const int max_tokens = _params.n_predict < 0 ? std::numeric_limits<int>::max() : _params.n_predict;
     while (completion->has_next_token && !_interrupted && token_count < max_tokens) {
       // Get next token using rn-llama completion
       rnllama::completion_token_output token_output = completion->doCompletion();
