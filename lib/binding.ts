@@ -149,6 +149,21 @@ export type LlamaCompletionOptions = {
    * Help prevent hallucinations by forcing the TTS to use the correct words.
    */
   guide_tokens?: number[] | Int32Array
+  /**
+   * Number of top token probabilities to return for each generated token.
+   * When > 0, completion_probabilities will be included in streaming callbacks and final result.
+   */
+  n_probs?: number
+}
+
+export type TokenProbability = {
+  tok_str: string
+  prob: number
+}
+
+export type CompletionProbability = {
+  content: string
+  probs: TokenProbability[]
 }
 
 export type LlamaCompletionResult = {
@@ -162,6 +177,7 @@ export type LlamaCompletionResult = {
   context_full: boolean
   interrupted: boolean
   audio_tokens?: Array<number>
+  completion_probabilities?: CompletionProbability[]
   timings: {
     prompt_n: number
     prompt_ms: number
@@ -180,6 +196,7 @@ export type LlamaCompletionToken = {
   reasoning_content?: string
   tool_calls?: ToolCall[]
   accumulated_text?: string
+  completion_probabilities?: CompletionProbability[]
 }
 
 export type TokenizeResult = {

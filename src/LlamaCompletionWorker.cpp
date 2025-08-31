@@ -3,6 +3,31 @@
 #include "rn-llama/rn-completion.h"
 #include <limits>
 
+// Helper function to convert token probabilities to JavaScript format
+Napi::Array TokenProbsToArray(Napi::Env env, llama_context* ctx, const std::vector<rnllama::completion_token_output>& probs) {
+  Napi::Array result = Napi::Array::New(env);
+  for (size_t i = 0; i < probs.size(); i++) {
+    const auto &prob = probs[i];
+    Napi::Object token_obj = Napi::Object::New(env);
+    
+    std::string token_str = common_token_to_piece(ctx, prob.tok);
+    token_obj.Set("content", Napi::String::New(env, token_str));
+    
+    Napi::Array token_probs = Napi::Array::New(env);
+    for (size_t j = 0; j < prob.probs.size(); j++) {
+      const auto &p = prob.probs[j];
+      Napi::Object prob_obj = Napi::Object::New(env);
+      std::string tok_str = common_token_to_piece(ctx, p.tok);
+      prob_obj.Set("tok_str", Napi::String::New(env, tok_str));
+      prob_obj.Set("prob", Napi::Number::New(env, p.prob));
+      token_probs.Set(j, prob_obj);
+    }
+    token_obj.Set("probs", token_probs);
+    result.Set(i, token_obj);
+  }
+  return result;
+}
+
 
 LlamaCompletionWorker::LlamaCompletionWorker(
     const Napi::CallbackInfo &info, rnllama::llama_rn_context* rn_ctx,
@@ -132,15 +157,35 @@ void LlamaCompletionWorker::Execute() {
           std::string reasoning_content;
           std::vector<common_chat_tool_call> tool_calls;
           std::string accumulated_text;
+          std::vector<rnllama::completion_token_output> completion_probabilities;
+          llama_context* ctx;
         };
         
         auto partial_output = completion->parseChatOutput(true);
+        
+        // Extract completion probabilities if n_probs > 0, similar to iOS implementation
+        std::vector<rnllama::completion_token_output> probs_output;
+        if (_rn_ctx->params.sampling.n_probs > 0) {
+          const std::vector<llama_token> to_send_toks = common_tokenize(_rn_ctx->ctx, token_text, false);
+          size_t probs_pos = std::min(_sent_token_probs_index, completion->generated_token_probs.size());
+          size_t probs_stop_pos = std::min(_sent_token_probs_index + to_send_toks.size(), completion->generated_token_probs.size());
+          if (probs_pos < probs_stop_pos) {
+            probs_output = std::vector<rnllama::completion_token_output>(
+              completion->generated_token_probs.begin() + probs_pos, 
+              completion->generated_token_probs.begin() + probs_stop_pos
+            );
+          }
+          _sent_token_probs_index = probs_stop_pos;
+        }
+        
         TokenData *token_data = new TokenData{
           token_text, 
           partial_output.content, 
           partial_output.reasoning_content, 
           partial_output.tool_calls, 
-          partial_output.accumulated_text
+          partial_output.accumulated_text,
+          probs_output,
+          _rn_ctx->ctx
         };
         
         _tsfn.BlockingCall(token_data, [](Napi::Env env, Napi::Function jsCallback,
@@ -171,6 +216,12 @@ void LlamaCompletionWorker::Execute() {
             obj.Set("tool_calls", tool_calls);
           }
           obj.Set("accumulated_text", Napi::String::New(env, data->accumulated_text));
+          
+          // Add completion_probabilities if available
+          if (!data->completion_probabilities.empty()) {
+            obj.Set("completion_probabilities", TokenProbsToArray(env, data->ctx, data->completion_probabilities));
+          }
+          
           delete data;
           jsCallback.Call({obj});
         });
@@ -279,6 +330,11 @@ void LlamaCompletionWorker::OnOK() {
       audio_tokens.Set(i, Napi::Number::New(env, _result.audio_tokens[i]));
     }
     result.Set("audio_tokens", audio_tokens);
+  }
+
+  // Add completion_probabilities to final result
+  if (_rn_ctx->params.sampling.n_probs > 0 && _rn_ctx->completion != nullptr && !_rn_ctx->completion->generated_token_probs.empty()) {
+    result.Set("completion_probabilities", TokenProbsToArray(env, _rn_ctx->ctx, _rn_ctx->completion->generated_token_probs));
   }
 
   auto ctx = _rn_ctx->ctx;

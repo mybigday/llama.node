@@ -879,6 +879,7 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   params.n_keep = get_option<int32_t>(options, "n_keep", 0);
   params.sampling.seed =
       get_option<int32_t>(options, "seed", LLAMA_DEFAULT_SEED);
+  params.sampling.n_probs = get_option<int32_t>(options, "n_probs", 0);
 
   // guide_tokens
   std::vector<llama_token> guide_tokens;

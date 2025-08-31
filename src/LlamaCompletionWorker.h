@@ -60,6 +60,7 @@ private:
   bool _next_token_uses_guide_token = true;
   bool _has_vocoder;
   rnllama::tts_type _tts_type;
+  size_t _sent_token_probs_index = 0;
   struct {
     size_t tokens_evaluated = 0;
     size_t tokens_predicted = 0;
