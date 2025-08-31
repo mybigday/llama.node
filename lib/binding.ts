@@ -27,7 +27,8 @@ export type LlamaModelOptions = {
   n_ubatch?: number
   n_threads?: number
   n_gpu_layers?: number
-  flash_attn?: boolean
+  flash_attn_type?: 'auto' | 'on' | 'off'
+  flash_attn?: boolean // Deprecated: use flash_attn_type instead
   cache_type_k?:
     | 'f16'
     | 'f32'
