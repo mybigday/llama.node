@@ -25,10 +25,6 @@ void LoadSessionWorker::Execute() {
     
     tokens.resize(count);
     
-    // Update the completion context with loaded tokens
-    if (_rn_ctx->completion == nullptr) {
-      _rn_ctx->completion = new rnllama::llama_rn_context_completion(_rn_ctx);
-    }
     _rn_ctx->completion->embd = std::move(tokens);
     _rn_ctx->completion->n_past = count;
   } catch (const std::exception &e) {

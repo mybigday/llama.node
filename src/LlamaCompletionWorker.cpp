@@ -56,12 +56,7 @@ void LlamaCompletionWorker::Execute() {
       }
       return;
     }
-    
-    // Initialize completion context if not already created
-    if (_rn_ctx->completion == nullptr) {
-      _rn_ctx->completion = new rnllama::llama_rn_context_completion(_rn_ctx);
-    }
-    
+
     auto completion = _rn_ctx->completion;
     
     // Prepare completion context

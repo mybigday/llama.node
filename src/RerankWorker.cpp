@@ -10,11 +10,6 @@ RerankWorker::RerankWorker(const Napi::CallbackInfo &info,
 
 void RerankWorker::Execute() {
   try {
-    // Use rn-completion API for reranking
-    if (_rn_ctx->completion == nullptr) {
-      _rn_ctx->completion = new rnllama::llama_rn_context_completion(_rn_ctx);
-    }
-    
     std::vector<float> scores = _rn_ctx->completion->rerank(_query, _documents);
     _result.scores = scores;
   } catch (const std::exception &e) {

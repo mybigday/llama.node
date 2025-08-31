@@ -9,28 +9,10 @@ EmbeddingWorker::EmbeddingWorker(const Napi::CallbackInfo &info,
 
 void EmbeddingWorker::Execute() {
   try {
-    // Clear memory and tokenize text
-    llama_memory_clear(llama_get_memory(_rn_ctx->ctx), true);
-    auto tokens = ::common_tokenize(_rn_ctx->ctx, _text, true);
-    
-    // Add SEP token if not present
-    auto vocab = llama_model_get_vocab(_rn_ctx->model);
-    if (tokens.empty() || tokens.back() != llama_vocab_sep(vocab)) {
-      tokens.push_back(llama_vocab_sep(vocab));
-    }
-    
-    // Decode tokens to compute embeddings
-    int ret = llama_decode(_rn_ctx->ctx, llama_batch_get_one(tokens.data(), tokens.size()));
-    if (ret < 0) {
-      SetError("Failed to inference, code: " + std::to_string(ret));
-      return;
-    }
-    
-    // Get embeddings using rn-completion API
-    if (_rn_ctx->completion == nullptr) {
-      _rn_ctx->completion = new rnllama::llama_rn_context_completion(_rn_ctx);
-    }
-    _result.embedding = _rn_ctx->completion->getEmbedding(_params);
+    _rn_ctx->params.prompt = _text;
+    _rn_ctx->params.n_predict = 0;
+
+    _result.embedding = _rn_ctx->completion->embedding(_params);
   } catch (const std::exception &e) {
     SetError(e.what());
   }
