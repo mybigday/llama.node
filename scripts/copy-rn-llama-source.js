@@ -83,7 +83,7 @@ try {
     });
 
     log('All llama.rn source files copied and processed successfully!', 'green');
-    log('Note: lm_ and LM_ prefixes have been removed from all copied files.', 'yellow');
+    log('Note: lm_ggml and LM_GGML prefixes have been removed from all copied files.', 'yellow');
 
 } catch (error) {
     log(`Error: ${error.message}`, 'red');

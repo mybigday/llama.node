@@ -134,8 +134,7 @@ void LlamaCompletionWorker::Execute() {
           std::string accumulated_text;
         };
         
-        // Get parsed partial output using rn-llama
-        auto partial_output = completion->getPartialOutput(token_text);
+        auto partial_output = completion->parseChatOutput(true);
         TokenData *token_data = new TokenData{
           token_text, 
           partial_output.content, 
@@ -217,6 +216,7 @@ void LlamaCompletionWorker::Execute() {
 void LlamaCompletionWorker::OnOK() {
   auto env = Napi::AsyncWorker::Env();
   auto result = Napi::Object::New(env);
+  result.Set("chat_format", Napi::Number::New(env, _chat_format));
   result.Set("tokens_evaluated",
              Napi::Number::New(env, _result.tokens_evaluated));
   result.Set("tokens_predicted", Napi::Number::New(Napi::AsyncWorker::Env(),
@@ -239,14 +239,10 @@ void LlamaCompletionWorker::OnOK() {
   std::string content;
   if (!_interrupted && _rn_ctx->completion != nullptr) {
     try {
-      // Get final parsed output from rn-llama completion context
-      auto final_output = _rn_ctx->completion->getPartialOutput("");
-      
+      auto final_output = _rn_ctx->completion->parseChatOutput(false);
       reasoning_content = final_output.reasoning_content;
       content = final_output.content;
-      
-      result.Set("chat_format", Napi::Number::New(env, _chat_format));
-      
+
       // Convert tool calls to JavaScript format
       for (size_t i = 0; i < final_output.tool_calls.size(); i++) {
         const auto &tc = final_output.tool_calls[i];
