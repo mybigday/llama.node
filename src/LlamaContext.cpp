@@ -177,8 +177,6 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
   exports.Set("LlamaContext", func);
 }
 
-// kv_cache_type_from_str is now provided by rn-llama
-
 static int32_t pooling_type_from_str(const std::string &s) {
   if (s == "none")
     return LLAMA_POOLING_TYPE_NONE;
