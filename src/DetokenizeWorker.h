@@ -16,5 +16,5 @@ protected:
 private:
   rnllama::llama_rn_context* _rn_ctx;
   std::vector<int32_t> _tokens;
-  std::string _result;
+  std::string _text;
 };

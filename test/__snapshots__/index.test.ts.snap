@@ -246,9 +246,6 @@ exports[`loadModelInfo 1`] = `
 
 exports[`tokeneize & detokenize & getFormattedChat 1`] = `
 {
-  "bitmap_hashes": [],
-  "chunk_pos": [],
-  "chunk_pos_media": [],
   "has_media": false,
   "tokens": Int32Array [
     12805,
@@ -369,9 +366,6 @@ exports[`works fine with vocab_only: model info 1`] = `
 
 exports[`works fine with vocab_only: tokenize 1`] = `
 {
-  "bitmap_hashes": [],
-  "chunk_pos": [],
-  "chunk_pos_media": [],
   "has_media": false,
   "tokens": Int32Array [
     12805,

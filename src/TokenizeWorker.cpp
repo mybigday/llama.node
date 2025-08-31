@@ -34,24 +34,26 @@ void TokenizeWorker::OnOK() {
   memcpy(tokens.Data(), _result.tokens.data(), _result.tokens.size() * sizeof(int32_t));
   ret.Set("tokens", tokens);
   ret.Set("has_media", Napi::Boolean::New(env, _result.has_media));
-  
-  auto bitmap_hashes = Napi::Array::New(env, _result.bitmap_hashes.size());
-  for (size_t i = 0; i < _result.bitmap_hashes.size(); i++) {
-    bitmap_hashes.Set(i, Napi::String::New(env, _result.bitmap_hashes[i]));
+
+  if (_result.has_media) {
+    auto bitmap_hashes = Napi::Array::New(env, _result.bitmap_hashes.size());
+    for (size_t i = 0; i < _result.bitmap_hashes.size(); i++) {
+      bitmap_hashes.Set(i, Napi::String::New(env, _result.bitmap_hashes[i]));
+    }
+    ret.Set("bitmap_hashes", bitmap_hashes);
+    
+    auto chunk_pos = Napi::Array::New(env, _result.chunk_pos.size());
+    for (size_t i = 0; i < _result.chunk_pos.size(); i++) {
+      chunk_pos.Set(i, Napi::Number::New(env, static_cast<double>(_result.chunk_pos[i])));
+    }
+    ret.Set("chunk_pos", chunk_pos);
+    
+    auto chunk_pos_media = Napi::Array::New(env, _result.chunk_pos_media.size());
+    for (size_t i = 0; i < _result.chunk_pos_media.size(); i++) {
+      chunk_pos_media.Set(i, Napi::Number::New(env, static_cast<double>(_result.chunk_pos_media[i])));
+    }
+    ret.Set("chunk_pos_media", chunk_pos_media);
   }
-  ret.Set("bitmap_hashes", bitmap_hashes);
-  
-  auto chunk_pos = Napi::Array::New(env, _result.chunk_pos.size());
-  for (size_t i = 0; i < _result.chunk_pos.size(); i++) {
-    chunk_pos.Set(i, Napi::Number::New(env, static_cast<double>(_result.chunk_pos[i])));
-  }
-  ret.Set("chunk_pos", chunk_pos);
-  
-  auto chunk_pos_media = Napi::Array::New(env, _result.chunk_pos_media.size());
-  for (size_t i = 0; i < _result.chunk_pos_media.size(); i++) {
-    chunk_pos_media.Set(i, Napi::Number::New(env, static_cast<double>(_result.chunk_pos_media[i])));
-  }
-  ret.Set("chunk_pos_media", chunk_pos_media);
   
   Napi::Promise::Deferred::Resolve(ret);
 }
