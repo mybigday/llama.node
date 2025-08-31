@@ -309,7 +309,7 @@ export interface LlamaContext {
   stopCompletion(): void
   tokenize(text: string, media_paths?: string[]): Promise<TokenizeResult>
   detokenize(tokens: number[]): Promise<string>
-  embedding(text: string): Promise<EmbeddingResult>
+  embedding(text: string, params?: { embd_normalize?: number }): Promise<EmbeddingResult>
   rerank(query: string, documents: string[], params?: RerankParams): Promise<RerankResult[]>
   saveSession(path: string): Promise<void>
   loadSession(path: string): Promise<void>
