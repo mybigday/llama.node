@@ -251,8 +251,8 @@ class LlamaContextWrapper {
     return this.ctx.detokenize(tokens)
   }
 
-  embedding(text: string): Promise<EmbeddingResult> {
-    return this.ctx.embedding(text)
+  embedding(text: string, params?: { embd_normalize?: number }): Promise<EmbeddingResult> {
+    return this.ctx.embedding(text, params)
   }
 
   rerank(
