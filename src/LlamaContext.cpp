@@ -229,7 +229,14 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   params.cpuparams.n_threads =
       get_option<int32_t>(options, "n_threads", cpu_get_num_math() / 2);
   params.n_gpu_layers = get_option<int32_t>(options, "n_gpu_layers", -1);
-  params.flash_attn = get_option<bool>(options, "flash_attn", false);
+
+  auto flash_attn_type = get_option<std::string>(options, "flash_attn_type", "auto");
+  if (!flash_attn_type.empty()) {
+    params.flash_attn_type = (enum llama_flash_attn_type)flash_attn_type_from_str(flash_attn_type.c_str());
+  } else {
+    params.flash_attn_type = get_option<bool>(options, "flash_attn", false) ? LLAMA_FLASH_ATTN_TYPE_ENABLED : LLAMA_FLASH_ATTN_TYPE_DISABLED;
+  }
+
   params.cache_type_k = kv_cache_type_from_str(
       get_option<std::string>(options, "cache_type_k", "f16"));
   params.cache_type_v = kv_cache_type_from_str(
