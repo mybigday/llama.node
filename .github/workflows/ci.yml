@@ -26,5 +26,5 @@ jobs:
       with:
         path: test/*.gguf
         key: ${{ runner.os }}-gguf-models-${{ hashFiles('test/*.gguf') }}
-    - run: npm install --omit=optional --build-from-source
+    - run: npm run copy-rn-llama-source && npm install --omit=optional --build-from-source
     - run: npm run test

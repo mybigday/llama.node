@@ -13,7 +13,7 @@ exports[`basic completion 1`] = `
   "text": "wallwallwallwallwallwallwallwallwallwall",
   "timings": "Timings: (8) keys",
   "tokens_evaluated": 18,
-  "tokens_predicted": 10,
+  "tokens_predicted": 9,
   "truncated": false,
 }
 `;
@@ -83,7 +83,7 @@ exports[`completion with response_format: json_object 1`] = `
   "text": "{}
 		              			",
   "timings": "Timings: (8) keys",
-  "tokens_evaluated": 3,
+  "tokens_evaluated": 12,
   "tokens_predicted": 3,
   "truncated": false,
 }
@@ -103,7 +103,7 @@ exports[`completion with response_format: json_schema 1`] = `
  				 				 				 				",
   "timings": "Timings: (8) keys",
   "tokens_evaluated": 13,
-  "tokens_predicted": 5,
+  "tokens_predicted": 4,
   "truncated": false,
 }
 `;

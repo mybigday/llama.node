@@ -1,12 +1,12 @@
 #include "common.hpp"
+#include "rn-llama/rn-llama.h"
 #include <vector>
 
 class DecodeAudioTokenWorker : public Napi::AsyncWorker,
                                public Napi::Promise::Deferred {
 public:
-  DecodeAudioTokenWorker(const Napi::CallbackInfo &info, llama_model *model,
-                         llama_context *ctx, int n_threads,
-                         const std::vector<llama_token> &tokens);
+  DecodeAudioTokenWorker(const Napi::CallbackInfo &info, rnllama::llama_rn_context* rn_ctx,
+                         std::vector<int32_t> tokens);
 
 protected:
   void Execute();
@@ -14,9 +14,7 @@ protected:
   void OnError(const Napi::Error &err);
 
 private:
-  llama_model *_model;
-  llama_context *_ctx;
-  int _n_threads;
-  std::vector<llama_token> _tokens;
+  rnllama::llama_rn_context* _rn_ctx;
+  std::vector<int32_t> _tokens;
   std::vector<float> _result;
 };

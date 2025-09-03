@@ -1,31 +1,36 @@
 #include "LlamaCompletionWorker.h"
 #include "LlamaContext.h"
+#include "rn-llama/rn-completion.h"
 #include <limits>
 
-size_t findStoppingStrings(const std::string &text,
-                           const size_t last_token_size,
-                           const std::vector<std::string> &stop_words) {
-  size_t stop_pos = std::string::npos;
-
-  for (const std::string &word : stop_words) {
-    size_t pos;
-
-    const size_t tmp = word.size() + last_token_size;
-    const size_t from_pos = text.size() > tmp ? text.size() - tmp : 0;
-
-    pos = text.find(word, from_pos);
-
-    if (pos != std::string::npos &&
-        (stop_pos == std::string::npos || pos < stop_pos)) {
-      stop_pos = pos;
+// Helper function to convert token probabilities to JavaScript format
+Napi::Array TokenProbsToArray(Napi::Env env, llama_context* ctx, const std::vector<rnllama::completion_token_output>& probs) {
+  Napi::Array result = Napi::Array::New(env);
+  for (size_t i = 0; i < probs.size(); i++) {
+    const auto &prob = probs[i];
+    Napi::Object token_obj = Napi::Object::New(env);
+    
+    std::string token_str = common_token_to_piece(ctx, prob.tok);
+    token_obj.Set("content", Napi::String::New(env, token_str));
+    
+    Napi::Array token_probs = Napi::Array::New(env);
+    for (size_t j = 0; j < prob.probs.size(); j++) {
+      const auto &p = prob.probs[j];
+      Napi::Object prob_obj = Napi::Object::New(env);
+      std::string tok_str = common_token_to_piece(ctx, p.tok);
+      prob_obj.Set("tok_str", Napi::String::New(env, tok_str));
+      prob_obj.Set("prob", Napi::Number::New(env, p.prob));
+      token_probs.Set(j, prob_obj);
     }
+    token_obj.Set("probs", token_probs);
+    result.Set(i, token_obj);
   }
-
-  return stop_pos;
+  return result;
 }
 
+
 LlamaCompletionWorker::LlamaCompletionWorker(
-    const Napi::CallbackInfo &info, LlamaSessionPtr &sess,
+    const Napi::CallbackInfo &info, rnllama::llama_rn_context* rn_ctx,
     Napi::Function callback,
     common_params params,
     std::vector<std::string> stop_words,
@@ -35,9 +40,9 @@ LlamaCompletionWorker::LlamaCompletionWorker(
     const std::vector<std::string> &media_paths,
     const std::vector<llama_token> &guide_tokens,
     bool has_vocoder,
-    tts_type tts_type_val,
+    rnllama::tts_type tts_type_val,
     const std::string &prefill_text)
-    : AsyncWorker(info.Env()), Deferred(info.Env()), _sess(sess),
+    : AsyncWorker(info.Env()), Deferred(info.Env()), _rn_ctx(rn_ctx),
       _params(params), _stop_words(stop_words), _chat_format(chat_format),
       _thinking_forced_open(thinking_forced_open),
       _reasoning_format(reasoning_format),
@@ -57,298 +62,203 @@ LlamaCompletionWorker::~LlamaCompletionWorker() {
   }
 }
 
-LlamaCompletionWorker::PartialOutput LlamaCompletionWorker::getPartialOutput(const std::string &generated_text) {
-  PartialOutput result;
-  
-  try {
-    common_chat_syntax chat_syntax;
-    chat_syntax.format = static_cast<common_chat_format>(_chat_format);
-    chat_syntax.thinking_forced_open = _thinking_forced_open;
-    
-    // Set reasoning format using the common function
-    chat_syntax.reasoning_format = common_reasoning_format_from_name(_reasoning_format);
-    
-    chat_syntax.parse_tool_calls = true;
-    
-    // Combine prefill_text with generated_text for parsing
-    std::string full_text = _prefill_text + generated_text;
-    
-    // Use is_partial=true for streaming partial output
-    common_chat_msg parsed_msg = common_chat_parse(full_text, true, chat_syntax);
-    
-    result.content = parsed_msg.content;
-    result.reasoning_content = parsed_msg.reasoning_content;
-    result.tool_calls = parsed_msg.tool_calls;
-  } catch (const std::exception &e) {
-    // If parsing fails, leave content empty - this is expected for partial content
-  }
-  
-  return result;
-}
 
 void LlamaCompletionWorker::Execute() {
-  _sess->get_mutex().lock();
-  const auto t_main_start = ggml_time_us();
-  const size_t n_ctx = _params.n_ctx;
-  const auto n_keep = _params.n_keep;
-  size_t n_cur = 0;
-  size_t n_input = 0;
-  const auto model = _sess->model();
-  auto vocab = llama_model_get_vocab(model);
-  const bool is_enc_dec = llama_model_has_encoder(model);
-
-  const bool add_bos = llama_vocab_get_add_bos(vocab);
-  auto ctx = _sess->context();
-
-  auto sparams = llama_sampler_chain_default_params();
-
-  LlamaCppSampling sampling{common_sampler_init(model, _params.sampling),
-                            common_sampler_free};
-
-  // Process media if any are provided
-  if (!_media_paths.empty()) {
-    auto *mtmd_ctx = _sess->get_mtmd_ctx();
-
-    if (mtmd_ctx != nullptr) {
-      // Process the media and get the tokens
-      try {
-        n_cur = processMediaPrompt(ctx, mtmd_ctx, _sess, _params, _media_paths);
-      } catch (const std::exception &e) {
-        SetError(e.what());
-        _sess->get_mutex().unlock();
-        return;
+  try {
+    // Check if vocab_only mode is enabled - if so, return empty result
+    if (_params.vocab_only) {
+      // Return empty completion result for vocab_only mode
+      _result.tokens_evaluated = 0;
+      _result.tokens_predicted = 0;
+      _result.text = "";
+      _result.stopped_limited = true;
+      _result.truncated = false;
+      _result.context_full = false;
+      _result.stopped_eos = false;
+      _result.stopped_words = false;
+      if (_onComplete) {
+        _onComplete();
       }
-
-      if (n_cur <= 0) {
-        SetError("Failed to process media");
-        _sess->get_mutex().unlock();
-        return;
-      }
-
-      fprintf(stdout,
-              "[DEBUG] Media processing successful, n_cur=%zu, tokens=%zu\n",
-              n_cur, _sess->tokens_ptr()->size());
-
-      n_input = _sess->tokens_ptr()->size();
-      if (n_cur == n_input) {
-        --n_cur;
-      }
-      n_input -= n_cur;
-    } else {
-      SetError("Multimodal context not initialized");
-      _sess->get_mutex().unlock();
       return;
     }
-  } else {
-    // Text-only path
-    std::vector<llama_token> prompt_tokens =
-        ::common_tokenize(ctx, _params.prompt, add_bos || is_enc_dec, true);
-    n_input = prompt_tokens.size();
 
-    if (_sess->tokens_ptr()->size() > 0) {
-      n_cur = common_tokens_part(*(_sess->tokens_ptr()), prompt_tokens);
-      if (n_cur == n_input) {
-        --n_cur;
-      }
-      n_input -= n_cur;
-      llama_memory_seq_rm(llama_get_memory(ctx), 0, n_cur, -1);
+    auto completion = _rn_ctx->completion;
+    
+    // Prepare completion context
+    completion->rewind();
+    
+    // Set up parameters
+    _rn_ctx->params.prompt = _params.prompt;
+    _rn_ctx->params.sampling = _params.sampling;
+    _rn_ctx->params.antiprompt = _stop_words;
+    _rn_ctx->params.n_predict = _params.n_predict;
+    _rn_ctx->params.n_ctx = _params.n_ctx;
+    _rn_ctx->params.n_batch = _params.n_batch;
+    _rn_ctx->params.ctx_shift = _params.ctx_shift;
+    
+    // Set prefill text
+    completion->prefill_text = _prefill_text;
+    
+    // Set up TTS guide tokens if enabled
+    if (_has_vocoder && _rn_ctx->tts_wrapper != nullptr) {
+      _rn_ctx->tts_wrapper->guide_tokens = _guide_tokens;
+      _rn_ctx->tts_wrapper->next_token_uses_guide_token = true;
     }
-    // Set the tokens
-    _sess->set_tokens(std::move(prompt_tokens));
-  }
-
-  const int max_len = _params.n_predict < 0 ? std::numeric_limits<int>::max() : _params.n_predict;
-  auto embd = _sess->tokens_ptr();
-  embd->reserve(embd->size() + max_len);
-
-
-  if (is_enc_dec) {
-    if (n_input > 0) {
-      // Decode tokens in batches using n_batch as chunk size
-      int n_past_batch = n_cur;
-      int n_remaining = n_input;
+    
+    // Initialize sampling
+    if (!completion->initSampling()) {
+      SetError("Failed to initialize sampling");
+      return;
+    }
+    
+    // Load prompt (handles both text-only and multimodal)
+    completion->loadPrompt(_media_paths);
+    
+    // Check if context is full after loading prompt
+    if (completion->context_full) {
+      _result.context_full = true;
+      return;
+    }
+    
+    // Begin completion with chat format and reasoning settings
+    completion->beginCompletion(_chat_format, common_reasoning_format_from_name(_reasoning_format), _thinking_forced_open);
+    
+    // Main completion loop
+    int token_count = 0;
+    const int max_tokens = _params.n_predict < 0 ? std::numeric_limits<int>::max() : _params.n_predict;
+    while (completion->has_next_token && !_interrupted && token_count < max_tokens) {
+      // Get next token using rn-llama completion
+      rnllama::completion_token_output token_output = completion->doCompletion();
       
-      while (n_remaining > 0) {
-        int n_eval = n_remaining;
-        if (n_eval > _params.n_batch) {
-          n_eval = _params.n_batch;
-        }
-
-        int ret = llama_encode(ctx, llama_batch_get_one(embd->data() + n_past_batch, n_eval));
-        if (ret < 0) {
-          SetError("Failed to encode token batch, code: " + std::to_string(ret) + 
-                   ", n_eval: " + std::to_string(n_eval) + 
-                   ", n_past_batch: " + std::to_string(n_past_batch));
-          _sess->get_mutex().unlock();
-          return;
-        }
-
-        n_past_batch += n_eval;
-        n_remaining -= n_eval;
-        n_cur += n_eval;
-      }
-    }
-    _result.tokens_evaluated += n_input;
-
-    llama_token decode_bos = llama_model_decoder_start_token(model);
-    if (decode_bos == LLAMA_TOKEN_NULL) {
-      decode_bos = llama_vocab_bos(vocab);
-    }
-
-    embd->emplace_back(decode_bos);
-    common_sampler_accept(sampling.get(), decode_bos, false);
-    n_input = 1;
-  }
-
-  for (int i = 0; (i < max_len || _interrupted) && !_params.vocab_only; i++) {
-    // check if we need to remove some tokens
-    if (embd->size() >= _params.n_ctx) {
-      if (!_params.ctx_shift) {
-        // Context is full and ctx_shift is disabled, so we need to stop
-        _result.context_full = true;
+      if (token_output.tok == -1) {
         break;
       }
-
-      const int n_left = n_cur - n_keep - 1;
-      const int n_discard = n_left / 2;
-
-      auto mem = llama_get_memory(ctx);
-      llama_memory_seq_rm(mem, 0, n_keep + 1, n_keep + n_discard + 1);
-      llama_memory_seq_add(mem, 0, n_keep + 1 + n_discard, n_cur, -n_discard);
-
-      // shift the tokens
-      embd->insert(embd->begin() + n_keep + 1,
-                   embd->begin() + n_keep + 1 + n_discard, embd->end());
-      embd->resize(embd->size() - n_discard);
-
-      n_cur -= n_discard;
-      _result.truncated = true;
-    }
-
-    // For multimodal input, n_past might already be set
-    // Only decode text tokens if we have any input left
-    if (n_input > 0) {
-      // Decode tokens in batches using n_batch as chunk size
-      int n_past_batch = n_cur;
-      int n_remaining = n_input;
       
-      while (n_remaining > 0) {
-        int n_eval = n_remaining;
-        if (n_eval > _params.n_batch) {
-          n_eval = _params.n_batch;
+      token_count++;
+      
+      std::string token_text = common_token_to_piece(_rn_ctx->ctx, token_output.tok);
+      _result.text += token_text;
+      
+      // Check for stopping strings after adding the token
+      if (!_stop_words.empty()) {
+        size_t stop_pos = completion->findStoppingStrings(_result.text, token_text.size(), rnllama::STOP_FULL);
+        if (stop_pos != std::string::npos) {
+          // Found a stop word, truncate the result and break
+          _result.text = _result.text.substr(0, stop_pos);
+          break;
         }
-
-        int ret = llama_decode(ctx, llama_batch_get_one(embd->data() + n_past_batch, n_eval));
-        if (ret < 0) {
-          SetError("Failed to decode token batch, code: " + std::to_string(ret) + 
-                   ", n_eval: " + std::to_string(n_eval) + 
-                   ", n_past_batch: " + std::to_string(n_past_batch));
-          _sess->get_mutex().unlock();
-          return;
+      }
+      
+      // Handle streaming callback
+      if (_has_callback && !completion->incomplete) {
+        struct TokenData {
+          std::string token;
+          std::string content;
+          std::string reasoning_content;
+          std::vector<common_chat_tool_call> tool_calls;
+          std::string accumulated_text;
+          std::vector<rnllama::completion_token_output> completion_probabilities;
+          llama_context* ctx;
+        };
+        
+        auto partial_output = completion->parseChatOutput(true);
+        
+        // Extract completion probabilities if n_probs > 0, similar to iOS implementation
+        std::vector<rnllama::completion_token_output> probs_output;
+        if (_rn_ctx->params.sampling.n_probs > 0) {
+          const std::vector<llama_token> to_send_toks = common_tokenize(_rn_ctx->ctx, token_text, false);
+          size_t probs_pos = std::min(_sent_token_probs_index, completion->generated_token_probs.size());
+          size_t probs_stop_pos = std::min(_sent_token_probs_index + to_send_toks.size(), completion->generated_token_probs.size());
+          if (probs_pos < probs_stop_pos) {
+            probs_output = std::vector<rnllama::completion_token_output>(
+              completion->generated_token_probs.begin() + probs_pos, 
+              completion->generated_token_probs.begin() + probs_stop_pos
+            );
+          }
+          _sent_token_probs_index = probs_stop_pos;
         }
         
-        n_past_batch += n_eval;
-        n_remaining -= n_eval;
-      }
-    }
-
-    // sample the next token
-    llama_token new_token_id = common_sampler_sample(sampling.get(), ctx, -1);
-
-    // is it an end of generation?
-    if (llama_vocab_is_eog(vocab, new_token_id)) {
-      _result.stopped_eos = true;
-      break;
-    }
-
-    if (_next_token_uses_guide_token && !_guide_tokens.empty() &&
-        !llama_vocab_is_control(vocab, new_token_id) &&
-        !llama_vocab_is_eog(vocab, new_token_id)) {
-      new_token_id = _guide_tokens[0];
-      _guide_tokens.erase(_guide_tokens.begin());
-    }
-    _next_token_uses_guide_token = (new_token_id == 198);
-    common_sampler_accept(sampling.get(), new_token_id, true);
-    
-    // Collect audio tokens for TTS if vocoder is enabled
-    if (_has_vocoder) {
-      if ((_tts_type == OUTETTS_V0_1 || _tts_type == OUTETTS_V0_2 || _tts_type == OUTETTS_V0_3) && 
-          (new_token_id >= 151672 && new_token_id <= 155772)) {
-        _result.audio_tokens.push_back(new_token_id);
-      }
-    }
-    
-    // prepare the next batch
-    embd->emplace_back(new_token_id);
-    auto token = common_token_to_piece(ctx, new_token_id);
-    _result.text += token;
-    n_cur += n_input;
-    _result.tokens_evaluated += n_input;
-    _result.tokens_predicted += 1;
-    n_input = 1;
-    if (_has_callback) {
-      // TODO: When we got possible stop words (startsWith)
-      // we should avoid calling the callback, wait for the next token
-      struct TokenData {
-        std::string token;
-        std::string content;
-        std::string reasoning_content;
-        std::vector<common_chat_tool_call> tool_calls;
-        std::string accumulated_text;
-      };
-      
-      auto partial = getPartialOutput(_result.text);
-      TokenData *token_data = new TokenData{token, partial.content, partial.reasoning_content, partial.tool_calls, _result.text};
-      
-      _tsfn.BlockingCall(token_data, [](Napi::Env env, Napi::Function jsCallback,
-                                        TokenData *data) {
-        auto obj = Napi::Object::New(env);
-        obj.Set("token", Napi::String::New(env, data->token));
-        if (!data->content.empty()) {
-          obj.Set("content", Napi::String::New(env, data->content));
-        }
-        if (!data->reasoning_content.empty()) {
-          obj.Set("reasoning_content", Napi::String::New(env, data->reasoning_content));
-        }
-        if (!data->tool_calls.empty()) {
-          Napi::Array tool_calls = Napi::Array::New(env);
-          for (size_t i = 0; i < data->tool_calls.size(); i++) {
-            const auto &tc = data->tool_calls[i];
-            Napi::Object tool_call = Napi::Object::New(env);
-            tool_call.Set("type", "function");
-            Napi::Object function = Napi::Object::New(env);
-            function.Set("name", tc.name);
-            function.Set("arguments", tc.arguments);
-            tool_call.Set("function", function);
-            if (!tc.id.empty()) {
-              tool_call.Set("id", tc.id);
-            }
-            tool_calls.Set(i, tool_call);
+        TokenData *token_data = new TokenData{
+          token_text, 
+          partial_output.content, 
+          partial_output.reasoning_content, 
+          partial_output.tool_calls, 
+          partial_output.accumulated_text,
+          probs_output,
+          _rn_ctx->ctx
+        };
+        
+        _tsfn.BlockingCall(token_data, [](Napi::Env env, Napi::Function jsCallback,
+                                          TokenData *data) {
+          auto obj = Napi::Object::New(env);
+          obj.Set("token", Napi::String::New(env, data->token));
+          if (!data->content.empty()) {
+            obj.Set("content", Napi::String::New(env, data->content));
           }
-          obj.Set("tool_calls", tool_calls);
-        }
-        obj.Set("accumulated_text", Napi::String::New(env, data->accumulated_text));
-        delete data;
-        jsCallback.Call({obj});
-      });
-    }
-    // check for stop words
-    if (!_stop_words.empty()) {
-      const size_t stop_pos =
-          findStoppingStrings(_result.text, token.size(), _stop_words);
-      if (stop_pos != std::string::npos) {
-        _result.stopped_words = true;
-        _result.stopping_word = _result.text.substr(stop_pos, token.size());
-        _result.text = _result.text.substr(0, stop_pos - 1);
-        break;
+          if (!data->reasoning_content.empty()) {
+            obj.Set("reasoning_content", Napi::String::New(env, data->reasoning_content));
+          }
+          if (!data->tool_calls.empty()) {
+            Napi::Array tool_calls = Napi::Array::New(env);
+            for (size_t i = 0; i < data->tool_calls.size(); i++) {
+              const auto &tc = data->tool_calls[i];
+              Napi::Object tool_call = Napi::Object::New(env);
+              tool_call.Set("type", "function");
+              Napi::Object function = Napi::Object::New(env);
+              function.Set("name", tc.name);
+              function.Set("arguments", tc.arguments);
+              tool_call.Set("function", function);
+              if (!tc.id.empty()) {
+                tool_call.Set("id", tc.id);
+              }
+              tool_calls.Set(i, tool_call);
+            }
+            obj.Set("tool_calls", tool_calls);
+          }
+          obj.Set("accumulated_text", Napi::String::New(env, data->accumulated_text));
+          
+          // Add completion_probabilities if available
+          if (!data->completion_probabilities.empty()) {
+            obj.Set("completion_probabilities", TokenProbsToArray(env, data->ctx, data->completion_probabilities));
+          }
+          
+          delete data;
+          jsCallback.Call({obj});
+        });
       }
     }
+    
+    // Check stopping conditions
+    if (token_count >= max_tokens) {
+      _result.stopped_limited = true;
+    } else if (!completion->has_next_token && completion->n_remain == 0) {
+      _result.stopped_limited = true;
+    }
+    
+    // Set completion results from rn-llama completion context
+    // tokens_evaluated should include both prompt tokens and generated tokens that were processed
+    _result.tokens_evaluated = completion->num_prompt_tokens + completion->num_tokens_predicted;
+    _result.tokens_predicted = completion->num_tokens_predicted;
+    _result.truncated = completion->truncated;
+    _result.context_full = completion->context_full;
+    _result.stopped_eos = completion->stopped_eos;
+    _result.stopped_words = completion->stopped_word;
+    _result.stopping_word = completion->stopping_word;
+    _result.stopped_limited = completion->stopped_limit;
+    
+    // Get audio tokens if TTS is enabled
+    if (_has_vocoder && _rn_ctx->tts_wrapper != nullptr) {
+      _result.audio_tokens = _rn_ctx->tts_wrapper->audio_tokens;
+    }
+    
+    // End completion
+    completion->endCompletion();
+    
+  } catch (const std::exception &e) {
+    SetError(e.what());
+    return;
   }
-  if (!_result.stopped_eos && !_result.stopped_words) {
-    _result.stopped_limited = true;
-  }
-  const auto t_main_end = ggml_time_us();
-  _sess->get_mutex().unlock();
+  
   if (_onComplete) {
     _onComplete();
   }
@@ -357,6 +267,7 @@ void LlamaCompletionWorker::Execute() {
 void LlamaCompletionWorker::OnOK() {
   auto env = Napi::AsyncWorker::Env();
   auto result = Napi::Object::New(env);
+  result.Set("chat_format", Napi::Number::New(env, _chat_format));
   result.Set("tokens_evaluated",
              Napi::Number::New(env, _result.tokens_evaluated));
   result.Set("tokens_predicted", Napi::Number::New(Napi::AsyncWorker::Env(),
@@ -364,7 +275,9 @@ void LlamaCompletionWorker::OnOK() {
   result.Set("truncated", Napi::Boolean::New(env, _result.truncated));
   result.Set("context_full", Napi::Boolean::New(env, _result.context_full));
   result.Set("interrupted", Napi::Boolean::New(env, _interrupted));
-  result.Set("text", Napi::String::New(env, _result.text.c_str()));
+  // Use the generated text from rn-llama completion if available, otherwise use our result text
+  std::string final_text = (_rn_ctx->completion != nullptr) ? _rn_ctx->completion->generated_text : _result.text;
+  result.Set("text", Napi::String::New(env, final_text.c_str()));
   result.Set("stopped_eos", Napi::Boolean::New(env, _result.stopped_eos));
   result.Set("stopped_words", Napi::Boolean::New(env, _result.stopped_words));
   result.Set("stopping_word",
@@ -375,31 +288,15 @@ void LlamaCompletionWorker::OnOK() {
   Napi::Array tool_calls = Napi::Array::New(Napi::AsyncWorker::Env());
   std::string reasoning_content = "";
   std::string content;
-  if (!_interrupted) {
+  if (!_interrupted && _rn_ctx->completion != nullptr) {
     try {
-      common_chat_syntax chat_syntax;
-      chat_syntax.format = static_cast<common_chat_format>(_chat_format);
-      result.Set("chat_format", Napi::Number::New(env, _chat_format));
+      auto final_output = _rn_ctx->completion->parseChatOutput(false);
+      reasoning_content = final_output.reasoning_content;
+      content = final_output.content;
 
-      chat_syntax.thinking_forced_open = _thinking_forced_open;
-
-      chat_syntax.reasoning_format = common_reasoning_format_from_name(_reasoning_format);
-      
-      // Combine prefill_text with generated_text for final parsing
-      std::string full_text = _prefill_text + _result.text;
-      common_chat_msg message = common_chat_parse(
-          full_text,
-          false,
-          chat_syntax
-      );
-      if (!message.reasoning_content.empty()) {
-        reasoning_content = message.reasoning_content;
-      }
-      if (!message.content.empty()) {
-        content = message.content;
-      }
-      for (size_t i = 0; i < message.tool_calls.size(); i++) {
-        const auto &tc = message.tool_calls[i];
+      // Convert tool calls to JavaScript format
+      for (size_t i = 0; i < final_output.tool_calls.size(); i++) {
+        const auto &tc = final_output.tool_calls[i];
         Napi::Object tool_call = Napi::Object::New(env);
         tool_call.Set("type", "function");
         Napi::Object function = Napi::Object::New(env);
@@ -435,7 +332,12 @@ void LlamaCompletionWorker::OnOK() {
     result.Set("audio_tokens", audio_tokens);
   }
 
-  auto ctx = _sess->context();
+  // Add completion_probabilities to final result
+  if (_rn_ctx->params.sampling.n_probs > 0 && _rn_ctx->completion != nullptr && !_rn_ctx->completion->generated_token_probs.empty()) {
+    result.Set("completion_probabilities", TokenProbsToArray(env, _rn_ctx->ctx, _rn_ctx->completion->generated_token_probs));
+  }
+
+  auto ctx = _rn_ctx->ctx;
   const auto timings_token = llama_perf_context(ctx);
 
   auto timingsResult = Napi::Object::New(Napi::AsyncWorker::Env());

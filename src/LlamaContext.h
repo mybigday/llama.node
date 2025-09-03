@@ -1,7 +1,11 @@
 #include "common.hpp"
 #include "tools/mtmd/clip.h"
 #include "tools/mtmd/mtmd.h"
-#include "tts_utils.h"
+#include "rn-llama/rn-llama.h"
+#include "rn-llama/rn-completion.h"
+#include "rn-llama/rn-tts.h"
+
+using namespace rnllama;
 
 class LlamaCompletionWorker;
 
@@ -43,7 +47,7 @@ private:
   void ReleaseMultimodal(const Napi::CallbackInfo &info);
 
   // TTS methods
-  tts_type getTTSType(Napi::Env env, nlohmann::json speaker = nullptr);
+  rnllama::tts_type getTTSType(Napi::Env env, nlohmann::json speaker = nullptr);
   Napi::Value InitVocoder(const Napi::CallbackInfo &info);
   void ReleaseVocoder(const Napi::CallbackInfo &info);
   Napi::Value IsVocoderEnabled(const Napi::CallbackInfo &info);
@@ -53,17 +57,8 @@ private:
 
   std::string _info;
   Napi::Object _meta;
-  LlamaSessionPtr _sess = nullptr;
-  common_chat_templates_ptr _templates;
-  std::vector<common_adapter_lora_info> _lora;
   LlamaCompletionWorker *_wip = nullptr;
 
-  // Multimodal support
-  mtmd_context *_mtmd_ctx = nullptr;
-  bool _has_multimodal = false;
-
-  // Vocoder support
-  tts_type _tts_type = UNKNOWN;
-  vocoder_context _vocoder;
-  bool _has_vocoder = false;
+  // Use rn-llama context instead of direct llama.cpp types
+  llama_rn_context *_rn_ctx = nullptr;
 };

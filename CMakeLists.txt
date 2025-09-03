@@ -137,10 +137,6 @@ file(
     "src/LlamaCompletionWorker.h"
     "src/LlamaContext.cpp"
     "src/LlamaContext.h"
-    "src/TokenizeWorker.cpp"
-    "src/TokenizeWorker.h"
-    "src/DetokenizeWorker.cpp"
-    "src/DetokenizeWorker.h"
     "src/EmbeddingWorker.cpp"
     "src/EmbeddingWorker.h"
     "src/RerankWorker.cpp"
@@ -149,12 +145,13 @@ file(
     "src/LoadSessionWorker.h"
     "src/SaveSessionWorker.cpp"
     "src/SaveSessionWorker.h"
+    "src/TokenizeWorker.cpp"
+    "src/TokenizeWorker.h"
+    "src/DetokenizeWorker.cpp"
+    "src/DetokenizeWorker.h"
     "src/DecodeAudioTokenWorker.cpp"
     "src/DecodeAudioTokenWorker.h"
-    "src/tts_utils.cpp"
-    "src/tts_utils.h"
-    "src/anyascii.h"
-    "src/anyascii.c"
+    "src/rn-llama/*"
 )
 
 if (NOT MSVC AND CMAKE_SYSTEM_NAME STREQUAL "Windows")

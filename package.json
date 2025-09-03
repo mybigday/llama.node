@@ -5,7 +5,8 @@
   "description": "An another Node binding of llama.cpp",
   "main": "lib/index.js",
   "scripts": {
-    "bootstrap": "npm install --omit=optional",
+    "copy-rn-llama-source": "node scripts/copy-rn-llama-source.js",
+    "bootstrap": "npm run copy-rn-llama-source && npm install --omit=optional",
     "postinstall": "node scripts/check.js",
     "pretest": "node scripts/download-test-models.js",
     "test": "jest",
@@ -53,6 +54,7 @@
     "scripts/check.js",
     "scripts/llama.cpp.patch",
     "src/*.{cc,c,h,hpp}",
+    "src/rn-llama/*",
     "src/DecodeAudioTokenWorker.cpp",
     "src/DetokenizeWorker.cpp",
     "src/DisposeWorker.cpp",
@@ -62,7 +64,6 @@
     "src/LoadSessionWorker.cpp",
     "src/SaveSessionWorker.cpp",
     "src/TokenizeWorker.cpp",
-    "src/tts_utils.cpp",
     "src/llama.cpp/{common,src,include}/**/*.{h,hpp,cpp,cc,c}",
     "src/llama.cpp/ggml/include/*.h",
     "src/llama.cpp/ggml/src/ggml-cpu/**/*.{h,hpp,cpp,cc,c}",
@@ -115,6 +116,9 @@
     ],
     "testMatch": [
       "**/*.test.ts"
+    ],
+    "testPathIgnorePatterns": [
+      "<rootDir>/src/llama.rn/"
     ]
   },
   "prettier": {

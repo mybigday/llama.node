@@ -2,57 +2,60 @@
 #include "LlamaContext.h"
 
 TokenizeWorker::TokenizeWorker(const Napi::CallbackInfo &info,
-                               LlamaSessionPtr &sess, std::string text,
+                               rnllama::llama_rn_context* rn_ctx, std::string text,
                                std::vector<std::string> media_paths)
-    : AsyncWorker(info.Env()), Deferred(info.Env()), _sess(sess), _text(text),
+    : AsyncWorker(info.Env()), Deferred(info.Env()), _rn_ctx(rn_ctx), _text(text),
       _media_paths(media_paths) {}
 
 void TokenizeWorker::Execute() {
-  auto mtmd_ctx = _sess->get_mtmd_ctx();
-  if (!_media_paths.empty()) {
-    try {
-      _result = tokenizeWithMedia(mtmd_ctx, _text, _media_paths);
-      mtmd_input_chunks_free(_result.chunks);
-    } catch (const std::exception &e) {
-      SetError(e.what());
+  try {
+    // Use rn-llama tokenize API directly
+    auto result = _rn_ctx->tokenize(_text, _media_paths);
+    
+    // Convert llama_token to int32_t
+    _result.tokens.resize(result.tokens.size());
+    for (size_t i = 0; i < result.tokens.size(); i++) {
+      _result.tokens[i] = static_cast<int32_t>(result.tokens[i]);
     }
-  } else {
-    const auto tokens = common_tokenize(_sess->context(), _text, false);
-    _result.tokens = tokens;
-    _result.has_media = false;
+    
+    _result.has_media = result.has_media;
+    _result.bitmap_hashes = result.bitmap_hashes;
+    _result.chunk_pos = result.chunk_pos;
+    _result.chunk_pos_media = result.chunk_pos_media;
+  } catch (const std::exception &e) {
+    SetError(e.what());
   }
 }
 
 void TokenizeWorker::OnOK() {
-  Napi::HandleScope scope(Napi::AsyncWorker::Env());
-  auto result = Napi::Object::New(Napi::AsyncWorker::Env());
-  auto tokens =
-      Napi::Int32Array::New(Napi::AsyncWorker::Env(), _result.tokens.size());
-  memcpy(tokens.Data(), _result.tokens.data(),
-         _result.tokens.size() * sizeof(llama_token));
-  result.Set("tokens", tokens);
-  result.Set("has_media", _result.has_media);
+  Napi::Env env = Napi::AsyncWorker::Env();
+  Napi::Object ret = Napi::Object::New(env);
+  auto tokens = Napi::Int32Array::New(env, _result.tokens.size());
+  memcpy(tokens.Data(), _result.tokens.data(), _result.tokens.size() * sizeof(int32_t));
+  ret.Set("tokens", tokens);
+  ret.Set("has_media", Napi::Boolean::New(env, _result.has_media));
+
   if (_result.has_media) {
-    auto bitmap_hashes = Napi::Array::New(Napi::AsyncWorker::Env(),
-                                          _result.bitmap_hashes.size());
+    auto bitmap_hashes = Napi::Array::New(env, _result.bitmap_hashes.size());
     for (size_t i = 0; i < _result.bitmap_hashes.size(); i++) {
-      bitmap_hashes.Set(i, _result.bitmap_hashes[i]);
+      bitmap_hashes.Set(i, Napi::String::New(env, _result.bitmap_hashes[i]));
     }
-    result.Set("bitmap_hashes", bitmap_hashes);
-    auto chunk_pos =
-        Napi::Array::New(Napi::AsyncWorker::Env(), _result.chunk_pos.size());
+    ret.Set("bitmap_hashes", bitmap_hashes);
+    
+    auto chunk_pos = Napi::Array::New(env, _result.chunk_pos.size());
     for (size_t i = 0; i < _result.chunk_pos.size(); i++) {
-      chunk_pos.Set(i, _result.chunk_pos[i]);
+      chunk_pos.Set(i, Napi::Number::New(env, static_cast<double>(_result.chunk_pos[i])));
     }
-    result.Set("chunk_pos", chunk_pos);
-    auto chunk_pos_media = Napi::Array::New(Napi::AsyncWorker::Env(),
-                                            _result.chunk_pos_media.size());
+    ret.Set("chunk_pos", chunk_pos);
+    
+    auto chunk_pos_media = Napi::Array::New(env, _result.chunk_pos_media.size());
     for (size_t i = 0; i < _result.chunk_pos_media.size(); i++) {
-      chunk_pos_media.Set(i, _result.chunk_pos_media[i]);
+      chunk_pos_media.Set(i, Napi::Number::New(env, static_cast<double>(_result.chunk_pos_media[i])));
     }
-    result.Set("chunk_pos_media", chunk_pos_media);
+    ret.Set("chunk_pos_media", chunk_pos_media);
   }
-  Napi::Promise::Deferred::Resolve(result);
+  
+  Napi::Promise::Deferred::Resolve(ret);
 }
 
 void TokenizeWorker::OnError(const Napi::Error &err) {

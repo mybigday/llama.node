@@ -2,19 +2,16 @@
 #include "LlamaContext.h"
 
 DetokenizeWorker::DetokenizeWorker(const Napi::CallbackInfo &info,
-                                   LlamaSessionPtr &sess,
-                                   std::vector<llama_token> &tokens)
-    : AsyncWorker(info.Env()), Deferred(info.Env()), _sess(sess),
-      _tokens(std::move(tokens)) {}
+                                   rnllama::llama_rn_context* rn_ctx, std::vector<int32_t> tokens)
+    : AsyncWorker(info.Env()), Deferred(info.Env()), _rn_ctx(rn_ctx), _tokens(tokens) {}
 
 void DetokenizeWorker::Execute() {
-  const auto text = ::common_detokenize(_sess->context(), _tokens);
+  const auto text = tokens_to_str(_rn_ctx->ctx, _tokens.begin(), _tokens.end());
   _text = std::move(text);
 }
 
 void DetokenizeWorker::OnOK() {
-  Napi::Promise::Deferred::Resolve(
-      Napi::String::New(Napi::AsyncWorker::Env(), _text));
+  Napi::Promise::Deferred::Resolve(Napi::String::New(Napi::AsyncWorker::Env(), _text));
 }
 
 void DetokenizeWorker::OnError(const Napi::Error &err) {

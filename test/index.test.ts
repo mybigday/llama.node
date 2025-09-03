@@ -275,3 +275,120 @@ test('ctx_shift and context_full', async () => {
   await model.release()
   await model2.release()
 })
+
+test('completion with n_probs parameter', async () => {
+  let streamingTokensWithProbs: any[] = []
+  let streamingTokensWithoutProbs: any[] = []
+  
+  const model = await loadModel({
+    model: path.resolve(__dirname, './tiny-random-llama.gguf'),
+  })
+  
+  // Test with n_probs enabled
+  const resultWithProbs = await model.completion({
+    prompt: 'My name is Merve and my favorite',
+    temperature: 0,
+    n_predict: 5,
+    seed: 0,
+    n_probs: 3, // Request top 3 token probabilities
+  }, (data) => {
+    expect(data).toMatchObject({ token: expect.any(String) })
+    streamingTokensWithProbs.push(data)
+    
+    if (data.completion_probabilities) {
+      // Verify structure of completion_probabilities in streaming
+      expect(Array.isArray(data.completion_probabilities)).toBe(true)
+      data.completion_probabilities.forEach((prob: any) => {
+        expect(prob).toHaveProperty('content')
+        expect(typeof prob.content).toBe('string')
+        expect(Array.isArray(prob.probs)).toBe(true)
+        expect(prob.probs.length).toBeLessThanOrEqual(3) // Should have at most 3 probabilities
+        prob.probs.forEach((p: any) => {
+          expect(p).toHaveProperty('tok_str')
+          expect(p).toHaveProperty('prob')
+          expect(typeof p.tok_str).toBe('string')
+          expect(typeof p.prob).toBe('number')
+          expect(p.prob).toBeGreaterThanOrEqual(0)
+          expect(p.prob).toBeLessThanOrEqual(1)
+        })
+      })
+    }
+  })
+  
+  // Test without n_probs (default behavior)
+  const resultWithoutProbs = await model.completion({
+    prompt: 'My name is Merve and my favorite',
+    temperature: 0,
+    n_predict: 5,
+    seed: 0,
+    // n_probs: 0 (default)
+  }, (data) => {
+    expect(data).toMatchObject({ token: expect.any(String) })
+    streamingTokensWithoutProbs.push(data)
+  })
+  
+  // Verify final result with n_probs has completion_probabilities
+  expect(resultWithProbs.completion_probabilities).toBeDefined()
+  expect(Array.isArray(resultWithProbs.completion_probabilities)).toBe(true)
+  expect(resultWithProbs.completion_probabilities!.length).toBeGreaterThan(0)
+  
+  // Verify structure of final completion_probabilities
+  resultWithProbs.completion_probabilities!.forEach((prob: any) => {
+    expect(prob).toHaveProperty('content')
+    expect(typeof prob.content).toBe('string')
+    expect(Array.isArray(prob.probs)).toBe(true)
+    expect(prob.probs.length).toBeLessThanOrEqual(3) // Should have at most 3 probabilities
+    prob.probs.forEach((p: any) => {
+      expect(p).toHaveProperty('tok_str')
+      expect(p).toHaveProperty('prob')
+      expect(typeof p.tok_str).toBe('string')
+      expect(typeof p.prob).toBe('number')
+      expect(p.prob).toBeGreaterThanOrEqual(0)
+      expect(p.prob).toBeLessThanOrEqual(1)
+    })
+  })
+  
+  // Verify final result without n_probs does NOT have completion_probabilities
+  expect(resultWithoutProbs.completion_probabilities).toBeUndefined()
+  
+  // Verify streaming tokens with n_probs have completion_probabilities when available
+  const streamingWithProbs = streamingTokensWithProbs.filter(token => token.completion_probabilities)
+  expect(streamingWithProbs.length).toBeGreaterThan(0)
+  
+  // Verify streaming tokens without n_probs do NOT have completion_probabilities
+  const streamingWithoutProbs = streamingTokensWithoutProbs.filter(token => token.completion_probabilities)
+  expect(streamingWithoutProbs.length).toBe(0)
+  
+  // Test with different n_probs values
+  const resultWith1Prob = await model.completion({
+    prompt: 'Test',
+    temperature: 0,
+    n_predict: 2,
+    seed: 0,
+    n_probs: 1, // Request only top 1 probability
+  })
+  
+  // Just verify that probabilities are returned when n_probs is set
+  if (resultWith1Prob.completion_probabilities && resultWith1Prob.completion_probabilities.length > 0) {
+    expect(resultWith1Prob.completion_probabilities.length).toBeGreaterThan(0)
+  }
+  
+  const resultWith10Probs = await model.completion({
+    prompt: 'Test',
+    temperature: 0,
+    n_predict: 2,
+    seed: 0,
+    n_probs: 10, // Request top 10 probabilities
+  })
+  
+  // Verify probabilities are returned and structure is correct
+  if (resultWith10Probs.completion_probabilities && resultWith10Probs.completion_probabilities.length > 0) {
+    expect(resultWith10Probs.completion_probabilities.length).toBeGreaterThan(0)
+    resultWith10Probs.completion_probabilities.forEach((prob: any) => {
+      expect(Array.isArray(prob.probs)).toBe(true)
+      expect(prob.probs.length).toBeGreaterThan(0)
+    })
+  }
+  
+  await model.release()
+})

@@ -1,4 +1,5 @@
 import path from 'path'
+import fs from 'fs'
 import { loadModel } from '../lib'
 
 jest.setTimeout(60000)
@@ -89,7 +90,9 @@ test('multimodal with images', async () => {
   await model.release()
 })
 
-test.skip('multimodal with audio', async () => {
+const modelPath = path.resolve(__dirname, './Llama-3.2-1B-Instruct-Q4_K_M.gguf');
+
+;(fs.existsSync(modelPath) ? test : test.skip)('multimodal with audio', async () => {
   const model = await loadModel({
     model: path.resolve(__dirname, './Llama-3.2-1B-Instruct-Q4_K_M.gguf'),
     n_gpu_layers: 0,
