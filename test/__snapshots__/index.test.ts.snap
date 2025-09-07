@@ -161,7 +161,7 @@ wrappable-tool-call ::= ( any-tool-call | "<tool_call>" space any-tool-call "</t
     {
       "token": -1,
       "type": 3,
-      "value": "(?:<think>[\\s\\S]*?</think>\\s*)?(\\s*(?:<tool_call>|<function|(?:\`\`\`(?:json|xml)?
+      "value": "(?:<think>[\\s\\S]*?</think>\\s*)?\\s*((?:<tool_call>|<function|(?:\`\`\`(?:json|xml)?
 \\s*)?(?:<function_call>|<tools>|<xml><json>|<response>)?\\s*\\{\\s*"name"\\s*:\\s*"(?:calc)"))[\\s\\S]*",
     },
   ],
