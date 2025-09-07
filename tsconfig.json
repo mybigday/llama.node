@@ -107,6 +107,7 @@
     "skipLibCheck": true                                 /* Skip type checking all .d.ts files. */
   },
   "exclude": [
-    "src/llama.cpp/"
+    "src/llama.cpp/",
+    "src/llama.rn/"
   ]
 }
