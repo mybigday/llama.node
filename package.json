@@ -118,7 +118,8 @@
       "**/*.test.ts"
     ],
     "testPathIgnorePatterns": [
-      "<rootDir>/src/llama.rn/"
+      "<rootDir>/src/llama.rn/",
+      "<rootDir>/src/llama.cpp/"
     ]
   },
   "prettier": {
