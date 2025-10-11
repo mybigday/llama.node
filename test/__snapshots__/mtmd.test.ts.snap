@@ -25,11 +25,11 @@ exports[`multimodal with images 1`] = `
   ],
   "chunk_pos": [
     0,
-    30,
-    94,
+    31,
+    95,
   ],
   "chunk_pos_media": [
-    30,
+    31,
   ],
   "has_media": true,
   "tokens": Int32Array [
@@ -61,6 +61,7 @@ exports[`multimodal with images 1`] = `
     2443,
     47,
     198,
+    1116,
     49189,
     49152,
     -1,
