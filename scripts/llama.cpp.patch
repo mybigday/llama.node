@@ -1,5 +1,27 @@
+diff --git a/src/llama.cpp/common/CMakeLists.txt b/src/llama.cpp/common/CMakeLists.txt
+index fe290bf8f..d377e29b9 100644
+--- a/src/llama.cpp/common/CMakeLists.txt
++++ b/src/llama.cpp/common/CMakeLists.txt
+@@ -170,9 +170,16 @@ if (LLAMA_LLGUIDANCE)
+     set(LLAMA_COMMON_EXTRA_LIBS ${LLAMA_COMMON_EXTRA_LIBS} llguidance ${LLGUIDANCE_PLATFORM_LIBS})
+ endif ()
+ 
++# Add Windows socket libraries unconditionally on Windows
++if (WIN32)
++    set(LLAMA_COMMON_WIN_LIBS ws2_32)
++else()
++    set(LLAMA_COMMON_WIN_LIBS "")
++endif()
++
+ target_include_directories(${TARGET} PUBLIC . ../vendor)
+ target_compile_features   (${TARGET} PUBLIC cxx_std_17)
+-target_link_libraries     (${TARGET} PRIVATE ${LLAMA_COMMON_EXTRA_LIBS} PUBLIC llama Threads::Threads)
++target_link_libraries     (${TARGET} PRIVATE ${LLAMA_COMMON_EXTRA_LIBS} ${LLAMA_COMMON_WIN_LIBS} PUBLIC llama Threads::Threads)
+ 
+ 
+ #
 diff --git a/src/llama.cpp/common/chat.cpp b/src/llama.cpp/common/chat.cpp
-index 111b4a21b..16ce87672 100644
+index 8587140e1..7931a31a1 100644
 --- a/src/llama.cpp/common/chat.cpp
 +++ b/src/llama.cpp/common/chat.cpp
 @@ -6,9 +6,6 @@
@@ -29,7 +51,7 @@ index 111b4a21b..16ce87672 100644
  struct templates_params {
      json messages;
      json tools;
-@@ -784,8 +771,7 @@ static std::string apply(
+@@ -807,8 +794,7 @@ static std::string apply(
      if (additional_context) {
          tmpl_inputs.extra_context.merge_patch(*additional_context);
      }
@@ -40,7 +62,7 @@ index 111b4a21b..16ce87672 100644
      minja::chat_template_options tmpl_opts;
      // To avoid double BOS / EOS tokens, we're manually removing begining / trailing tokens
 diff --git a/src/llama.cpp/common/chat.h b/src/llama.cpp/common/chat.h
-index d1e480c91..437e64e29 100644
+index f7b36ec71..c07429f08 100644
 --- a/src/llama.cpp/common/chat.h
 +++ b/src/llama.cpp/common/chat.h
 @@ -9,7 +9,18 @@
@@ -64,10 +86,10 @@ index d1e480c91..437e64e29 100644
  struct common_chat_tool_call {
      std::string name;
 diff --git a/src/llama.cpp/common/common.cpp b/src/llama.cpp/common/common.cpp
-index fdce1dcde..55aac3412 100644
+index b0591e84b..93759f884 100644
 --- a/src/llama.cpp/common/common.cpp
 +++ b/src/llama.cpp/common/common.cpp
-@@ -1103,6 +1103,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
+@@ -1126,6 +1126,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
          mparams.n_gpu_layers = params.n_gpu_layers;
      }
  
@@ -76,10 +98,10 @@ index fdce1dcde..55aac3412 100644
      mparams.split_mode      = params.split_mode;
      mparams.tensor_split    = params.tensor_split;
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index 390dda5e5..f259ca785 100644
+index 040a44ebd..37ad69173 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
-@@ -270,6 +270,7 @@ struct lr_opt {
+@@ -274,6 +274,7 @@ struct lr_opt {
  struct ggml_opt_optimizer_params common_opt_lr_pars(void * userdata);
  
  struct common_params {
@@ -88,7 +110,7 @@ index 390dda5e5..f259ca785 100644
      int32_t n_ctx                 =  4096; // context size
      int32_t n_batch               =  2048; // logical batch size for prompt processing (must be >=32 to use BLAS)
 diff --git a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
-index ce0a3e128..df9300224 100644
+index 42041b717..371752718 100644
 --- a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
 +++ b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
 @@ -106,7 +106,7 @@ function(ggml_add_cpu_backend_variant_impl tag_name)
@@ -101,10 +123,10 @@ index ce0a3e128..df9300224 100644
              check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
              if (NOT "${GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E}" STREQUAL "")
 diff --git a/src/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt b/src/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
-index b97e7bf99..c3eb9519f 100644
+index 83a83887b..8ae962b29 100644
 --- a/src/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
 +++ b/src/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
-@@ -111,7 +111,7 @@ if (Vulkan_FOUND)
+@@ -112,7 +112,7 @@ if (Vulkan_FOUND)
      endif()
  
      # Set up toolchain for host compilation whether cross-compiling or not
@@ -113,7 +135,7 @@ index b97e7bf99..c3eb9519f 100644
          if (GGML_VULKAN_SHADERS_GEN_TOOLCHAIN)
              set(HOST_CMAKE_TOOLCHAIN_FILE ${GGML_VULKAN_SHADERS_GEN_TOOLCHAIN})
          else()
-@@ -131,7 +131,7 @@ if (Vulkan_FOUND)
+@@ -132,7 +132,7 @@ if (Vulkan_FOUND)
  
      include(ExternalProject)
  
