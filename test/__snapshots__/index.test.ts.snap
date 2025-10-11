@@ -129,7 +129,7 @@ exports[`completion with t5-like model 1`] = `
 exports[`completion with tools 1`] = `
 {
   "additional_stops": [],
-  "chat_format": 10,
+  "chat_format": 11,
   "grammar": "any-tool-call ::= ( calc-call ) space
 calc-args ::= "{" space  (calc-args-expression-kv )? "}" space
 calc-args-expression-kv ::= "\\"expression\\"" space ":" space string
