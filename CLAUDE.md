@@ -79,6 +79,9 @@ npm run typecheck
 
 # Clean build artifacts
 npm run clean
+
+# Regenerate llama.cpp.patch from current submodule changes
+./scripts/regenerate-patch.sh
 ```
 
 ### Testing
