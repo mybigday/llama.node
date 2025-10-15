@@ -25,6 +25,12 @@ export type LlamaModelOptions = {
   n_ctx?: number
   n_batch?: number
   n_ubatch?: number
+  /**
+   * Number of parallel sequences to support (sets n_seq_max).
+   * This determines the maximum number of parallel slots that can be used.
+   * Default: 8
+   */
+  n_parallel?: number
   n_threads?: number
   n_gpu_layers?: number
   flash_attn_type?: 'auto' | 'on' | 'off'
@@ -403,6 +409,65 @@ export interface LlamaContext {
    * @returns Promise resolving to decoded audio tokens
    */
   decodeAudioTokens(tokens: number[]|Int32Array): Promise<Float32Array>
+
+  // Parallel decoding methods
+
+  /**
+   * Enable parallel decoding mode
+   * @param params Configuration for parallel mode
+   * @returns boolean indicating if successful
+   */
+  enableParallelMode(params: { n_parallel?: number, n_batch?: number }): boolean
+
+  /**
+   * Disable parallel decoding mode
+   */
+  disableParallelMode(): void
+
+  /**
+   * Queue a completion request for parallel processing
+   * @param options Completion options
+   * @param callback Optional token callback
+   * @returns Object with requestId
+   */
+  queueCompletion(
+    options: LlamaCompletionOptions,
+    callback?: (error: any, result: any) => void,
+  ): { requestId: number }
+
+  /**
+   * Queue an embedding request for parallel processing
+   * @param text Text to embed
+   * @param params Optional embedding parameters
+   * @param callback Optional result callback
+   * @returns Object with requestId
+   */
+  queueEmbedding(
+    text: string,
+    params?: { embd_normalize?: number },
+    callback?: (error: any, result: any) => void,
+  ): { requestId: number }
+
+  /**
+   * Queue a rerank request for parallel processing
+   * @param query Query text
+   * @param documents Documents to rank
+   * @param params Optional rerank parameters
+   * @param callback Optional result callback
+   * @returns Object with requestId
+   */
+  queueRerank(
+    query: string,
+    documents: string[],
+    params?: RerankParams,
+    callback?: (error: any, result: any) => void,
+  ): { requestId: number }
+
+  /**
+   * Cancel a queued request
+   * @param requestId Request ID to cancel
+   */
+  cancelRequest(requestId: number): void
 
   // static
   loadModelInfo(path: string, skip: string[]): Promise<GGUFModelInfo>

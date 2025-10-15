@@ -4,6 +4,10 @@
 #include "rn-llama/rn-llama.h"
 #include "rn-llama/rn-completion.h"
 #include "rn-llama/rn-tts.h"
+#include "rn-llama/rn-slot.h"
+#include "rn-llama/rn-slot-manager.h"
+#include <atomic>
+#include <memory>
 
 using namespace rnllama;
 
@@ -55,10 +59,22 @@ private:
   Napi::Value GetAudioCompletionGuideTokens(const Napi::CallbackInfo &info);
   Napi::Value DecodeAudioTokens(const Napi::CallbackInfo &info);
 
+  // Parallel decoding methods
+  Napi::Value EnableParallelMode(const Napi::CallbackInfo &info);
+  void DisableParallelMode(const Napi::CallbackInfo &info);
+  Napi::Value QueueCompletion(const Napi::CallbackInfo &info);
+  Napi::Value QueueEmbedding(const Napi::CallbackInfo &info);
+  Napi::Value QueueRerank(const Napi::CallbackInfo &info);
+  void CancelRequest(const Napi::CallbackInfo &info);
+
   std::string _info;
   Napi::Object _meta;
   LlamaCompletionWorker *_wip = nullptr;
 
   // Use rn-llama context instead of direct llama.cpp types
   llama_rn_context *_rn_ctx = nullptr;
+
+  // Validity flag for async callbacks to prevent use-after-free
+  // Shared pointer ensures callbacks can safely check if context is still alive
+  std::shared_ptr<std::atomic<bool>> _context_valid;
 };

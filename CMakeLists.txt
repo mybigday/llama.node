@@ -137,6 +137,7 @@ file(
     "src/LlamaCompletionWorker.h"
     "src/LlamaContext.cpp"
     "src/LlamaContext.h"
+    "src/LlamaContext_parallel.cpp"
     "src/EmbeddingWorker.cpp"
     "src/EmbeddingWorker.h"
     "src/RerankWorker.cpp"

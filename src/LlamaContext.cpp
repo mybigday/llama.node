@@ -168,6 +168,25 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
            static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::DecodeAudioTokens>(
            "decodeAudioTokens",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       // Parallel decoding methods
+       InstanceMethod<&LlamaContext::EnableParallelMode>(
+           "enableParallelMode",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::DisableParallelMode>(
+           "disableParallelMode",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::QueueCompletion>(
+           "queueCompletion",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::QueueEmbedding>(
+           "queueEmbedding",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::QueueRerank>(
+           "queueRerank",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::CancelRequest>(
+           "cancelRequest",
            static_cast<napi_property_attributes>(napi_enumerable))});
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
@@ -217,6 +236,7 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   params.n_ctx = get_option<int32_t>(options, "n_ctx", 512);
   params.n_batch = get_option<int32_t>(options, "n_batch", 2048);
   params.n_ubatch = get_option<int32_t>(options, "n_ubatch", 512);
+  params.n_parallel = get_option<int32_t>(options, "n_parallel", 1); // Default to 1 for compatibility
   params.embedding = get_option<bool>(options, "embedding", false);
   if (params.embedding) {
     // For non-causal models, batch size must be equal to ubatch size
@@ -288,6 +308,9 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
       }
     }
   }
+  // Initialize validity flag for async callback safety
+  _context_valid = std::make_shared<std::atomic<bool>>(true);
+
   // Use rn-llama context instead of direct session
   _rn_ctx = new llama_rn_context();
   if (!_rn_ctx->loadModel(params)) {
@@ -305,6 +328,11 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
 }
 
 LlamaContext::~LlamaContext() {
+  // Invalidate the context to prevent use-after-free in async callbacks
+  if (_context_valid) {
+    _context_valid->store(false);
+  }
+
   // The DisposeWorker is responsible for cleanup of _rn_ctx
   // If _rn_ctx is still not null here, it means disposal was not properly initiated
   if (_rn_ctx) {
@@ -1133,6 +1161,11 @@ Napi::Value LlamaContext::Release(const Napi::CallbackInfo &info) {
   auto env = info.Env();
   if (_wip != nullptr) {
     _wip->SetStop();
+  }
+
+  // stop_processing_loop
+  if (_rn_ctx && _rn_ctx->slot_manager) {
+    _rn_ctx->slot_manager->stop_processing_loop();
   }
 
   if (_rn_ctx == nullptr) {

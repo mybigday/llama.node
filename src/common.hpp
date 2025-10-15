@@ -16,11 +16,12 @@ static bool is_nil(const Napi::Value &value) {
   return value.IsNull() || value.IsUndefined();
 }
 
-static std::string json_stringify(const Napi::Object &obj) {
-  Napi::Env env = obj.Env();
+// Overload for Napi::Value to handle both arrays and objects
+static std::string json_stringify(const Napi::Value &value) {
+  Napi::Env env = value.Env();
   Napi::Object json = env.Global().Get("JSON").As<Napi::Object>();
   Napi::Function stringify = json.Get("stringify").As<Napi::Function>();
-  return stringify.Call(json, {obj}).As<Napi::String>().ToString();
+  return stringify.Call(json, {value}).As<Napi::String>().ToString();
 }
 
 static void console_log(Napi::Env env, const std::string &message) {

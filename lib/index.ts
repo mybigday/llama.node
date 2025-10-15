@@ -18,8 +18,10 @@ import type {
   GGUFModelInfo,
 } from './binding'
 import { BUILD_NUMBER, BUILD_COMMIT } from './version'
+import { LlamaParallelAPI } from './parallel'
 
 export * from './binding'
+export { LlamaParallelAPI }
 
 export const MTMD_DEFAULT_MEDIA_MARKER = '<__media__>'
 
@@ -78,9 +80,11 @@ export type FormattedChatResult = {
 
 class LlamaContextWrapper {
   ctx: LlamaContext
+  parallel: LlamaParallelAPI
 
   constructor(nativeCtx: LlamaContext) {
     this.ctx = nativeCtx
+    this.parallel = new LlamaParallelAPI(nativeCtx)
   }
 
   getSystemInfo(): string {
@@ -181,7 +185,6 @@ class LlamaContextWrapper {
     const useJinja = this.isJinjaSupported() && params?.jinja
     let tmpl
     if (template) tmpl = template // Force replace if provided
-    const jsonSchema = getJsonSchema(params?.response_format)
 
     const result = this.ctx.getFormattedChat(chat!, tmpl, {
       jinja: useJinja,
