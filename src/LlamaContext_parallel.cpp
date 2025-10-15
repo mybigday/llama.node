@@ -25,6 +25,12 @@ Napi::Value LlamaContext::EnableParallelMode(const Napi::CallbackInfo &info) {
 
   try {
     _rn_ctx->enableParallelMode(n_parallel, n_batch);
+
+    // Start the processing loop after enabling parallel mode
+    if (_rn_ctx->parallel_mode_enabled && _rn_ctx->slot_manager != nullptr) {
+      _rn_ctx->slot_manager->start_processing_loop();
+    }
+
     return Napi::Boolean::New(env, true);
   } catch (const std::exception& e) {
     Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
@@ -342,30 +348,94 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
     reasoning_format_enum,
     thinking_forced_open,
     prefill_text,
-    [tsfn, hasCallback](const completion_token_output& token) {
+    [tsfn, hasCallback, chat_format, thinking_forced_open, this](const completion_token_output& token) {
       if (!hasCallback) return;
 
-      auto callback = [](Napi::Env env, Napi::Function jsCallback, completion_token_output* data) {
-        Napi::Object result = Napi::Object::New(env);
-        result.Set("requestId", Napi::Number::New(env, data->request_id));
-        result.Set("token", Napi::String::New(env, data->text));
+      struct TokenData {
+        completion_token_output token;
+        int32_t chat_format;
+        bool thinking_forced_open;
+        std::string accumulated_text;
+        std::string content;
+        std::string reasoning_content;
+        std::vector<common_chat_tool_call> tool_calls;
+      };
 
-        if (!data->probs.empty()) {
+      auto callback = [](Napi::Env env, Napi::Function jsCallback, TokenData* data) {
+        Napi::Object result = Napi::Object::New(env);
+        result.Set("requestId", Napi::Number::New(env, data->token.request_id));
+        result.Set("token", Napi::String::New(env, data->token.text));
+
+        if (!data->token.probs.empty()) {
           Napi::Array probs = Napi::Array::New(env);
-          for (size_t i = 0; i < data->probs.size(); i++) {
+          for (size_t i = 0; i < data->token.probs.size(); i++) {
             Napi::Object prob = Napi::Object::New(env);
-            prob.Set("tok", Napi::Number::New(env, data->probs[i].tok));
-            prob.Set("prob", Napi::Number::New(env, data->probs[i].prob));
+            prob.Set("tok", Napi::Number::New(env, data->token.probs[i].tok));
+            prob.Set("prob", Napi::Number::New(env, data->token.probs[i].prob));
             probs.Set(i, prob);
           }
           result.Set("probs", probs);
         }
 
-        jsCallback.Call({result});
+        // Add chat format metadata
+        if (data->chat_format > 0) {
+          result.Set("chat_format", Napi::Number::New(env, data->chat_format));
+
+          // Add parsed content if available
+          if (!data->content.empty()) {
+            result.Set("content", Napi::String::New(env, data->content));
+          }
+          if (!data->reasoning_content.empty()) {
+            result.Set("reasoning_content", Napi::String::New(env, data->reasoning_content));
+          }
+          if (!data->tool_calls.empty()) {
+            Napi::Array tool_calls = Napi::Array::New(env);
+            for (size_t i = 0; i < data->tool_calls.size(); i++) {
+              const auto &tc = data->tool_calls[i];
+              Napi::Object tool_call = Napi::Object::New(env);
+              tool_call.Set("type", "function");
+              Napi::Object function = Napi::Object::New(env);
+              function.Set("name", tc.name);
+              function.Set("arguments", tc.arguments);
+              tool_call.Set("function", function);
+              if (!tc.id.empty()) {
+                tool_call.Set("id", tc.id);
+              }
+              tool_calls.Set(i, tool_call);
+            }
+            result.Set("tool_calls", tool_calls);
+          }
+        }
+
+        // Always use consistent callback format with error as first parameter
+        jsCallback.Call({env.Null(), result});
         delete data;
       };
 
-      auto* data = new completion_token_output(token);
+      auto* data = new TokenData;
+      data->token = token;
+      data->chat_format = chat_format;
+      data->thinking_forced_open = thinking_forced_open;
+
+      // For chat format, try to parse partial output
+      if (chat_format > 0 && _rn_ctx->slot_manager != nullptr) {
+        // Get the slot for this request to access accumulated text
+        auto slot = _rn_ctx->slot_manager->get_slot_by_request_id(token.request_id);
+        if (slot != nullptr) {
+          try {
+            // Use slot's own parseChatOutput method
+            auto partial_output = slot->parseChatOutput(true);
+
+            data->accumulated_text = partial_output.accumulated_text;
+            data->content = partial_output.content;
+            data->reasoning_content = partial_output.reasoning_content;
+            data->tool_calls = partial_output.tool_calls;
+          } catch (const std::exception &e) {
+            // Silently ignore parse errors for partial output
+          }
+        }
+      }
+
       tsfn.BlockingCall(data, callback);
     },
     [tsfn, hasCallback, this](llama_rn_slot* slot) {
@@ -392,14 +462,10 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
       std::string reasoning_content;
       std::vector<common_chat_tool_call> tool_calls;
 
-      if (slot->current_chat_format > 0 && _rn_ctx->completion != nullptr) {
+      if (slot->current_chat_format > 0) {
         try {
-          // Temporarily set the generated text to parse it
-          _rn_ctx->completion->generated_text = slot->generated_text;
-          _rn_ctx->completion->current_chat_format = slot->current_chat_format;
-          _rn_ctx->completion->current_thinking_forced_open = slot->current_thinking_forced_open;
-
-          auto final_output = _rn_ctx->completion->parseChatOutput(false);
+          // Use slot's own parseChatOutput method
+          auto final_output = slot->parseChatOutput(false);
 
           content = final_output.content;
           reasoning_content = final_output.reasoning_content;

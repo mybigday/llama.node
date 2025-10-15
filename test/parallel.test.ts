@@ -127,7 +127,7 @@ describe('Parallel Decoding', () => {
           max_tokens: 3,
           temperature: 0.7,
         },
-        (requestId, token) => {
+        (_requestId: number, token: any) => {
           if (token.token) {
             tokens.push(token.token)
           }
@@ -141,6 +141,7 @@ describe('Parallel Decoding', () => {
 
       // Request was successfully queued even if no tokens generated yet
       expect(request.requestId).toBeGreaterThan(0)
+      expect(tokens.length).toBeGreaterThan(0)
     }, 5000)
 
     test('should stop completion request', async () => {

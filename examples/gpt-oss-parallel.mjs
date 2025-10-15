@@ -3,7 +3,7 @@ import { loadModel } from '../lib/index.js'
 const model = await loadModel({
   n_gpu_layers: 99,
   model: import.meta.resolve('./gpt-oss-20b-mxfp4.gguf').replace('file://', ''),
-  n_parallel: 4,
+  n_parallel: 2,
 })
 
 const tools = [
@@ -37,7 +37,7 @@ const tools = [
 ]
 
 await model.parallel.enable({
-  n_parallel: 4,
+  n_parallel: 2,
   n_batch: 512,
 })
 
@@ -47,8 +47,9 @@ const results = await Promise.all(
     'What is the current date?',
     'What is the current weather?',
   ].map(async (message) => {
-    const { promise } = model.parallel.completion(
+    const { promise } = await model.parallel.completion(
       {
+        reasoning_format: 'auto',
         messages: [
           {
             role: 'system',
@@ -68,8 +69,8 @@ const results = await Promise.all(
         console.log(`Request ${requestId}:`, data.token)
       },
     )
-    await promise
-  }
-))
+    return await promise  // Return the result here
+  })
+)
 
 console.log(results)
