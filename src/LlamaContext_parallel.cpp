@@ -110,7 +110,7 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
   params.sampling.mirostat = get_option<int32_t>(options, "mirostat", 0);
   params.sampling.mirostat_tau = get_option<float>(options, "mirostat_tau", 5.00f);
   params.sampling.mirostat_eta = get_option<float>(options, "mirostat_eta", 0.10f);
-  params.sampling.seed = get_option<uint32_t>(options, "seed", LLAMA_DEFAULT_SEED);
+  params.sampling.seed = get_option<int32_t>(options, "seed", LLAMA_DEFAULT_SEED);
   params.sampling.n_probs = get_option<int32_t>(options, "n_probs", 0);
   params.sampling.ignore_eos = get_option<bool>(options, "ignore_eos", false);
   params.sampling.top_n_sigma = get_option<float>(options, "top_n_sigma", 0);
@@ -280,7 +280,8 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
     }
   }
 
-  // Handle grammar triggers
+
+  // Handle grammar_triggers from options
   if (options.Has("grammar_triggers")) {
     auto grammar_triggers = options.Get("grammar_triggers").As<Napi::Array>();
     for (size_t i = 0; i < grammar_triggers.Length(); i++) {
@@ -291,32 +292,37 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
       auto word = trigger_obj.Get("value").ToString().Utf8Value();
 
       if (type == COMMON_GRAMMAR_TRIGGER_TYPE_WORD) {
-        auto ids = common_tokenize(_rn_ctx->ctx, word, false, true);
+        auto ids =
+            common_tokenize(_rn_ctx->ctx, word, /* add_special= */ false,
+                            /* parse_special= */ true);
         if (ids.size() == 1) {
+          auto token = ids[0];
           if (std::find(params.sampling.preserved_tokens.begin(),
                         params.sampling.preserved_tokens.end(),
-                        ids[0]) != params.sampling.preserved_tokens.end()) {
-            common_grammar_trigger trigger;
-            trigger.type = type;
-            trigger.value = word;
-            trigger.token = ids[0];
-            params.sampling.grammar_triggers.push_back(std::move(trigger));
+                        (llama_token)token) ==
+              params.sampling.preserved_tokens.end()) {
+            throw std::runtime_error(
+                "Grammar trigger word should be marked as preserved token");
           }
+          common_grammar_trigger trigger;
+          trigger.type = COMMON_GRAMMAR_TRIGGER_TYPE_TOKEN;
+          trigger.value = word;
+          trigger.token = token;
+          params.sampling.grammar_triggers.push_back(std::move(trigger));
+        } else {
+          params.sampling.grammar_triggers.push_back(
+              {COMMON_GRAMMAR_TRIGGER_TYPE_WORD, word});
         }
-      } else if (type == COMMON_GRAMMAR_TRIGGER_TYPE_TOKEN) {
+      } else {
         common_grammar_trigger trigger;
         trigger.type = type;
         trigger.value = word;
-        if (trigger_obj.Has("token")) {
-          trigger.token = trigger_obj.Get("token").ToNumber().Int32Value();
+        if (type == COMMON_GRAMMAR_TRIGGER_TYPE_TOKEN) {
+          auto token =
+              (llama_token)trigger_obj.Get("token").ToNumber().Int32Value();
+          trigger.token = token;
         }
-        params.sampling.grammar_triggers.push_back(trigger);
-      } else if (type == COMMON_GRAMMAR_TRIGGER_TYPE_PATTERN ||
-                 type == COMMON_GRAMMAR_TRIGGER_TYPE_PATTERN_FULL) {
-        common_grammar_trigger trigger;
-        trigger.type = type;
-        trigger.value = word;
-        params.sampling.grammar_triggers.push_back(trigger);
+        params.sampling.grammar_triggers.push_back(std::move(trigger));
       }
     }
   }
