@@ -147,6 +147,7 @@ string ::= "\\"" char* "\\"" space
 tool-call ::= calc-function-tag | wrappable-tool-call | ( "\`\`\`\\n" | "\`\`\`json\\n" | "\`\`\`xml\\n" ) space wrappable-tool-call space "\`\`\`" space 
 wrappable-tool-call ::= ( any-tool-call | "<tool_call>" space any-tool-call "</tool_call>" | "<function_call>" space any-tool-call "</function_call>" | "<response>"  space any-tool-call "</response>" | "<tools>"     space any-tool-call "</tools>" | "<json>"      space any-tool-call "</json>" | "<xml>"      space any-tool-call "</xml>" | "<JSON>"      space any-tool-call "</JSON>" ) space
 ",
+  "grammar_lazy": true,
   "grammar_triggers": [
     {
       "token": -1,
@@ -165,7 +166,6 @@ wrappable-tool-call ::= ( any-tool-call | "<tool_call>" space any-tool-call "</t
 \\s*)?(?:<function_call>|<tools>|<xml><json>|<response>)?\\s*\\{\\s*"name"\\s*:\\s*"(?:calc)"))[\\s\\S]*",
     },
   ],
-  "grammea_lazy": true,
   "has_media": false,
   "media_paths": [],
   "preserved_tokens": [
