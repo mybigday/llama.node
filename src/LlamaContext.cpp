@@ -168,6 +168,25 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
            static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::DecodeAudioTokens>(
            "decodeAudioTokens",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       // Parallel decoding methods
+       InstanceMethod<&LlamaContext::EnableParallelMode>(
+           "enableParallelMode",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::DisableParallelMode>(
+           "disableParallelMode",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::QueueCompletion>(
+           "queueCompletion",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::QueueEmbedding>(
+           "queueEmbedding",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::QueueRerank>(
+           "queueRerank",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::CancelRequest>(
+           "cancelRequest",
            static_cast<napi_property_attributes>(napi_enumerable))});
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
@@ -217,6 +236,7 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   params.n_ctx = get_option<int32_t>(options, "n_ctx", 512);
   params.n_batch = get_option<int32_t>(options, "n_batch", 2048);
   params.n_ubatch = get_option<int32_t>(options, "n_ubatch", 512);
+  params.n_parallel = get_option<int32_t>(options, "n_parallel", 1); // Default to 1 for compatibility
   params.embedding = get_option<bool>(options, "embedding", false);
   if (params.embedding) {
     // For non-causal models, batch size must be equal to ubatch size

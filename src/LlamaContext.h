@@ -4,6 +4,8 @@
 #include "rn-llama/rn-llama.h"
 #include "rn-llama/rn-completion.h"
 #include "rn-llama/rn-tts.h"
+#include "rn-llama/rn-slot.h"
+#include "rn-llama/rn-slot-manager.h"
 
 using namespace rnllama;
 
@@ -54,6 +56,14 @@ private:
   Napi::Value GetFormattedAudioCompletion(const Napi::CallbackInfo &info);
   Napi::Value GetAudioCompletionGuideTokens(const Napi::CallbackInfo &info);
   Napi::Value DecodeAudioTokens(const Napi::CallbackInfo &info);
+
+  // Parallel decoding methods
+  Napi::Value EnableParallelMode(const Napi::CallbackInfo &info);
+  void DisableParallelMode(const Napi::CallbackInfo &info);
+  Napi::Value QueueCompletion(const Napi::CallbackInfo &info);
+  Napi::Value QueueEmbedding(const Napi::CallbackInfo &info);
+  Napi::Value QueueRerank(const Napi::CallbackInfo &info);
+  void CancelRequest(const Napi::CallbackInfo &info);
 
   std::string _info;
   Napi::Object _meta;

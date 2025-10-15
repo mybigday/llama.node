@@ -32,7 +32,13 @@ const FILES_TO_COPY = [
     'rn-completion.cpp',
     'rn-mtmd.hpp',
     'rn-tts.h',
-    'rn-tts.cpp'
+    'rn-tts.cpp',
+    // Parallel decoding support
+    'rn-common.hpp',
+    'rn-slot.h',
+    'rn-slot.cpp',
+    'rn-slot-manager.h',
+    'rn-slot-manager.cpp'
 ];
 
 try {
