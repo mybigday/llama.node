@@ -185,7 +185,6 @@ class LlamaContextWrapper {
     const useJinja = this.isJinjaSupported() && params?.jinja
     let tmpl
     if (template) tmpl = template // Force replace if provided
-    const jsonSchema = getJsonSchema(params?.response_format)
 
     const result = this.ctx.getFormattedChat(chat!, tmpl, {
       jinja: useJinja,

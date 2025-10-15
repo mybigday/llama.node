@@ -62,3 +62,5 @@ const result = await model.completion({
 })
 
 console.log(result)
+
+await model.release()
