@@ -1,8 +1,14 @@
 import { loadModel } from '../lib/index.js'
 
 const model = await loadModel({
+  n_ctx: 8192,
   n_gpu_layers: 99,
   model: import.meta.resolve('./gpt-oss-20b-mxfp4.gguf').replace('file://', ''),
+  use_mlock: true,
+  use_mmap: true,
+  flash_attn_type: 'auto',
+  cache_type_k: 'q8_0',
+  cache_type_v: 'q8_0',
 })
 
 const tools = [
