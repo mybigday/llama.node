@@ -6,6 +6,8 @@
 #include "rn-llama/rn-tts.h"
 #include "rn-llama/rn-slot.h"
 #include "rn-llama/rn-slot-manager.h"
+#include <atomic>
+#include <memory>
 
 using namespace rnllama;
 
@@ -71,4 +73,8 @@ private:
 
   // Use rn-llama context instead of direct llama.cpp types
   llama_rn_context *_rn_ctx = nullptr;
+
+  // Validity flag for async callbacks to prevent use-after-free
+  // Shared pointer ensures callbacks can safely check if context is still alive
+  std::shared_ptr<std::atomic<bool>> _context_valid;
 };

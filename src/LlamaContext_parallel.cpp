@@ -344,6 +344,10 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
     );
   }
 
+  // Capture validity flag and slot_manager to prevent use-after-free
+  auto context_valid = _context_valid;
+  auto slot_manager = _rn_ctx->slot_manager;
+
   // Queue the request
   int32_t requestId = _rn_ctx->slot_manager->queue_request(
     params,
@@ -354,7 +358,7 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
     reasoning_format_enum,
     thinking_forced_open,
     prefill_text,
-    [tsfn, hasCallback, chat_format, thinking_forced_open, this](const completion_token_output& token) {
+    [tsfn, hasCallback, chat_format, thinking_forced_open, context_valid, slot_manager](const completion_token_output& token) {
       if (!hasCallback) return;
 
       struct TokenData {
@@ -424,9 +428,10 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
       data->thinking_forced_open = thinking_forced_open;
 
       // For chat format, try to parse partial output
-      if (chat_format > 0 && _rn_ctx->slot_manager != nullptr) {
+      // Check context validity to prevent use-after-free
+      if (chat_format > 0 && context_valid && context_valid->load() && slot_manager != nullptr) {
         // Get the slot for this request to access accumulated text
-        auto slot = _rn_ctx->slot_manager->get_slot_by_request_id(token.request_id);
+        auto slot = slot_manager->get_slot_by_request_id(token.request_id);
         if (slot != nullptr) {
           try {
             // Use slot's own parseChatOutput method
@@ -444,7 +449,7 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
 
       tsfn.BlockingCall(data, callback);
     },
-    [tsfn, hasCallback, this](llama_rn_slot* slot) {
+    [tsfn, hasCallback](llama_rn_slot* slot) {
       if (!hasCallback) return;
 
       struct CompletionResult {

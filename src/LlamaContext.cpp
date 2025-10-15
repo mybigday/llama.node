@@ -308,6 +308,9 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
       }
     }
   }
+  // Initialize validity flag for async callback safety
+  _context_valid = std::make_shared<std::atomic<bool>>(true);
+
   // Use rn-llama context instead of direct session
   _rn_ctx = new llama_rn_context();
   if (!_rn_ctx->loadModel(params)) {
@@ -325,6 +328,11 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
 }
 
 LlamaContext::~LlamaContext() {
+  // Invalidate the context to prevent use-after-free in async callbacks
+  if (_context_valid) {
+    _context_valid->store(false);
+  }
+
   // The DisposeWorker is responsible for cleanup of _rn_ctx
   // If _rn_ctx is still not null here, it means disposal was not properly initiated
   if (_rn_ctx) {
@@ -1153,6 +1161,11 @@ Napi::Value LlamaContext::Release(const Napi::CallbackInfo &info) {
   auto env = info.Env();
   if (_wip != nullptr) {
     _wip->SetStop();
+  }
+
+  // stop_processing_loop
+  if (_rn_ctx && _rn_ctx->slot_manager) {
+    _rn_ctx->slot_manager->stop_processing_loop();
   }
 
   if (_rn_ctx == nullptr) {
