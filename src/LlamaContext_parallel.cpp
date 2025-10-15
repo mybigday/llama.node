@@ -447,7 +447,10 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
         }
       }
 
-      tsfn.BlockingCall(data, callback);
+      auto status = tsfn.BlockingCall(data, callback);
+      if (status != napi_ok) {
+        delete data;
+      }
     },
     [tsfn, hasCallback](llama_rn_slot* slot) {
       if (!hasCallback) return;
@@ -546,7 +549,10 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
         delete data;
       };
 
-      tsfn.BlockingCall(result_data, callback);
+      auto status = tsfn.BlockingCall(result_data, callback);
+      if (status != napi_ok) {
+        delete result_data;
+      }
 
       if (hasCallback) {
         tsfn.Release();
@@ -635,7 +641,10 @@ Napi::Value LlamaContext::QueueEmbedding(const Napi::CallbackInfo &info) {
       };
 
       auto* data = new EmbeddingData{requestId, embedding};
-      tsfn.BlockingCall(data, callback);
+      auto status = tsfn.BlockingCall(data, callback);
+      if (status != napi_ok) {
+        delete data;
+      }
       tsfn.Release();
     }
   );
@@ -722,7 +731,10 @@ Napi::Value LlamaContext::QueueRerank(const Napi::CallbackInfo &info) {
       };
 
       auto* data = new RerankData{requestId, scores, documents};
-      tsfn.BlockingCall(data, callback);
+      auto status = tsfn.BlockingCall(data, callback);
+      if (status != napi_ok) {
+        delete data;
+      }
       tsfn.Release();
     }
   );
