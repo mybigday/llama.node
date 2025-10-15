@@ -607,7 +607,7 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
     // grammar: string
     result.Set("grammar", chatParams.grammar);
     // grammar_lazy: boolean
-    result.Set("grammea_lazy", chatParams.grammar_lazy);
+    result.Set("grammar_lazy", chatParams.grammar_lazy);
     // grammar_triggers: [{ value: string, token: number }]
     Napi::Array grammar_triggers = Napi::Array::New(env);
     for (size_t i = 0; i < chatParams.grammar_triggers.size(); i++) {

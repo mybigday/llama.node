@@ -277,7 +277,7 @@ export type JinjaFormattedChatResult = {
   prompt: string
   chat_format: number
   grammar: string
-  grammea_lazy: boolean
+  grammar_lazy: boolean
   grammar_triggers: Array<{
     type: number
     value: string
