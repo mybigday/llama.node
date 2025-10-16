@@ -47,13 +47,13 @@ await model.parallel.enable({
   n_batch: 512,
 })
 
-const requests = [
+const results = await Promise.all([
   'What is the current time?',
   'What is the current date?',
   'What is the current weather?',
   'What is the current weather and time?',
-].map(message =>
-  model.parallel.completion(
+].map(async message => {
+  const { promise } = await model.parallel.completion(
     {
       reasoning_format: 'auto',
       messages: [
@@ -75,10 +75,8 @@ const requests = [
       console.log(`Request ${requestId}:`, data.token)
     },
   )
-)
-
-// Now await all the promises
-const results = await Promise.all(requests.map(req => req.promise))
+  return promise
+}))
 
 console.log(results)
 
