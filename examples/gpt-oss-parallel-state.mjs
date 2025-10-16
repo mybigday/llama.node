@@ -1,0 +1,156 @@
+import { loadModel } from '../lib/index.js'
+import * as fs from 'fs'
+import * as path from 'path'
+import * as os from 'os'
+
+// Helper to generate a simple hash for a question (for state file naming)
+const hashString = (str) => {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash &= hash // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(36)
+}
+
+// Helper to get state file path for a question (per model)
+const getStatePath = (modelPath, prompt) => {
+  // Extract model filename without extension
+  const modelFilename = path.basename(modelPath, path.extname(modelPath))
+  const questionHash = hashString(prompt.trim().toLowerCase())
+  const cacheDir = os.tmpdir()
+  return path.join(cacheDir, `state_${modelFilename}_${questionHash}.bin`)
+}
+
+// Example prompts to demonstrate state caching
+const EXAMPLE_PROMPTS = [
+  'What is the capital of France?',
+  'Explain quantum computing in simple terms.',
+  'Write a haiku about coding.',
+  'What are the primary colors?',
+  'What is the meaning of life?',
+  'What is art?',
+  // Repeat some questions to demonstrate state loading
+  'What is the capital of France?', // Should load state from first request
+  'Explain quantum computing in simple terms.', // Should load state from second request
+]
+
+const SYSTEM_PROMPT = 'You are a helpful AI assistant. Be concise and direct in your responses.'
+
+console.log('Loading model...')
+const model = await loadModel({
+  n_ctx: 8192,
+  n_gpu_layers: 99,
+  model: import.meta.resolve('./gpt-oss-20b-mxfp4.gguf').replace('file://', ''),
+  use_mlock: true,
+  use_mmap: true,
+  flash_attn_type: 'auto',
+  cache_type_k: 'q8_0',
+  cache_type_v: 'q8_0',
+  n_parallel: 8,
+})
+
+console.log('Enabling parallel mode...')
+await model.parallel.enable({
+  n_parallel: 4,
+  n_batch: 512,
+})
+
+console.log('\n=== Parallel Completion with State Management Demo ===\n')
+console.log('This demo shows how to use load_state_path and save_state_path to cache')
+console.log('question-specific state. When a question is asked multiple times, the')
+console.log('state from the first request is reused, significantly improving performance.\n')
+
+// Process all requests in parallel
+const modelPath = import.meta.resolve('./gpt-oss-20b-mxfp4.gguf').replace('file://', '')
+
+const requests = EXAMPLE_PROMPTS.map(async (prompt, i) => {
+  const startTime = Date.now()
+  console.log(`\n[${i + 1}/${EXAMPLE_PROMPTS.length}] Processing: "${prompt}"`)
+
+  try {
+    // Get state path for this question
+    const statePath = getStatePath(modelPath, prompt)
+
+    // Check if state file exists
+    const stateFileExists = fs.existsSync(statePath)
+    const loadStatePath = stateFileExists ? statePath : undefined
+
+    if (loadStatePath) {
+      console.log(`  ✓ Loading existing state from: ${path.basename(statePath)}`)
+    } else {
+      console.log(`  ○ No existing state, will save to: ${path.basename(statePath)}`)
+    }
+
+    // Build messages
+    const messages = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: prompt },
+    ]
+
+    // Format chat to get the formatted prompt for tokenization
+    const formattedChat = await model.getFormattedChat(
+      messages,
+      undefined,
+      { jinja: true }
+    )
+
+    // Tokenize the formatted prompt to get question token count
+    let questionTokenCount = 0
+    try {
+      const tokenizeResult = await model.tokenize(formattedChat.prompt)
+      questionTokenCount = tokenizeResult.tokens.length
+      console.log(`  → Question tokens: ${questionTokenCount}`)
+    } catch (error) {
+      console.error('  ✗ Error tokenizing prompt:', error)
+      questionTokenCount = 0
+    }
+
+    // Queue the completion with state management
+    const request = await model.parallel.completion(
+      {
+        messages,
+        reasoning_format: 'auto',
+        n_predict: 50,
+        jinja: true,
+        temperature: 0.7,
+        // State management parameters
+        load_state_path: loadStatePath,
+        save_state_path: questionTokenCount > 0 ? statePath : undefined,
+        save_state_size: questionTokenCount > 0 ? questionTokenCount : undefined,
+      },
+      (requestId, data) => {
+        // Stream tokens (optional)
+        if (data.token) {
+          process.stdout.write(data.token)
+        }
+      }
+    )
+
+    // Wait for completion
+    const result = await request.promise
+    const duration = ((Date.now() - startTime) / 1000).toFixed(2)
+
+    console.log(`\n  ✓ Completed in ${duration}s`)
+    console.log(`  → Response: ${result.text.substring(0, 100)}${result.text.length > 100 ? '...' : ''}`)
+
+    if (questionTokenCount > 0) {
+      console.log(`  ✓ State saved to: ${path.basename(statePath)}`)
+    }
+
+    return result
+  } catch (error) {
+    console.error(`\n  ✗ Error:`, error.message)
+    return null
+  }
+})
+
+// Wait for all requests to complete
+const results = await Promise.all(requests)
+
+console.log('\n\n=== Demo Complete ===')
+console.log('\nTo clear saved state files, run:')
+console.log(`  rm ${os.tmpdir()}/state_*.bin`)
+
+await model.release()

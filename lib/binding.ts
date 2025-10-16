@@ -163,6 +163,36 @@ export type LlamaCompletionOptions = {
   n_probs?: number
 }
 
+/**
+ * Parameters for parallel completion requests (queueCompletion).
+ * Extends LlamaCompletionOptions with parallel-mode specific options.
+ */
+export type LlamaParallelCompletionOptions = LlamaCompletionOptions & {
+  /**
+   * File path to load session state from before processing.
+   * This allows you to resume from a previously saved completion state.
+   * Use with `save_state_path` to enable conversation continuity across requests.
+   * Example: `'/path/to/session.bin'` or `'file:///path/to/session.bin'`
+   */
+  load_state_path?: string
+
+  /**
+   * File path to save session state to after completion.
+   * The session state will be saved to this file path when the completion finishes.
+   * You can then pass this path to `load_state_path` in a subsequent request to resume.
+   * Example: `'/path/to/session.bin'` or `'file:///path/to/session.bin'`
+   */
+  save_state_path?: string
+
+  /**
+   * Number of tokens to save when saving session state.
+   * If not specified or <= 0, all tokens will be saved.
+   * Use this to limit the size of saved session files.
+   * Example: `512` to save only the last 512 tokens
+   */
+  save_state_size?: number
+}
+
 export type TokenProbability = {
   tok_str: string
   prob: number
@@ -426,12 +456,12 @@ export interface LlamaContext {
 
   /**
    * Queue a completion request for parallel processing
-   * @param options Completion options
+   * @param options Completion options with parallel-specific state management
    * @param callback Optional token callback
    * @returns Object with requestId
    */
   queueCompletion(
-    options: LlamaCompletionOptions,
+    options: LlamaParallelCompletionOptions,
     callback?: (error: any, result: any) => void,
   ): { requestId: number }
 
