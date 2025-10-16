@@ -1,7 +1,9 @@
 import { loadModel } from '../lib/index.js'
 import * as fs from 'fs'
 import * as path from 'path'
-import * as os from 'os'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // Helper to generate a simple hash for a question (for state file naming)
 const hashString = (str) => {
@@ -19,8 +21,14 @@ const getStatePath = (modelPath, prompt) => {
   // Extract model filename without extension
   const modelFilename = path.basename(modelPath, path.extname(modelPath))
   const questionHash = hashString(prompt.trim().toLowerCase())
-  const cacheDir = os.tmpdir()
-  return path.join(cacheDir, `state_${modelFilename}_${questionHash}.bin`)
+  const stateDir = path.join(__dirname, 'state')
+
+  // Create state directory if it doesn't exist
+  if (!fs.existsSync(stateDir)) {
+    fs.mkdirSync(stateDir, { recursive: true })
+  }
+
+  return path.join(stateDir, `state_${modelFilename}_${questionHash}.bin`)
 }
 
 // Example prompts to demonstrate state caching
@@ -90,7 +98,7 @@ const requests = EXAMPLE_PROMPTS.map(async (prompt, i) => {
     ]
 
     // Format chat to get the formatted prompt for tokenization
-    const formattedChat = await model.getFormattedChat(
+    const formattedChat = model.getFormattedChat(
       messages,
       undefined,
       { jinja: true }
@@ -120,7 +128,7 @@ const requests = EXAMPLE_PROMPTS.map(async (prompt, i) => {
         save_state_path: questionTokenCount > 0 ? statePath : undefined,
         save_state_size: questionTokenCount > 0 ? questionTokenCount : undefined,
       },
-      (requestId, data) => {
+      (_requestId, data) => {
         // Stream tokens (optional)
         if (data.token) {
           process.stdout.write(data.token)
@@ -150,7 +158,11 @@ const requests = EXAMPLE_PROMPTS.map(async (prompt, i) => {
 const results = await Promise.all(requests)
 
 console.log('\n\n=== Demo Complete ===')
-console.log('\nTo clear saved state files, run:')
-console.log(`  rm ${os.tmpdir()}/state_*.bin`)
+console.log(`Total requests: ${EXAMPLE_PROMPTS.length}`)
+console.log(`Successful: ${results.filter(r => r !== null).length}`)
+console.log(`Failed: ${results.filter(r => r === null).length}`)
+console.log('\nState files saved to: examples/state/')
+console.log('To clear saved state files, run:')
+console.log('  rm -rf examples/state/')
 
 await model.release()
