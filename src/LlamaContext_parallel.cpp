@@ -268,6 +268,11 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
   // Handle prefill text
   prefill_text = get_option<std::string>(options, "prefill_text", "");
 
+  // Handle state management parameters
+  std::string load_state_path = get_option<std::string>(options, "load_state_path", "");
+  std::string save_state_path = get_option<std::string>(options, "save_state_path", "");
+  int32_t save_state_size = get_option<int32_t>(options, "save_state_size", -1);
+
   // Handle preserved tokens
   if (options.Has("preserved_tokens")) {
     auto preserved_tokens = options.Get("preserved_tokens").As<Napi::Array>();
@@ -358,6 +363,9 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
     reasoning_format_enum,
     thinking_forced_open,
     prefill_text,
+    load_state_path,
+    save_state_path,
+    save_state_size,
     [tsfn, hasCallback, chat_format, thinking_forced_open, context_valid, slot_manager](const completion_token_output& token) {
       if (!hasCallback) return;
 
