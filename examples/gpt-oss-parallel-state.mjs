@@ -56,12 +56,12 @@ const model = await loadModel({
   flash_attn_type: 'auto',
   cache_type_k: 'q8_0',
   cache_type_v: 'q8_0',
-  n_parallel: 1,
+  n_parallel: 8,
 })
 
 console.log('Enabling parallel mode...')
 await model.parallel.enable({
-  n_parallel: 1,
+  n_parallel: 4,
   n_batch: 512,
 })
 
