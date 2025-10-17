@@ -500,7 +500,7 @@ export interface LlamaContext {
    */
   queueCompletion(
     options: LlamaParallelCompletionOptions,
-    callback?: (error: any, result: LlamaParallelCompletionResult | { requestId: number, token: string, content?: string, reasoning_content?: string, tool_calls?: ToolCall[] }) => void,
+    callback?: (error: any, result: LlamaParallelCompletionResult) => void,
   ): { requestId: number }
 
   /**
