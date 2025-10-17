@@ -25,6 +25,7 @@ public:
   ~LlamaContext();
   static void ToggleNativeLog(const Napi::CallbackInfo &info);
   static Napi::Value ModelInfo(const Napi::CallbackInfo &info);
+  static Napi::Value GetBackendDevicesInfo(const Napi::CallbackInfo &info);
   static void Init(Napi::Env env, Napi::Object &exports);
 
 private:

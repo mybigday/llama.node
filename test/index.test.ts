@@ -1,6 +1,6 @@
 import path from 'path'
 import waitForExpect from 'wait-for-expect'
-import { loadModel, loadLlamaModelInfo, toggleNativeLog, addNativeLogListener } from '../lib'
+import { loadModel, loadLlamaModelInfo, toggleNativeLog, addNativeLogListener, getBackendDevicesInfo } from '../lib'
 
 const filterCompletionResult = (result: any) => {
   return {
@@ -389,6 +389,62 @@ test('completion with n_probs parameter', async () => {
       expect(prob.probs.length).toBeGreaterThan(0)
     })
   }
-  
+
   await model.release()
+})
+
+test('getBackendDevicesInfo', async () => {
+  // Get backend device information
+  const devices = await getBackendDevicesInfo()
+
+  console.log('Backend Devices Info:', JSON.stringify(devices, null, 2))
+
+  // Should return an array
+  expect(Array.isArray(devices)).toBe(true)
+  expect(devices.length).toBeGreaterThan(0)
+
+  // Each device should have the required properties
+  devices.forEach((device) => {
+    expect(device).toHaveProperty('backend')
+    expect(device).toHaveProperty('type')
+    expect(device).toHaveProperty('deviceName')
+    expect(device).toHaveProperty('maxMemorySize')
+
+    // Type checks
+    expect(typeof device.backend).toBe('string')
+    expect(typeof device.type).toBe('string')
+    expect(typeof device.deviceName).toBe('string')
+    expect(typeof device.maxMemorySize).toBe('number')
+
+    // Type should be one of the known values
+    expect(['cpu', 'gpu', 'igpu', 'accel', 'unknown']).toContain(device.type)
+
+    // Memory size should be non-negative
+    expect(device.maxMemorySize).toBeGreaterThanOrEqual(0)
+
+    // Metadata is optional but should be an object if present
+    if (device.metadata) {
+      expect(typeof device.metadata).toBe('object')
+    }
+  })
+
+  // Verify we have at least a CPU backend
+  const cpuDevice = devices.find((d) => d.type === 'cpu')
+  expect(cpuDevice).toBeDefined()
+  expect(cpuDevice?.backend).toBe('CPU')
+
+  // On macOS with Metal support, we should have a Metal GPU device
+  if (process.platform === 'darwin') {
+    const metalDevice = devices.find((d) => d.backend === 'Metal')
+    if (metalDevice) {
+      expect(metalDevice.type).toBe('gpu')
+      expect(metalDevice.maxMemorySize).toBeGreaterThan(0)
+
+      // Metal devices should have metadata with specific properties
+      if (metalDevice.metadata) {
+        expect(metalDevice.metadata).toHaveProperty('hasUnifiedMemory')
+        expect(typeof metalDevice.metadata.hasUnifiedMemory).toBe('boolean')
+      }
+    }
+  }
 })
