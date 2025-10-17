@@ -48,20 +48,20 @@ const SYSTEM_PROMPT = 'You are a helpful AI assistant. Be concise and direct in 
 
 console.log('Loading model...')
 const model = await loadModel({
+  model: import.meta.resolve('./gpt-oss-20b-mxfp4.gguf').replace('file://', ''),
   n_ctx: 8192,
   n_gpu_layers: 99,
-  model: import.meta.resolve('./gpt-oss-20b-mxfp4.gguf').replace('file://', ''),
   use_mlock: true,
   use_mmap: true,
   flash_attn_type: 'auto',
   cache_type_k: 'q8_0',
   cache_type_v: 'q8_0',
-  n_parallel: 8,
+  n_parallel: 1,
 })
 
 console.log('Enabling parallel mode...')
 await model.parallel.enable({
-  n_parallel: 4,
+  n_parallel: 1,
   n_batch: 512,
 })
 
@@ -70,50 +70,71 @@ console.log('This demo shows how to use load_state_path and save_state_path to c
 console.log('question-specific state. When a question is asked multiple times, the')
 console.log('state from the first request is reused, significantly improving performance.\n')
 
-// Process all requests in parallel
+// Pre-tokenize all prompts SEQUENTIALLY to avoid lock contention
+console.log('Pre-tokenizing all prompts...')
 const modelPath = import.meta.resolve('./gpt-oss-20b-mxfp4.gguf').replace('file://', '')
+const preTokenizedPrompts = []
 
-const requests = EXAMPLE_PROMPTS.map(async (prompt, i) => {
+const t0_total = Date.now()
+for (let i = 0; i < EXAMPLE_PROMPTS.length; i++) {
+  const prompt = EXAMPLE_PROMPTS[i]
+  const statePath = getStatePath(modelPath, prompt)
+  const stateFileExists = fs.existsSync(statePath)
+  const loadStatePath = stateFileExists ? statePath : undefined
+
+  // Build messages
+  const messages = [
+    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'user', content: prompt },
+  ]
+
+  const t0_formatChat = Date.now()
+  // Format chat to get the formatted prompt for tokenization
+  const formattedChat = model.getFormattedChat(
+    messages,
+    undefined,
+    { jinja: true }
+  )
+  const t1_formatChat = Date.now()
+  console.log(`  → Format chat time: ${t1_formatChat - t0_formatChat}ms`)
+
+  // Tokenize the formatted prompt to get question token count
+  let questionTokenCount = 0
+  try {
+    const t0 = Date.now()
+    const tokenizeResult = await model.tokenize(formattedChat.prompt)
+    const t1 = Date.now()
+    questionTokenCount = tokenizeResult.tokens.length
+    console.log(`  [${i + 1}/${EXAMPLE_PROMPTS.length}] Tokenized "${prompt.substring(0, 40)}..." → ${questionTokenCount} tokens (${t1 - t0}ms)`)
+  } catch (error) {
+    console.error(`  [${i + 1}/${EXAMPLE_PROMPTS.length}] ✗ Error tokenizing prompt:`, error)
+    questionTokenCount = 0
+  }
+
+  preTokenizedPrompts.push({
+    prompt,
+    messages,
+    statePath,
+    loadStatePath,
+    questionTokenCount,
+  })
+}
+const t1_total = Date.now()
+console.log(`✓ Pre-tokenization complete in ${t1_total - t0_total}ms\n`)
+
+// Now process all requests in parallel using pre-computed tokenization results
+const requests = preTokenizedPrompts.map(async ({ prompt, messages, statePath, loadStatePath, questionTokenCount }, i) => {
   const startTime = Date.now()
   console.log(`\n[${i + 1}/${EXAMPLE_PROMPTS.length}] Processing: "${prompt}"`)
 
   try {
-    // Get state path for this question
-    const statePath = getStatePath(modelPath, prompt)
-
-    // Check if state file exists
-    const stateFileExists = fs.existsSync(statePath)
-    const loadStatePath = stateFileExists ? statePath : undefined
-
     if (loadStatePath) {
       console.log(`  ✓ Loading existing state from: ${path.basename(statePath)}`)
     } else {
       console.log(`  ○ No existing state, will save to: ${path.basename(statePath)}`)
     }
 
-    // Build messages
-    const messages = [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: prompt },
-    ]
-
-    // Format chat to get the formatted prompt for tokenization
-    const formattedChat = model.getFormattedChat(
-      messages,
-      undefined,
-      { jinja: true }
-    )
-
-    // Tokenize the formatted prompt to get question token count
-    let questionTokenCount = 0
-    try {
-      const tokenizeResult = await model.tokenize(formattedChat.prompt)
-      questionTokenCount = tokenizeResult.tokens.length
-      console.log(`  → Question tokens: ${questionTokenCount}`)
-    } catch (error) {
-      console.error('  ✗ Error tokenizing prompt:', error)
-      questionTokenCount = 0
-    }
+    console.log(`  → Question tokens: ${questionTokenCount}`)
 
     // Queue the completion with state management
     const request = await model.parallel.completion(

@@ -477,6 +477,7 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
         bool thinking_forced_open;
         size_t tokens_evaluated;
         size_t tokens_predicted;
+        rnllama::slot_timings timings;
       };
 
       // Parse chat output if chat format is enabled
@@ -497,6 +498,9 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
         }
       }
 
+      // Get timings from slot
+      rnllama::slot_timings slot_timings = slot->get_timings();
+
       auto* result_data = new CompletionResult{
         slot->request_id,
         slot->generated_text,
@@ -510,7 +514,8 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
         slot->current_chat_format,
         slot->current_thinking_forced_open,
         static_cast<size_t>(slot->n_decoded),
-        slot->num_tokens_predicted
+        slot->num_tokens_predicted,
+        slot_timings
       };
 
       auto callback = [](Napi::Env env, Napi::Function jsCallback, CompletionResult* data) {
@@ -552,6 +557,19 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
           }
           result.Set("tool_calls", tool_calls);
         }
+
+        // Add timings
+        Napi::Object timingsObj = Napi::Object::New(env);
+        timingsObj.Set("cache_n", Napi::Number::New(env, data->timings.cache_n));
+        timingsObj.Set("prompt_n", Napi::Number::New(env, data->timings.prompt_n));
+        timingsObj.Set("prompt_ms", Napi::Number::New(env, data->timings.prompt_ms));
+        timingsObj.Set("prompt_per_token_ms", Napi::Number::New(env, data->timings.prompt_per_token_ms));
+        timingsObj.Set("prompt_per_second", Napi::Number::New(env, data->timings.prompt_per_second));
+        timingsObj.Set("predicted_n", Napi::Number::New(env, data->timings.predicted_n));
+        timingsObj.Set("predicted_ms", Napi::Number::New(env, data->timings.predicted_ms));
+        timingsObj.Set("predicted_per_token_ms", Napi::Number::New(env, data->timings.predicted_per_token_ms));
+        timingsObj.Set("predicted_per_second", Napi::Number::New(env, data->timings.predicted_per_second));
+        result.Set("timings", timingsObj);
 
         jsCallback.Call({env.Null(), result});
         delete data;

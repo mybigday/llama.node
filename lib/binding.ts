@@ -236,6 +236,36 @@ export type LlamaCompletionToken = {
   completion_probabilities?: CompletionProbability[]
 }
 
+/**
+ * Result from a parallel completion request (queueCompletion callback).
+ * Extends the basic completion result with per-slot timing information.
+ */
+export type LlamaParallelCompletionResult = {
+  requestId: number
+  text: string
+  reasoning_content?: string
+  content?: string
+  tool_calls?: ToolCall[]
+  chat_format: number
+  stopped_eos: boolean
+  stopped_limit: boolean
+  stopped_word: boolean
+  context_full: boolean
+  tokens_evaluated: number
+  tokens_predicted: number
+  timings: {
+    cache_n: number
+    prompt_n: number
+    prompt_ms: number
+    prompt_per_token_ms: number
+    prompt_per_second: number
+    predicted_n: number
+    predicted_ms: number
+    predicted_per_token_ms: number
+    predicted_per_second: number
+  }
+}
+
 export type TokenizeResult = {
   tokens: Int32Array
   has_media: boolean
@@ -457,12 +487,12 @@ export interface LlamaContext {
   /**
    * Queue a completion request for parallel processing
    * @param options Completion options with parallel-specific state management
-   * @param callback Optional token callback
+   * @param callback Optional callback that receives tokens during generation and final result
    * @returns Object with requestId
    */
   queueCompletion(
     options: LlamaParallelCompletionOptions,
-    callback?: (error: any, result: any) => void,
+    callback?: (error: any, result: LlamaParallelCompletionResult | { requestId: number, token: string, content?: string, reasoning_content?: string, tool_calls?: ToolCall[] }) => void,
   ): { requestId: number }
 
   /**
