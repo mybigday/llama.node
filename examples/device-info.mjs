@@ -1,7 +1,12 @@
 import { getBackendDevicesInfo } from '../lib/index.js'
 
+// Get variant from command line args (default, vulkan, cuda)
+const variant = process.argv[2] || 'default'
+
+console.log(`Querying backend devices for variant: ${variant}\n`)
+
 // Get information about available backend devices
-const devices = await getBackendDevicesInfo()
+const devices = await getBackendDevicesInfo(variant)
 
 console.log(`Found ${devices.length} backend device(s):\n`)
 
@@ -20,3 +25,6 @@ devices.forEach((device, index) => {
   }
   console.log()
 })
+
+console.log('Usage: node examples/device-info.mjs [variant]')
+console.log('  variant: default, vulkan, or cuda')

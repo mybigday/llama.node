@@ -385,10 +385,9 @@ export const loadLlamaModelInfo = async (
   return mods[variant].LlamaContext.loadModelInfo(path, modelInfoSkip)
 }
 
-export const getBackendDevicesInfo = async (): Promise<
-  import('./binding').BackendDeviceInfo[]
-> => {
-  const variant = 'default'
+export const getBackendDevicesInfo = async (
+  variant: LibVariant = 'default'
+): Promise<import('./binding').BackendDeviceInfo[]> => {
   mods[variant] ??= await loadModule(variant)
   refreshNativeLogSetup()
   const jsonString = mods[variant].LlamaContext.getBackendDevicesInfo()
