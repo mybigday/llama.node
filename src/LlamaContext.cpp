@@ -89,6 +89,13 @@ Napi::Value LlamaContext::ModelInfo(const Napi::CallbackInfo &info) {
   return metadata;
 }
 
+// getBackendDevicesInfo(): string
+Napi::Value LlamaContext::GetBackendDevicesInfo(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  std::string devices_json = rnllama::get_backend_devices_info();
+  return Napi::String::New(env, devices_json);
+}
+
 void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
   Napi::Function func = DefineClass(
       env, "LlamaContext",
@@ -147,6 +154,9 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
            static_cast<napi_property_attributes>(napi_enumerable)),
        StaticMethod<&LlamaContext::ToggleNativeLog>(
            "toggleNativeLog",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       StaticMethod<&LlamaContext::GetBackendDevicesInfo>(
+           "getBackendDevicesInfo",
            static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::GetMultimodalSupport>(
            "getMultimodalSupport",

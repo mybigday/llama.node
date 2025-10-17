@@ -385,6 +385,16 @@ export const loadLlamaModelInfo = async (
   return mods[variant].LlamaContext.loadModelInfo(path, modelInfoSkip)
 }
 
+export const getBackendDevicesInfo = async (): Promise<
+  import('./binding').BackendDeviceInfo[]
+> => {
+  const variant = 'default'
+  mods[variant] ??= await loadModule(variant)
+  refreshNativeLogSetup()
+  const jsonString = mods[variant].LlamaContext.getBackendDevicesInfo()
+  return JSON.parse(jsonString as any)
+}
+
 export const BuildInfo = {
   number: BUILD_NUMBER,
   commit: BUILD_COMMIT,

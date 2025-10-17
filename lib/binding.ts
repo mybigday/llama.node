@@ -287,6 +287,14 @@ export type RerankResult = {
   index: number
 }
 
+export type BackendDeviceInfo = {
+  backend: string
+  type: string
+  deviceName: string
+  maxMemorySize: number
+  metadata?: Record<string, any>
+}
+
 export type ModelInfo = {
   desc: string
   nEmbd: number
@@ -535,6 +543,11 @@ export interface LlamaContext {
     enable: boolean,
     callback: (level: string, text: string) => void,
   ): void
+  /**
+   * Get information about available backend devices
+   * @returns Array of backend device information
+   */
+  getBackendDevicesInfo(): BackendDeviceInfo[]
 }
 
 export interface Module {
