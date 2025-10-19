@@ -5,6 +5,7 @@ import type {
   LlamaCompletionToken,
   RerankParams,
 } from './binding'
+import { formatMediaChat } from './utils'
 
 export class LlamaParallelAPI {
   private context: LlamaContext
@@ -109,9 +110,16 @@ export class LlamaParallelAPI {
         }
       : undefined
 
+    const { messages, media_paths = options.media_paths } = formatMediaChat(
+      options.messages,
+    )
     // Queue the completion immediately (this is synchronous!)
     const { requestId } = this.context.queueCompletion(
-      options,
+      {
+        ...options,
+        messages,
+        media_paths: media_paths,
+      },
       tokenCallback ||
         ((error, result) => {
           if (error) {
