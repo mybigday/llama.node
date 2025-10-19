@@ -37,11 +37,9 @@ import { loadModel } from '@fugood/llama.node'
 // Initial a Llama context with the model (may take a while)
 const context = await loadModel({
   model: 'path/to/gguf/model',
-  use_mlock: true,
   n_ctx: 2048,
-  n_gpu_layers: 1, // > 0: enable GPU
-  // embedding: true, // use embedding
-  // lib_variant: 'opencl', // Change backend
+  n_gpu_layers: 99, // > 0: enable GPU
+  // lib_variant: 'vulkan', // Change backend
 })
 
 // Do completion
