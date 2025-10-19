@@ -7,7 +7,11 @@
 #include "rn-llama/rn-slot.h"
 #include "rn-llama/rn-slot-manager.h"
 #include "common.h"
+#include "json-schema-to-grammar.h"
+#include <nlohmann/json.hpp>
 #include <napi.h>
+
+using json = nlohmann::ordered_json;
 
 // EnableParallelMode(params: { n_parallel: number, n_batch?: number }): boolean
 Napi::Value LlamaContext::EnableParallelMode(const Napi::CallbackInfo &info) {
@@ -83,208 +87,59 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
     }
   }
 
+  // Check if multimodal is enabled when media_paths are provided
+  if (!media_paths.empty() && !(_rn_ctx->has_multimodal && _rn_ctx->mtmd_wrapper != nullptr)) {
+    Napi::Error::New(env, "Multimodal support must be enabled via "
+                          "initMultimodal to use media_paths")
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  int32_t chat_format = get_option<int32_t>(options, "chat_format", 0);
+  bool thinking_forced_open = get_option<bool>(options, "thinking_forced_open", false);
+  std::string reasoning_format = get_option<std::string>(options, "reasoning_format", "none");
+
   // Parse parameters
   common_params params = _rn_ctx->params;
-
-  // Handle max_tokens aliases
-  if (options.Has("max_tokens")) {
-    params.n_predict = options.Get("max_tokens").ToNumber().Int32Value();
-  } else if (options.Has("max_length")) {
-    params.n_predict = options.Get("max_length").ToNumber().Int32Value();
-  } else if (options.Has("n_predict")) {
-    params.n_predict = options.Get("n_predict").ToNumber().Int32Value();
-  } else {
-    params.n_predict = -1;
+  auto grammar_from_params = get_option<std::string>(options, "grammar", "");
+  auto has_grammar_set = !grammar_from_params.empty();
+  if (has_grammar_set) {
+    params.sampling.grammar = grammar_from_params;
   }
 
-  // ALL Sampling parameters
-  params.sampling.temp = get_option<float>(options, "temperature", 0.80f);
-  params.sampling.top_k = get_option<int32_t>(options, "top_k", 40);
-  params.sampling.top_p = get_option<float>(options, "top_p", 0.95f);
-  params.sampling.min_p = get_option<float>(options, "min_p", 0.05f);
-  params.sampling.typ_p = get_option<float>(options, "typical_p", 1.00f);
-  params.sampling.penalty_repeat = get_option<float>(options, "penalty_repeat", 1.00f);
-  params.sampling.penalty_last_n = get_option<int32_t>(options, "penalty_last_n", 64);
-  params.sampling.penalty_freq = get_option<float>(options, "penalty_freq", 0.00f);
-  params.sampling.penalty_present = get_option<float>(options, "penalty_present", 0.00f);
-  params.sampling.mirostat = get_option<int32_t>(options, "mirostat", 0);
-  params.sampling.mirostat_tau = get_option<float>(options, "mirostat_tau", 5.00f);
-  params.sampling.mirostat_eta = get_option<float>(options, "mirostat_eta", 0.10f);
-  params.sampling.seed = get_option<int32_t>(options, "seed", LLAMA_DEFAULT_SEED);
-  params.sampling.n_probs = get_option<int32_t>(options, "n_probs", 0);
-  params.sampling.ignore_eos = get_option<bool>(options, "ignore_eos", false);
-  params.sampling.top_n_sigma = get_option<float>(options, "top_n_sigma", 0);
-  params.sampling.xtc_threshold = get_option<float>(options, "xtc_threshold", 0);
-  params.sampling.xtc_probability = get_option<float>(options, "xtc_probability", 0);
-  params.sampling.dry_multiplier = get_option<float>(options, "dry_multiplier", 0);
-  params.sampling.dry_base = get_option<float>(options, "dry_base", 2);
-  params.sampling.dry_allowed_length = get_option<int32_t>(options, "dry_allowed_length", 2);
-  params.sampling.dry_penalty_last_n = get_option<int32_t>(options, "dry_penalty_last_n", -1);
-
-  // DRY sequence breakers
-  if (options.Has("dry_sequence_breakers") && options.Get("dry_sequence_breakers").IsArray()) {
-    auto dry_array = options.Get("dry_sequence_breakers").As<Napi::Array>();
-    params.sampling.dry_sequence_breakers.clear();
-    for (size_t i = 0; i < dry_array.Length(); i++) {
-      params.sampling.dry_sequence_breakers.push_back(dry_array.Get(i).ToString().Utf8Value());
+  std::string json_schema_str = "";
+  if (options.Has("response_format")) {
+    auto response_format = options.Get("response_format").As<Napi::Object>();
+    auto response_format_type =
+        get_option<std::string>(response_format, "type", "text");
+    if (response_format_type == "json_schema" &&
+        response_format.Has("json_schema")) {
+      auto json_schema = response_format.Get("json_schema").As<Napi::Object>();
+      json_schema_str =
+          json_schema.Has("schema")
+              ? json_stringify(json_schema.Get("schema").As<Napi::Object>())
+              : "{}";
+    } else if (response_format_type == "json_object") {
+      json_schema_str =
+          response_format.Has("schema")
+              ? json_stringify(response_format.Get("schema").As<Napi::Object>())
+              : "{}";
     }
   }
 
-  // Logit bias
-  if (options.Has("logit_bias") && options.Get("logit_bias").IsArray()) {
-    auto logit_bias_array = options.Get("logit_bias").As<Napi::Array>();
-    params.sampling.logit_bias.clear();
-    for (size_t i = 0; i < logit_bias_array.Length(); i++) {
-      auto bias_pair = logit_bias_array.Get(i).As<Napi::Array>();
-      if (bias_pair.Length() == 2) {
-        llama_token token = bias_pair.Get(static_cast<uint32_t>(0)).ToNumber().Int32Value();
-        float bias = bias_pair.Get(static_cast<uint32_t>(1)).ToNumber().FloatValue();
-        params.sampling.logit_bias[token].bias = bias;
-      }
-    }
-  }
-
-  // Stop words
-  params.antiprompt = stop_words;
-
-  // Grammar
-  if (options.Has("grammar")) {
-    params.sampling.grammar = options.Get("grammar").ToString().Utf8Value();
-  }
-
-  if (options.Has("grammar_lazy")) {
-    params.sampling.grammar_lazy = options.Get("grammar_lazy").ToBoolean().Value();
-  }
-
-  // Chat format parameters
-  int32_t chat_format = 0;
-  common_reasoning_format reasoning_format_enum = COMMON_REASONING_FORMAT_NONE;
-  bool thinking_forced_open = false;
-  std::string prefill_text = "";
-  std::string prompt = "";
-
-  // Handle messages/chat
-  if (options.Has("messages") && options.Get("messages").IsArray()) {
-    auto messages = options.Get("messages").As<Napi::Array>();
-    auto chat_template = get_option<std::string>(options, "chat_template", "");
-    auto jinja = get_option<bool>(options, "jinja", false);
-
-    // Handle response format for JSON schema
-    std::string json_schema_str = "";
-    if (options.Has("response_format")) {
-      auto response_format = options.Get("response_format").As<Napi::Object>();
-      auto response_format_type = get_option<std::string>(response_format, "type", "text");
-      if (response_format_type == "json_schema" && response_format.Has("json_schema")) {
-        auto json_schema = response_format.Get("json_schema").As<Napi::Object>();
-        json_schema_str = json_schema.Has("schema")
-            ? json_stringify(json_schema.Get("schema").As<Napi::Object>())
-            : "{}";
-      } else if (response_format_type == "json_object") {
-        json_schema_str = response_format.Has("schema")
-            ? json_stringify(response_format.Get("schema").As<Napi::Object>())
-            : "{}";
-      }
-    }
-
-    if (jinja) {
-      auto tools_str = !is_nil(options.Get("tools"))
-          ? json_stringify(options.Get("tools").As<Napi::Array>())
-          : "";
-      auto parallel_tool_calls = get_option<bool>(options, "parallel_tool_calls", false);
-      auto tool_choice = get_option<std::string>(options, "tool_choice", "none");
-      auto enable_thinking = get_option<bool>(options, "enable_thinking", true);
-      auto add_generation_prompt = get_option<bool>(options, "add_generation_prompt", true);
-      auto now_str = get_option<std::string>(options, "now", "");
-
-      std::map<std::string, std::string> chat_template_kwargs;
-      if (options.Has("chat_template_kwargs") && options.Get("chat_template_kwargs").IsObject()) {
-        auto kwargs_obj = options.Get("chat_template_kwargs").As<Napi::Object>();
-        auto props = kwargs_obj.GetPropertyNames();
-        for (uint32_t i = 0; i < props.Length(); i++) {
-          auto key = props.Get(i).ToString().Utf8Value();
-          auto val = kwargs_obj.Get(key).ToString().Utf8Value();
-          chat_template_kwargs[key] = val;
-        }
-      }
-
-      common_chat_params chatParams;
-
-      try {
-        chatParams = _rn_ctx->getFormattedChatWithJinja(
-            json_stringify(messages), chat_template,
-            json_schema_str, tools_str, parallel_tool_calls, tool_choice, enable_thinking,
-            add_generation_prompt, now_str, chat_template_kwargs);
-      } catch (const std::exception &e) {
-        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
-        return env.Undefined();
-      }
-
-      prompt = chatParams.prompt;
-      chat_format = chatParams.format;
-      thinking_forced_open = chatParams.thinking_forced_open;
-
-      // Apply chat params to sampling
-      if (!chatParams.grammar.empty()) {
-        params.sampling.grammar = chatParams.grammar;
-      }
-      params.sampling.grammar_lazy = chatParams.grammar_lazy;
-
-      for (const auto &token : chatParams.preserved_tokens) {
-        auto ids = common_tokenize(_rn_ctx->ctx, token, false, true);
-        if (ids.size() == 1) {
-          params.sampling.preserved_tokens.insert(ids[0]);
-        }
-      }
-
-      for (const auto &trigger : chatParams.grammar_triggers) {
-        params.sampling.grammar_triggers.push_back(trigger);
-      }
-
-      for (const auto &stop : chatParams.additional_stops) {
-        params.antiprompt.push_back(stop);
-      }
-    } else {
-      // Non-jinja chat formatting
-      prompt = _rn_ctx->getFormattedChat(json_stringify(messages), chat_template);
-    }
-  } else if (options.Has("prompt")) {
-    // Direct prompt
-    prompt = options.Get("prompt").ToString().Utf8Value();
-  } else {
-    Napi::TypeError::New(env, "Either 'prompt' or 'messages' is required").ThrowAsJavaScriptException();
-    return env.Undefined();
-  }
-
-  if (prompt.empty()) {
-    Napi::TypeError::New(env, "Prompt is empty").ThrowAsJavaScriptException();
-    return env.Undefined();
-  }
-
-  // Handle reasoning format
-  auto reasoning_format = get_option<std::string>(options, "reasoning_format", "none");
-  reasoning_format_enum = common_reasoning_format_from_name(reasoning_format);
-  thinking_forced_open = get_option<bool>(options, "thinking_forced_open", false);
-
-  // Handle prefill text
-  prefill_text = get_option<std::string>(options, "prefill_text", "");
-
-  // Handle state management parameters
-  std::string load_state_path = get_option<std::string>(options, "load_state_path", "");
-  std::string save_state_path = get_option<std::string>(options, "save_state_path", "");
-  int32_t save_state_size = get_option<int32_t>(options, "save_state_size", -1);
-
-  // Handle preserved tokens
+  // Handle preserved_tokens from options
   if (options.Has("preserved_tokens")) {
     auto preserved_tokens = options.Get("preserved_tokens").As<Napi::Array>();
     for (size_t i = 0; i < preserved_tokens.Length(); i++) {
       auto token = preserved_tokens.Get(i).ToString().Utf8Value();
-      auto ids = common_tokenize(_rn_ctx->ctx, token, false, true);
+      auto ids =
+          common_tokenize(_rn_ctx->ctx, token, /* add_special= */ false,
+                          /* parse_special= */ true);
       if (ids.size() == 1) {
         params.sampling.preserved_tokens.insert(ids[0]);
       }
     }
   }
-
 
   // Handle grammar_triggers from options
   if (options.Has("grammar_triggers")) {
@@ -331,6 +186,173 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
       }
     }
   }
+
+  // Handle grammar_lazy from options
+  if (options.Has("grammar_lazy")) {
+    params.sampling.grammar_lazy =
+        options.Get("grammar_lazy").ToBoolean().Value();
+  }
+
+  std::string prompt = "";
+  if (options.Has("messages") && options.Get("messages").IsArray()) {
+    auto messages = options.Get("messages").As<Napi::Array>();
+    auto chat_template = get_option<std::string>(options, "chat_template", "");
+    auto jinja = get_option<bool>(options, "jinja", false);
+    if (jinja) {
+      auto tools_str =
+          !is_nil(options.Get("tools"))
+              ? json_stringify(options.Get("tools").As<Napi::Array>())
+              : "";
+      auto parallel_tool_calls =
+          get_option<bool>(options, "parallel_tool_calls", false);
+      auto tool_choice =
+          get_option<std::string>(options, "tool_choice", "none");
+      auto enable_thinking = get_option<bool>(options, "enable_thinking", true);
+      auto add_generation_prompt = get_option<bool>(options, "add_generation_prompt", true);
+      auto now_str = get_option<std::string>(options, "now", "");
+
+      std::map<std::string, std::string> chat_template_kwargs;
+      if (options.Has("chat_template_kwargs") && options.Get("chat_template_kwargs").IsObject()) {
+        auto kwargs_obj = options.Get("chat_template_kwargs").As<Napi::Object>();
+        auto props = kwargs_obj.GetPropertyNames();
+        for (uint32_t i = 0; i < props.Length(); i++) {
+          auto key = props.Get(i).ToString().Utf8Value();
+          auto val = kwargs_obj.Get(key).ToString().Utf8Value();
+          chat_template_kwargs[key] = val;
+        }
+      }
+
+      common_chat_params chatParams;
+
+      try {
+        chatParams = _rn_ctx->getFormattedChatWithJinja(
+            json_stringify(messages), chat_template,
+            json_schema_str, tools_str, parallel_tool_calls, tool_choice, enable_thinking,
+            add_generation_prompt, now_str, chat_template_kwargs);
+      } catch (const std::exception &e) {
+        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+        return env.Undefined();
+      }
+
+      prompt = chatParams.prompt;
+
+      chat_format = chatParams.format;
+      thinking_forced_open = chatParams.thinking_forced_open;
+
+      for (const auto &token : chatParams.preserved_tokens) {
+        auto ids =
+            common_tokenize(_rn_ctx->ctx, token, /* add_special= */ false,
+                            /* parse_special= */ true);
+        if (ids.size() == 1) {
+          params.sampling.preserved_tokens.insert(ids[0]);
+        }
+      }
+
+      if (!has_grammar_set) {
+        // grammar param always wins jinja template & json_schema
+        params.sampling.grammar = chatParams.grammar;
+        params.sampling.grammar_lazy = chatParams.grammar_lazy;
+        for (const auto &trigger : chatParams.grammar_triggers) {
+          params.sampling.grammar_triggers.push_back(trigger);
+        }
+        has_grammar_set = true;
+      }
+
+      for (const auto &stop : chatParams.additional_stops) {
+        stop_words.push_back(stop);
+      }
+    } else {
+      auto formatted = _rn_ctx->getFormattedChat(
+          json_stringify(messages), chat_template);
+      prompt = formatted;
+    }
+  } else {
+    prompt = get_option<std::string>(options, "prompt", "");
+  }
+  if (prompt.empty()) {
+    Napi::TypeError::New(env, "Prompt is required")
+        .ThrowAsJavaScriptException();
+  }
+
+  if (!has_grammar_set && !json_schema_str.empty()) {
+    params.sampling.grammar =
+        json_schema_to_grammar(json::parse(json_schema_str));
+  }
+
+  std::string prefill_text = get_option<std::string>(options, "prefill_text", "");
+
+  // Handle state management parameters
+  std::string load_state_path = get_option<std::string>(options, "load_state_path", "");
+  std::string save_state_path = get_option<std::string>(options, "save_state_path", "");
+  int32_t save_state_size = get_option<int32_t>(options, "save_state_size", -1);
+
+  // ALL Sampling parameters
+  params.n_predict = get_option<int32_t>(options, "n_predict", -1);
+  params.sampling.temp = get_option<float>(options, "temperature", 0.80f);
+  params.sampling.top_k = get_option<int32_t>(options, "top_k", 40);
+  params.sampling.top_p = get_option<float>(options, "top_p", 0.95f);
+  params.sampling.min_p = get_option<float>(options, "min_p", 0.05f);
+  params.sampling.mirostat = get_option<int32_t>(options, "mirostat", 0.00f);
+  params.sampling.mirostat_tau =
+      get_option<float>(options, "mirostat_tau", 5.00f);
+  params.sampling.mirostat_eta =
+      get_option<float>(options, "mirostat_eta", 0.10f);
+  params.sampling.penalty_last_n =
+      get_option<int32_t>(options, "penalty_last_n", 64);
+  params.sampling.penalty_repeat =
+      get_option<float>(options, "penalty_repeat", 1.00f);
+  params.sampling.penalty_freq =
+      get_option<float>(options, "penalty_freq", 0.00f);
+  params.sampling.penalty_present =
+      get_option<float>(options, "penalty_present", 0.00f);
+  params.sampling.typ_p = get_option<float>(options, "typical_p", 1.00f);
+  params.sampling.xtc_threshold =
+      get_option<float>(options, "xtc_threshold", 0.00f);
+  params.sampling.xtc_probability =
+      get_option<float>(options, "xtc_probability", 0.10f);
+  params.sampling.dry_multiplier =
+      get_option<float>(options, "dry_multiplier", 1.75f);
+  params.sampling.dry_base = get_option<float>(options, "dry_base", 2);
+  params.sampling.dry_allowed_length =
+      get_option<float>(options, "dry_allowed_length", -1);
+  params.sampling.dry_penalty_last_n =
+      get_option<float>(options, "dry_penalty_last_n", 0);
+  params.sampling.top_n_sigma =
+      get_option<float>(options, "top_n_sigma", -1.0f);
+  params.sampling.ignore_eos = get_option<bool>(options, "ignore_eos", false);
+  params.n_keep = get_option<int32_t>(options, "n_keep", 0);
+  params.sampling.seed =
+      get_option<int32_t>(options, "seed", LLAMA_DEFAULT_SEED);
+  params.sampling.n_probs = get_option<int32_t>(options, "n_probs", 0);
+
+  // DRY sequence breakers
+  if (options.Has("dry_sequence_breakers") && options.Get("dry_sequence_breakers").IsArray()) {
+    auto dry_array = options.Get("dry_sequence_breakers").As<Napi::Array>();
+    params.sampling.dry_sequence_breakers.clear();
+    for (size_t i = 0; i < dry_array.Length(); i++) {
+      params.sampling.dry_sequence_breakers.push_back(dry_array.Get(i).ToString().Utf8Value());
+    }
+  }
+
+  // Logit bias
+  if (options.Has("logit_bias") && options.Get("logit_bias").IsArray()) {
+    auto logit_bias_array = options.Get("logit_bias").As<Napi::Array>();
+    params.sampling.logit_bias.clear();
+    for (size_t i = 0; i < logit_bias_array.Length(); i++) {
+      auto bias_pair = logit_bias_array.Get(i).As<Napi::Array>();
+      if (bias_pair.Length() == 2) {
+        llama_token token = bias_pair.Get(static_cast<uint32_t>(0)).ToNumber().Int32Value();
+        float bias = bias_pair.Get(static_cast<uint32_t>(1)).ToNumber().FloatValue();
+        params.sampling.logit_bias[token].bias = bias;
+      }
+    }
+  }
+
+  // Stop words assignment to params
+  params.antiprompt = stop_words;
+
+  // Handle reasoning format
+  common_reasoning_format reasoning_format_enum = common_reasoning_format_from_name(reasoning_format);
 
   // Tokenize prompt
   auto tokenize_result = _rn_ctx->tokenize(prompt, media_paths);
