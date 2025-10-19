@@ -587,3 +587,21 @@ export const loadModule = async (variant?: LibVariant): Promise<Module> => {
   // @ts-ignore
   return (await import('../build/Release/index.node')) as Module
 }
+
+export const isLibVariantAvailable = async (variant?: LibVariant): Promise<boolean> => {
+  if (variant && variant !== 'default') {
+    const module = await loadPlatformPackage(getPlatformPackageName(variant))
+    return module != null
+  }
+
+  const defaultModule = await loadPlatformPackage(getPlatformPackageName())
+  if (defaultModule) return true
+
+  try {
+    // @ts-ignore
+    await import('../build/Release/index.node')
+    return true
+  } catch (error) {
+    return false
+  }
+}
