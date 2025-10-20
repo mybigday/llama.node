@@ -299,12 +299,13 @@ class LlamaContextWrapper {
 
 export const loadModel = async (
   options: LlamaModelOptionsExtended,
+  onProgress?: (progress: number) => void,
 ): Promise<LlamaContextWrapper> => {
   const variant = options.lib_variant ?? 'default'
   mods[variant] ??= await loadModule(options.lib_variant)
   refreshNativeLogSetup()
 
-  const nativeCtx = new mods[variant].LlamaContext(options)
+  const nativeCtx = new mods[variant].LlamaContext(options, onProgress)
   return new LlamaContextWrapper(nativeCtx)
 }
 

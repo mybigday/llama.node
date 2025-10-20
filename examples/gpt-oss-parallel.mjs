@@ -10,6 +10,8 @@ const model = await loadModel({
   cache_type_k: 'q8_0',
   cache_type_v: 'q8_0',
   n_parallel: 2,
+}, (progress) => {
+  if (progress % 10 === 0) console.log(`Loading ${progress}%`)
 })
 
 const tools = [

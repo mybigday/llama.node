@@ -78,4 +78,7 @@ private:
   // Validity flag for async callbacks to prevent use-after-free
   // Shared pointer ensures callbacks can safely check if context is still alive
   std::shared_ptr<std::atomic<bool>> _context_valid;
+
+  // Progress callback support for model loading
+  Napi::ThreadSafeFunction _progress_tsfn;
 };

@@ -375,7 +375,7 @@ export type ToolCall = {
 }
 
 export interface LlamaContext {
-  new (options: LlamaModelOptions): LlamaContext
+  new (options: LlamaModelOptions, onProgress?: (progress: number) => void): LlamaContext
   getSystemInfo(): string
   getModelInfo(): ModelInfo
   getFormattedChat(

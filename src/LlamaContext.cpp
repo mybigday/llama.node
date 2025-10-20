@@ -221,7 +221,7 @@ static int32_t pooling_type_from_str(const std::string &s) {
 }
 
 // construct({ model, embedding, n_ctx, n_batch, n_threads, n_gpu_layers,
-// use_mlock, use_mmap }): LlamaContext throws error
+// use_mlock, use_mmap }, onProgress?: (progress: number) => void): LlamaContext throws error
 LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
     : Napi::ObjectWrap<LlamaContext>(info) {
   Napi::Env env = info.Env();
@@ -229,6 +229,16 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
     Napi::TypeError::New(env, "Object expected").ThrowAsJavaScriptException();
   }
   auto options = info[0].As<Napi::Object>();
+
+  // Check if progress callback is provided
+  bool has_progress_callback = info.Length() >= 2 && info[1].IsFunction();
+  if (has_progress_callback) {
+    _progress_tsfn = Napi::ThreadSafeFunction::New(
+        env, info[1].As<Napi::Function>(), "Model Loading Progress", 0, 1,
+        [](Napi::Env) {
+          // Finalizer callback
+        });
+  }
 
   common_params params;
   params.model.path = get_option<std::string>(options, "model", "");
@@ -323,10 +333,53 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
 
   // Use rn-llama context instead of direct session
   _rn_ctx = new llama_rn_context();
+  _rn_ctx->is_load_interrupted = false;
+  _rn_ctx->loading_progress = 0;
+
+  // Set up progress callback if provided
+  if (has_progress_callback) {
+    params.load_progress_callback = [](float progress, void *user_data) {
+      LlamaContext *self = static_cast<LlamaContext *>(user_data);
+      unsigned int percentage = static_cast<unsigned int>(100 * progress);
+
+      // Only call callback if progress increased
+      if (percentage > self->_rn_ctx->loading_progress) {
+        self->_rn_ctx->loading_progress = percentage;
+
+        // Create a heap-allocated copy of the percentage
+        auto *data = new unsigned int(percentage);
+
+        // Queue callback to be executed on the JavaScript thread
+        auto status = self->_progress_tsfn.NonBlockingCall(
+            data, [](Napi::Env env, Napi::Function jsCallback, unsigned int *data) {
+              jsCallback.Call({Napi::Number::New(env, *data)});
+              delete data;
+            });
+
+        // If the call failed, clean up the data
+        if (status != napi_ok) {
+          delete data;
+        }
+      }
+
+      // Return true to continue loading, false to interrupt
+      return !self->_rn_ctx->is_load_interrupted;
+    };
+    params.load_progress_callback_user_data = this;
+  }
+
   if (!_rn_ctx->loadModel(params)) {
+    if (has_progress_callback) {
+      _progress_tsfn.Release();
+    }
     delete _rn_ctx;
     _rn_ctx = nullptr;
     Napi::TypeError::New(env, "Failed to load model").ThrowAsJavaScriptException();
+  }
+
+  // Release progress callback after model is loaded
+  if (has_progress_callback) {
+    _progress_tsfn.Release();
   }
 
   // Handle LoRA adapters through rn-llama
@@ -341,6 +394,11 @@ LlamaContext::~LlamaContext() {
   // Invalidate the context to prevent use-after-free in async callbacks
   if (_context_valid) {
     _context_valid->store(false);
+  }
+
+  // Interrupt model loading if in progress
+  if (_rn_ctx) {
+    _rn_ctx->is_load_interrupted = true;
   }
 
   // The DisposeWorker is responsible for cleanup of _rn_ctx

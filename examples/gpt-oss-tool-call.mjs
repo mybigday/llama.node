@@ -9,6 +9,8 @@ const model = await loadModel({
   flash_attn_type: 'auto',
   cache_type_k: 'q8_0',
   cache_type_v: 'q8_0',
+}, (progress) => {
+  if (progress % 10 === 0) console.log(`Loading ${progress}%`)
 })
 
 const tools = [
