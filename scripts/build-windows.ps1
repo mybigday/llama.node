@@ -6,6 +6,9 @@ param (
 
 $ErrorActionPreference='Stop'
 
+# Enable parallel compilation
+$env:CMAKE_BUILD_PARALLEL_LEVEL = [Environment]::ProcessorCount
+
 $nativeArch = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture
 
 if ($arch -eq "native") {

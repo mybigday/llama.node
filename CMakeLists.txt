@@ -64,13 +64,23 @@ endif()
 # Improve speed
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   if (MSVC)
-    if (NOT GGML_VULKAN)
+    # Enable parallel compilation for all MSVC builds
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
+
+    if (NOT GGML_VULKAN AND NOT GGML_CUDA)
+      # Full optimization with LTCG for default builds
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /O2 /Ob2 /Oi /Ot /Oy /GL")
       set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /O2 /Ob2 /Oi /Ot /Oy /GL")
       set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} /LTCG")
-    else()
+    elseif(GGML_VULKAN)
+      # Reduced optimization for Vulkan builds
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /O1 /Ob1 /bigobj")
       set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /O1 /Ob1 /bigobj")
+    else()
+      # Faster linking for CUDA builds (no LTCG)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /O2 /Ob2 /Oi")
+      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /O2 /Ob2 /Oi")
     endif()
   else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -funroll-loops -flto=auto")
