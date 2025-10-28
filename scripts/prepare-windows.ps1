@@ -23,8 +23,16 @@ if (($arch -eq "all" -or $arch -eq "x64") -and ($target -eq "all" -or $target -e
   }
 }
 
-if (Get-Command ccache -ErrorAction SilentlyContinue) {
+if (-Not (Get-Command ccache -ErrorAction SilentlyContinue)) {
   choco install ccache -y
+}
+
+# Configure ccache for optimal performance
+if (Get-Command ccache -ErrorAction SilentlyContinue) {
+  ccache --set-config=max_size=5G
+  ccache --set-config=compression=true
+  ccache --set-config=compiler_check=content
+  ccache -z  # Zero statistics
 }
 
 if ($toolchain -eq "mingw-clang") {
