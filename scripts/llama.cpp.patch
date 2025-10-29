@@ -21,7 +21,7 @@ index fe290bf8f..d377e29b9 100644
  
  #
 diff --git a/src/llama.cpp/common/chat.cpp b/src/llama.cpp/common/chat.cpp
-index 8587140e1..7931a31a1 100644
+index 63583fb22..f8be20148 100644
 --- a/src/llama.cpp/common/chat.cpp
 +++ b/src/llama.cpp/common/chat.cpp
 @@ -6,9 +6,6 @@
@@ -31,10 +31,10 @@ index 8587140e1..7931a31a1 100644
 -#include <minja/chat-template.hpp>
 -#include <minja/minja.hpp>
 -
+ #include <algorithm>
  #include <cstdio>
- #include <exception>
- #include <iostream>
-@@ -123,16 +120,6 @@ std::vector<common_chat_msg_diff> common_chat_msg_diff::compute_diffs(const comm
+ #include <cctype>
+@@ -126,16 +123,6 @@ std::vector<common_chat_msg_diff> common_chat_msg_diff::compute_diffs(const comm
      return diffs;
  }
  
@@ -51,18 +51,17 @@ index 8587140e1..7931a31a1 100644
  struct templates_params {
      json messages;
      json tools;
-@@ -807,8 +794,7 @@ static std::string apply(
-     if (additional_context) {
+@@ -812,7 +799,7 @@ static std::string apply(
          tmpl_inputs.extra_context.merge_patch(*additional_context);
      }
--    // TODO: add flag to control date/time, if only for testing purposes.
+     // TODO: add flag to control date/time, if only for testing purposes.
 -    // tmpl_inputs.now = std::chrono::system_clock::now();
 +    tmpl_inputs.now = inputs.now;
  
      minja::chat_template_options tmpl_opts;
      // To avoid double BOS / EOS tokens, we're manually removing begining / trailing tokens
 diff --git a/src/llama.cpp/common/chat.h b/src/llama.cpp/common/chat.h
-index f7b36ec71..c07429f08 100644
+index 50efb0d4e..f471a84c7 100644
 --- a/src/llama.cpp/common/chat.h
 +++ b/src/llama.cpp/common/chat.h
 @@ -9,7 +9,18 @@
