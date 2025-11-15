@@ -121,6 +121,8 @@ endif()
 
 set(LLAMA_BUILD_COMMON ON CACHE BOOL "Build common")
 
+set(LLAMA_BUILD_TOOLS ON CACHE BOOL "Build tools")
+
 set(LLAMA_CURL OFF CACHE BOOL "Build curl")
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
@@ -128,7 +130,6 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
 add_definitions(-DGGML_MAX_NAME=80)
 
 add_subdirectory("src/llama.cpp")
-add_subdirectory("src/llama.cpp/tools/mtmd")
 
 include_directories(
   ${CMAKE_JS_INC}
@@ -172,7 +173,7 @@ if (NOT MSVC AND CMAKE_SYSTEM_NAME STREQUAL "Windows")
 
   add_library(win_dynamic_load ${WIN_DYNAMIC_LOAD_SRC})
   set_target_properties(win_dynamic_load PROPERTIES COMPILE_FLAGS "-Wno-implicit-function-declaration")
-  
+
   unset(CMAKE_JS_SRC)
   unset(CMAKE_JS_LIB)
   unset(CMAKE_JS_NODELIB_DEF)
@@ -207,7 +208,7 @@ if(CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)
 endif()
 
 if (GGML_METAL AND NOT GGML_METAL_EMBED_LIBRARY)
-  # copy ${CMAKE_BINARY_DIR}/bin/default.metallib  
+  # copy ${CMAKE_BINARY_DIR}/bin/default.metallib
   add_custom_command(
     TARGET copy_assets
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/bin/default.metallib ${METAL_LIB_TARGET_PATH}
