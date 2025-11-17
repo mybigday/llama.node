@@ -120,16 +120,20 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT DEFINED GGML_OPENMP OR GGML_O
 endif()
 
 set(LLAMA_BUILD_COMMON ON CACHE BOOL "Build common")
-
-set(LLAMA_BUILD_TOOLS ON CACHE BOOL "Build tools")
-
+set(LLAMA_BUILD_TOOLS OFF CACHE BOOL "Build tools")
+set(LLAMA_BUILD_TESTS OFF CACHE BOOL "Build tests")
+set(LLAMA_BUILD_SERVER OFF CACHE BOOL "Build server")
+set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "Build examples")
 set(LLAMA_CURL OFF CACHE BOOL "Build curl")
+
+set(LLAMA_INSTALL_VERSION "0.0.0") // TODO: Set the version number (0.0.<BUILD_NUMBER>)
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
 
 add_definitions(-DGGML_MAX_NAME=80)
 
 add_subdirectory("src/llama.cpp")
+add_subdirectory("src/llama.cpp/tools/mtmd")
 
 include_directories(
   ${CMAKE_JS_INC}
