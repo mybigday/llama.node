@@ -126,7 +126,7 @@ set(LLAMA_BUILD_SERVER OFF CACHE BOOL "Build server")
 set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "Build examples")
 set(LLAMA_CURL OFF CACHE BOOL "Build curl")
 
-set(LLAMA_INSTALL_VERSION "0.0.0") // TODO: Set the version number (0.0.<BUILD_NUMBER>)
+set(LLAMA_INSTALL_VERSION "0.0.0") # TODO: Set the version number (0.0.<BUILD_NUMBER>)
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
 
