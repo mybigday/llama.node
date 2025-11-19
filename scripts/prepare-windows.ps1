@@ -63,10 +63,7 @@ if ($target -eq "snapdragon") {
     Expand-Archive -Path "externals/Hexagon_SDK_WinNT.zip" -DestinationPath "externals/Hexagon_SDK" -Force
   }
 
-  $env:HEXAGON_SDK_ROOT = "$(Resolve-Path 'externals/Hexagon_SDK/Hexagon_SDK/6.4.0.2')"
-  if ($env:GITHUB_ENV -ne $null) {
-    Add-Content -Path $env:GITHUB_ENV -Value "HEXAGON_SDK_ROOT=$env:HEXAGON_SDK_ROOT"
-  }
+  . "externals/Hexagon_SDK/Hexagon_SDK/6.4.0.2/setup_sdk_env.ps1"
 
   # Download OpenCL SDK
   $openclPath = "externals/OpenCL-SDK"

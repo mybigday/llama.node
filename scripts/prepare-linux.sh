@@ -38,8 +38,7 @@ if [ $TARGET == "snapdragon" ]; then
     unzip -q externals/Hexagon_SDK_lnx.zip -d externals/Hexagon_SDK
   fi
   
-  export HEXAGON_SDK_ROOT="$(realpath externals/Hexagon_SDK/Hexagon_SDK/6.4.0.2)"
-  echo "HEXAGON_SDK_ROOT=${HEXAGON_SDK_ROOT}" >> $GITHUB_ENV
+  source externals/Hexagon_SDK/Hexagon_SDK/6.4.0.2/setup_sdk_env.source
 else
   run_as_root apt-get install -qy lsb-release wget llvm clang lld cmake ninja-build libomp-dev ccache
 fi

@@ -64,13 +64,14 @@ else
 
   # snapdragon
   if [ $TARGET == "all" ] || [ $TARGET == "snapdragon" ]; then
+    source externals/Hexagon_SDK/Hexagon_SDK/6.4.0.2/setup_sdk_env.source
     npx cmake-js rebuild -C --CDTO_PACKAGE=ON \
       --CDCLANG_USE_GOMP=ON \
       --CDGGML_NATIVE=OFF \
       --CDGGML_OPENMP=0 \
       --CDGGML_OPENCL=1 \
       --CDGGML_HEXAGON=1 \
-      --CDHEXAGON_SDK_ROOT="$(realpath 'externals/Hexagon_SDK/Hexagon_SDK/6.4.0.2')" \
+      --CDHEXAGON_SDK_ROOT="$HEXAGON_SDK_ROOT" \
       --CDPREBUILT_LIB_DIR=UbuntuARM_aarch64 \
       --CDVARIANT=snapdragon
   fi
