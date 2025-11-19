@@ -73,6 +73,7 @@ if ($target -eq "snapdragon") {
   if (-Not (Test-Path $openclPath)) {
     Write-Host "Downloading OpenCL SDK..."
     New-Item -ItemType Directory -Force -Path "externals" | Out-Null
+    New-Item -ItemType Directory -Force -Path "externals/OpenCL-SDK" | Out-Null
     
     # Clone OpenCL-Headers
     git clone --depth 1 --branch v2024.10.24 https://github.com/KhronosGroup/OpenCL-Headers.git externals/OpenCL-Headers
