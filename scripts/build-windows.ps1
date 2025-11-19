@@ -97,7 +97,7 @@ if ($target -eq "all" -or $target -eq "qualcomm") {
     --CDVARIANT=qualcomm `
     --CDGGML_OPENCL=1 `
     --CDGGML_HEXAGON=1 `
-    --CDHEXAGON_SDK_ROOT="$(Resolve-Path 'externals/Hexagon_SDK/6.4.0.2')"
+    --CDHEXAGON_SDK_ROOT="$(Resolve-Path 'externals/Hexagon_SDK/Hexagon_SDK/6.4.0.2')"
   if ($LASTEXITCODE -ne 0) {
     throw "build failed"
   }

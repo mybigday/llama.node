@@ -30,7 +30,7 @@ if [ $TARGET == "qualcomm" ]; then
   run_as_root apt-get install -qy lsb-release wget llvm clang lld cmake ninja-build libomp-dev ccache ocl-icd-opencl-dev opencl-headers clinfo unzip
   
   # Download and extract Hexagon SDK
-  if [ ! -d "externals/Hexagon_SDK/6.4.0.2" ]; then
+  if [ ! -d "externals/Hexagon_SDK" ]; then
     echo "Downloading Hexagon SDK..."
     mkdir -p externals
     wget -O externals/Hexagon_SDK_lnx.zip https://softwarecenter.qualcomm.com/api/download/software/sdks/Hexagon_SDK/Linux/Debian/6.4.0.2/Hexagon_SDK_lnx.zip
@@ -38,7 +38,7 @@ if [ $TARGET == "qualcomm" ]; then
     unzip -q externals/Hexagon_SDK_lnx.zip -d externals/Hexagon_SDK
   fi
   
-  export HEXAGON_SDK_ROOT="$(realpath externals/Hexagon_SDK/6.4.0.2)"
+  export HEXAGON_SDK_ROOT="$(realpath externals/Hexagon_SDK/Hexagon_SDK/6.4.0.2)"
   echo "HEXAGON_SDK_ROOT=${HEXAGON_SDK_ROOT}" >> $GITHUB_ENV
 else
   run_as_root apt-get install -qy lsb-release wget llvm clang lld cmake ninja-build libomp-dev ccache
