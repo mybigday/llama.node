@@ -84,7 +84,7 @@ else
           --CDCLANG_USE_GOMP=ON \
           --CDGGML_NATIVE=OFF \
           --CDGGML_OPENMP=0 \
-          --CDGGML_OPENCL=1 \
+          --CDGGML_OPENCL=0 \
           --CDGGML_HEXAGON=1 \
           --CDHEXAGON_SDK_ROOT="$HEXAGON_SDK_ROOT" \
           --CDPREBUILT_LIB_DIR=UbuntuARM_aarch64 \
@@ -96,7 +96,7 @@ else
           --CDCLANG_USE_GOMP=ON \
           --CDGGML_NATIVE=OFF \
           --CDGGML_OPENMP=0 \
-          --CDGGML_OPENCL=1 \
+          --CDGGML_OPENCL=0 \
           --CDGGML_HEXAGON=1 \
           --CDHEXAGON_SDK_ROOT="$HEXAGON_SDK_ROOT" \
           --CDPREBUILT_LIB_DIR=UbuntuARM_aarch64 \
@@ -108,7 +108,7 @@ else
         --CDCLANG_USE_GOMP=ON \
         --CDGGML_NATIVE=OFF \
         --CDGGML_OPENMP=0 \
-        --CDGGML_OPENCL=1 \
+        --CDGGML_OPENCL=0 \
         --CDGGML_HEXAGON=1 \
         --CDHEXAGON_SDK_ROOT="$HEXAGON_SDK_ROOT" \
         --CDPREBUILT_LIB_DIR=UbuntuARM_aarch64 \
