@@ -68,8 +68,8 @@ else
     
     # Check if cross-compilation is needed
     if [ $(uname -m) == "x86_64" ] && [ $ARCH == "arm64" ]; then
-      echo "Cross-compiling for arm64..."
-      npx cmake-js rebuild -C --CDTO_PACKAGE=ON \
+      echo "Cross-compiling for arm64 using GCC..."
+      npx cmake-js rebuild --CDTO_PACKAGE=ON \
         --CDCLANG_USE_GOMP=ON \
         --CDGGML_NATIVE=OFF \
         --CDGGML_OPENMP=0 \
