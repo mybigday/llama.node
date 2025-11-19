@@ -61,4 +61,15 @@ else
       --CDGGML_NATIVE=OFF \
       --CDCMAKE_CUDA_ARCHITECTURES=87 # > Jetson Orin series
   fi
+
+  # qualcomm
+  if [ $TARGET == "all" ] || [ $TARGET == "qualcomm" ]; then
+    npx cmake-js rebuild -C --CDTO_PACKAGE=ON \
+      --CDCLANG_USE_GOMP=ON \
+      --CDGGML_NATIVE=OFF \
+      --CDGGML_OPENCL=1 \
+      --CDGGML_HEXAGON=1 \
+      --CDHEXAGON_SDK_ROOT="$(realpath 'externals/Hexagon_SDK/6.4.0.2')" \
+      --CDVARIANT=qualcomm
+  fi
 fi

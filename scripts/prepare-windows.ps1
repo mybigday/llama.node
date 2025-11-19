@@ -51,3 +51,14 @@ if ($toolchain -eq "mingw-clang") {
 
   choco install ninja -y
 }
+
+if ($target -eq "qualcomm") {
+  $sdkPath = "externals/Hexagon_SDK/6.4.0.2"
+  if (-Not (Test-Path $sdkPath)) {
+    Write-Host "Downloading Hexagon SDK..."
+    New-Item -ItemType Directory -Force -Path "externals" | Out-Null
+    Invoke-WebRequest -Uri "https://softwarecenter.qualcomm.com/api/download/software/sdks/Hexagon_SDK/Windows/6.4.0.2/Hexagon_SDK_WinNT.zip" -OutFile "externals/Hexagon_SDK_WinNT.zip"
+    Write-Host "Extracting Hexagon SDK..."
+    Expand-Archive -Path "externals/Hexagon_SDK_WinNT.zip" -DestinationPath "externals/Hexagon_SDK" -Force
+  }
+}

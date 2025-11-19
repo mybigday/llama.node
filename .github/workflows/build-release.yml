@@ -113,6 +113,17 @@ jobs:
             target: vulkan
             package: node-llama-win32-arm64-vulkan
             toolchain: mingw-clang
+          # Linux arm64 Qualcomm
+          - os: ubuntu-22.04-arm
+            arch: arm64
+            target: qualcomm
+            package: node-llama-linux-arm64-qualcomm
+          # Windows arm64 Qualcomm
+          - os: windows-latest
+            arch: arm64
+            target: qualcomm
+            package: node-llama-win32-arm64-qualcomm
+            toolchain: mingw-clang
     steps:
       - name: Run this job?
         id: run

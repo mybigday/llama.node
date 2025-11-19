@@ -89,3 +89,16 @@ if ($target -eq "all" -or $target -eq "cuda") {
     throw "build failed"
   }
 }
+
+# Qualcomm
+
+if ($target -eq "all" -or $target -eq "qualcomm") {
+  npx cmake-js rebuild -C -a $arch $cmakeArgs `
+    --CDVARIANT=qualcomm `
+    --CDGGML_OPENCL=1 `
+    --CDGGML_HEXAGON=1 `
+    --CDHEXAGON_SDK_ROOT="$(Resolve-Path 'externals/Hexagon_SDK/6.4.0.2')"
+  if ($LASTEXITCODE -ne 0) {
+    throw "build failed"
+  }
+}
