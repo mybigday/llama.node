@@ -69,16 +69,22 @@ else
     # Check if cross-compilation is needed
     if [ $(uname -m) == "x86_64" ] && [ $ARCH == "arm64" ]; then
       echo "Cross-compiling for arm64 using GCC..."
-      npx cmake-js rebuild --CDTO_PACKAGE=ON \
-        --CDCLANG_USE_GOMP=ON \
-        --CDGGML_NATIVE=OFF \
-        --CDGGML_OPENMP=0 \
-        --CDGGML_OPENCL=1 \
-        --CDGGML_HEXAGON=1 \
-        --CDHEXAGON_SDK_ROOT="$HEXAGON_SDK_ROOT" \
-        --CDPREBUILT_LIB_DIR=UbuntuARM_aarch64 \
-        --CDVARIANT=snapdragon \
-        --CDCMAKE_TOOLCHAIN_FILE="$(realpath cmake/aarch64-linux-gnu.toolchain.cmake)"
+      
+      # Try to find OpenCL library for arm64
+      OPENCL_LIB_PATH=""
+      if [ -f "/usr/lib/aarch64-linux-gnu/libOpenCL.so" ]; then
+        OPENCL_LIB_PATH="/usr/lib/aarch64-linux-gnu/libOpenCL.so"
+      elif [ -f "externals/opencl-arm64/lib/libOpenCL.so" ]; then
+        OPENCL_LIB_PATH="$(realpath externals/opencl-arm64/lib/libOpenCL.so)"
+      fi
+      
+      BUILD_ARGS="--CDTO_PACKAGE=ON --CDCLANG_USE_GOMP=ON --CDGGML_NATIVE=OFF --CDGGML_OPENMP=0 --CDGGML_OPENCL=1 --CDGGML_HEXAGON=1 --CDHEXAGON_SDK_ROOT=\"$HEXAGON_SDK_ROOT\" --CDPREBUILT_LIB_DIR=UbuntuARM_aarch64 --CDVARIANT=snapdragon --CDCMAKE_TOOLCHAIN_FILE=\"$(realpath cmake/aarch64-linux-gnu.toolchain.cmake)\""
+      
+      if [ -n "$OPENCL_LIB_PATH" ]; then
+        BUILD_ARGS="$BUILD_ARGS --CDOpenCL_LIBRARY=\"$OPENCL_LIB_PATH\""
+      fi
+      
+      npx cmake-js rebuild $BUILD_ARGS
     else
       npx cmake-js rebuild -C --CDTO_PACKAGE=ON \
         --CDCLANG_USE_GOMP=ON \
