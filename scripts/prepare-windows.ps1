@@ -53,6 +53,7 @@ if ($toolchain -eq "mingw-clang") {
 }
 
 if ($target -eq "snapdragon") {
+  # Download Hexagon SDK
   $sdkPath = "externals/Hexagon_SDK"
   if (-Not (Test-Path $sdkPath)) {
     Write-Host "Downloading Hexagon SDK..."
@@ -66,4 +67,33 @@ if ($target -eq "snapdragon") {
   if ($env:GITHUB_ENV -ne $null) {
     Add-Content -Path $env:GITHUB_ENV -Value "HEXAGON_SDK_ROOT=$env:HEXAGON_SDK_ROOT"
   }
+
+  # Download OpenCL SDK
+  $openclPath = "externals/OpenCL-SDK"
+  if (-Not (Test-Path $openclPath)) {
+    Write-Host "Downloading OpenCL SDK..."
+    New-Item -ItemType Directory -Force -Path "externals" | Out-Null
+    
+    # Clone OpenCL-Headers
+    git clone --depth 1 --branch v2024.10.24 https://github.com/KhronosGroup/OpenCL-Headers.git externals/OpenCL-Headers
+    
+    # Clone OpenCL-ICD-Loader
+    git clone --depth 1 --branch v2024.10.24 https://github.com/KhronosGroup/OpenCL-ICD-Loader.git externals/OpenCL-ICD-Loader
+    
+    # Build OpenCL-ICD-Loader
+    Write-Host "Building OpenCL ICD Loader..."
+    cmake -S externals/OpenCL-ICD-Loader -B externals/OpenCL-ICD-Loader/build `
+      -DOPENCL_ICD_LOADER_HEADERS_DIR="$(Resolve-Path 'externals/OpenCL-Headers')" `
+      -DCMAKE_INSTALL_PREFIX="$(Resolve-Path 'externals/OpenCL-SDK')"
+    cmake --build externals/OpenCL-ICD-Loader/build --config Release
+    cmake --install externals/OpenCL-ICD-Loader/build --config Release
+  }
+
+  $env:OpenCL_INCLUDE_DIR = "$(Resolve-Path 'externals/OpenCL-Headers')"
+  $env:OpenCL_LIBRARY = "$(Resolve-Path 'externals/OpenCL-SDK/lib/OpenCL.lib')"
+  if ($env:GITHUB_ENV -ne $null) {
+    Add-Content -Path $env:GITHUB_ENV -Value "OpenCL_INCLUDE_DIR=$env:OpenCL_INCLUDE_DIR"
+    Add-Content -Path $env:GITHUB_ENV -Value "OpenCL_LIBRARY=$env:OpenCL_LIBRARY"
+  }
 }
+
