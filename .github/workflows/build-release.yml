@@ -113,11 +113,12 @@ jobs:
             target: vulkan
             package: node-llama-win32-arm64-vulkan
             toolchain: mingw-clang
-          # Linux arm64 Snapdragon
-          - os: ubuntu-22.04-arm
+          # Linux arm64 Snapdragon (cross-compiled on x86_64)
+          - os: ubuntu-24.04
             arch: arm64
             target: snapdragon
             package: node-llama-linux-arm64-snapdragon
+            cross-compile: true
           # Windows arm64 Snapdragon
           - os: windows-latest
             arch: arm64

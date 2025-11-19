@@ -29,6 +29,14 @@ run_as_root apt-get update
 if [ $TARGET == "snapdragon" ]; then
   run_as_root apt-get install -qy lsb-release wget llvm clang lld cmake ninja-build libomp-dev ccache ocl-icd-opencl-dev opencl-headers clinfo unzip
   
+  # Install cross-compilation sysroot for aarch64 if on x86_64
+  if [ $(uname -m) == "x86_64" ] && [ $ARCH == "arm64" ]; then
+    echo "Installing aarch64 sysroot for cross-compilation..."
+    run_as_root dpkg --add-architecture arm64
+    run_as_root apt-get update
+    run_as_root apt-get install -qy libc6-dev:arm64
+  fi
+  
   # Download and extract Hexagon SDK
   if [ ! -d "externals/Hexagon_SDK" ]; then
     echo "Downloading Hexagon SDK..."
