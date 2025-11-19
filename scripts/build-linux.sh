@@ -78,13 +78,31 @@ else
         OPENCL_LIB_PATH="$(realpath externals/opencl-arm64/lib/libOpenCL.so)"
       fi
       
-      BUILD_ARGS="--CDTO_PACKAGE=ON --CDCLANG_USE_GOMP=ON --CDGGML_NATIVE=OFF --CDGGML_OPENMP=0 --CDGGML_OPENCL=1 --CDGGML_HEXAGON=1 --CDHEXAGON_SDK_ROOT=\"$HEXAGON_SDK_ROOT\" --CDPREBUILT_LIB_DIR=UbuntuARM_aarch64 --CDVARIANT=snapdragon --CDCMAKE_TOOLCHAIN_FILE=\"$(realpath cmake/aarch64-linux-gnu.toolchain.cmake)\""
-      
+      # Build with toolchain
       if [ -n "$OPENCL_LIB_PATH" ]; then
-        BUILD_ARGS="$BUILD_ARGS --CDOpenCL_LIBRARY=\"$OPENCL_LIB_PATH\""
+        npx cmake-js rebuild --CDTO_PACKAGE=ON \
+          --CDCLANG_USE_GOMP=ON \
+          --CDGGML_NATIVE=OFF \
+          --CDGGML_OPENMP=0 \
+          --CDGGML_OPENCL=1 \
+          --CDGGML_HEXAGON=1 \
+          --CDHEXAGON_SDK_ROOT="$HEXAGON_SDK_ROOT" \
+          --CDPREBUILT_LIB_DIR=UbuntuARM_aarch64 \
+          --CDVARIANT=snapdragon \
+          --CDCMAKE_TOOLCHAIN_FILE="$(realpath cmake/aarch64-linux-gnu.toolchain.cmake)" \
+          --CDOpenCL_LIBRARY="$OPENCL_LIB_PATH"
+      else
+        npx cmake-js rebuild --CDTO_PACKAGE=ON \
+          --CDCLANG_USE_GOMP=ON \
+          --CDGGML_NATIVE=OFF \
+          --CDGGML_OPENMP=0 \
+          --CDGGML_OPENCL=1 \
+          --CDGGML_HEXAGON=1 \
+          --CDHEXAGON_SDK_ROOT="$HEXAGON_SDK_ROOT" \
+          --CDPREBUILT_LIB_DIR=UbuntuARM_aarch64 \
+          --CDVARIANT=snapdragon \
+          --CDCMAKE_TOOLCHAIN_FILE="$(realpath cmake/aarch64-linux-gnu.toolchain.cmake)"
       fi
-      
-      npx cmake-js rebuild $BUILD_ARGS
     else
       npx cmake-js rebuild -C --CDTO_PACKAGE=ON \
         --CDCLANG_USE_GOMP=ON \
