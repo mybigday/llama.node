@@ -52,7 +52,7 @@ if ($toolchain -eq "mingw-clang") {
   choco install ninja -y
 }
 
-if ($target -eq "qualcomm") {
+if ($target -eq "snapdragon") {
   $sdkPath = "externals/Hexagon_SDK"
   if (-Not (Test-Path $sdkPath)) {
     Write-Host "Downloading Hexagon SDK..."

@@ -1,7 +1,7 @@
 {
-    "name": "@fugood/node-llama-win32-arm64-qualcomm",
+    "name": "@fugood/node-llama-win32-arm64-snapdragon",
     "version": "1.3.4",
-    "description": "Native module for An another Node binding of llama.cpp (win32-arm64-qualcomm)",
+    "description": "Native module for An another Node binding of llama.cpp (win32-arm64-snapdragon)",
     "main": "index.node",
     "os": [
         "win32"
@@ -24,6 +24,7 @@
         "arm64",
         "native",
         "qualcomm",
+        "snapdragon",
         "opencl",
         "hexagon"
     ],
@@ -41,5 +42,5 @@
         "index.node",
         "*.dll"
     ],
-    "variant": "qualcomm"
+    "variant": "snapdragon"
 }

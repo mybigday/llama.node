@@ -62,14 +62,16 @@ else
       --CDCMAKE_CUDA_ARCHITECTURES=87 # > Jetson Orin series
   fi
 
-  # qualcomm
-  if [ $TARGET == "all" ] || [ $TARGET == "qualcomm" ]; then
+  # snapdragon
+  if [ $TARGET == "all" ] || [ $TARGET == "snapdragon" ]; then
     npx cmake-js rebuild -C --CDTO_PACKAGE=ON \
       --CDCLANG_USE_GOMP=ON \
       --CDGGML_NATIVE=OFF \
+      --CDGGML_OPENMP=0 \
       --CDGGML_OPENCL=1 \
       --CDGGML_HEXAGON=1 \
       --CDHEXAGON_SDK_ROOT="$(realpath 'externals/Hexagon_SDK/Hexagon_SDK/6.4.0.2')" \
-      --CDVARIANT=qualcomm
+      --CDPREBUILT_LIB_DIR=UbuntuARM_aarch64 \
+      --CDVARIANT=snapdragon
   fi
 fi

@@ -90,14 +90,16 @@ if ($target -eq "all" -or $target -eq "cuda") {
   }
 }
 
-# Qualcomm
+# Snapdragon
 
-if ($target -eq "all" -or $target -eq "qualcomm") {
+if ($target -eq "all" -or $target -eq "snapdragon") {
   npx cmake-js rebuild -C -a $arch $cmakeArgs `
-    --CDVARIANT=qualcomm `
+    --CDVARIANT=snapdragon `
+    --CDGGML_OPENMP=0 `
     --CDGGML_OPENCL=1 `
     --CDGGML_HEXAGON=1 `
-    --CDHEXAGON_SDK_ROOT="$(Resolve-Path 'externals/Hexagon_SDK/Hexagon_SDK/6.4.0.2')"
+    --CDHEXAGON_SDK_ROOT="$(Resolve-Path 'externals/Hexagon_SDK/Hexagon_SDK/6.4.0.2')" `
+    --CDPREBUILT_LIB_DIR=windows_aarch64
   if ($LASTEXITCODE -ne 0) {
     throw "build failed"
   }

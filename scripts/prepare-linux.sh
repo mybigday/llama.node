@@ -26,7 +26,7 @@ done
 
 run_as_root apt-get update
 
-if [ $TARGET == "qualcomm" ]; then
+if [ $TARGET == "snapdragon" ]; then
   run_as_root apt-get install -qy lsb-release wget llvm clang lld cmake ninja-build libomp-dev ccache ocl-icd-opencl-dev opencl-headers clinfo unzip
   
   # Download and extract Hexagon SDK

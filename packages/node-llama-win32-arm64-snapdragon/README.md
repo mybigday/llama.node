@@ -1,8 +1,8 @@
-# @fugood/node-llama-linux-arm64-qualcomm
+# @fugood/node-llama-win32-arm64-snapdragon
 
-Native module for llama.node targeting linux-arm64-qualcomm.
+Native module for llama.node targeting win32-arm64-snapdragon.
 
-This package contains the pre-compiled native module for the specified platform and architecture with Qualcomm OpenCL and Hexagon support.
+This package contains the pre-compiled native module for the specified platform and architecture with Qualcomm Snapdragon OpenCL and Hexagon support.
 
 ## Installation
 
@@ -10,9 +10,9 @@ This package is typically installed automatically as a dependency of `@fugood/ll
 
 ## Platform Support
 
-- **OS**: linux
+- **OS**: win32
 - **Architecture**: arm64
-- **Variant**: qualcomm
+- **Variant**: snapdragon
 - **Backends**: OpenCL, Hexagon NPU
 
 ## Usage
