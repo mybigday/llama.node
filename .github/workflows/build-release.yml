@@ -119,12 +119,13 @@ jobs:
             target: snapdragon
             package: node-llama-linux-arm64-snapdragon
             cross-compile: true
-          # Windows arm64 Snapdragon
-          - os: windows-latest
-            arch: arm64
-            target: snapdragon
-            package: node-llama-win32-arm64-snapdragon
-            toolchain: mingw-clang
+          # TODO: uncomment this when Windows arm64 Snapdragon is supported
+          # # Windows arm64 Snapdragon
+          # - os: windows-latest
+          #   arch: arm64
+          #   target: snapdragon
+          #   package: node-llama-win32-arm64-snapdragon
+          #   toolchain: mingw-clang
     steps:
       - name: Run this job?
         id: run
