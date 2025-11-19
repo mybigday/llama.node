@@ -104,7 +104,7 @@ if ($target -eq "all" -or $target -eq "snapdragon") {
     --CDGGML_OPENMP=0 `
     --CDGGML_OPENCL=1 `
     --CDGGML_HEXAGON=1 `
-    --CDHEXAGON_SDK_ROOT="$env:HEXAGON_SDK_ROOT" `
+    --CDHEXAGON_SDK_ROOT="$(Resolve-Path 'externals/Hexagon_SDK/Hexagon_SDK/6.4.0.2')" `
     --CDPREBUILT_LIB_DIR=windows_aarch64 `
     --CDOpenCL_LIBRARY="$openclLibPath" `
     --CDOpenCL_INCLUDE_DIR="$openclIncludePath"
