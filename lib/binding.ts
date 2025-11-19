@@ -1,9 +1,9 @@
 export type MessagePart = {
-  type: string,
-  text?: string,
+  type: string
+  text?: string
   image_url?: {
     url?: string
-  },
+  }
   input_audio?: {
     format: string
     data?: string
@@ -70,6 +70,12 @@ export type LlamaModelOptions = {
    * Number of layers to keep MoE weights on CPU
    */
   n_cpu_moe?: number
+  /**
+   * List of device names to use for offloading
+   * Device names can be obtained from getBackendDevicesInfo()
+   * Example: ['Metal', 'BLAS', 'CPU']
+   */
+  devices?: string[]
   use_mlock?: boolean
   use_mmap?: boolean
   vocab_only?: boolean
@@ -375,9 +381,13 @@ export type ToolCall = {
 }
 
 export interface LlamaContext {
-  new (options: LlamaModelOptions, onProgress?: (progress: number) => void): LlamaContext
+  new (
+    options: LlamaModelOptions,
+    onProgress?: (progress: number) => void,
+  ): LlamaContext
   getSystemInfo(): string
   getModelInfo(): ModelInfo
+  getUsedDevices(): string[]
   getFormattedChat(
     messages: ChatMessage[],
     chat_template?: string,
@@ -400,8 +410,15 @@ export interface LlamaContext {
   stopCompletion(): void
   tokenize(text: string, media_paths?: string[]): Promise<TokenizeResult>
   detokenize(tokens: number[]): Promise<string>
-  embedding(text: string, params?: { embd_normalize?: number }): Promise<EmbeddingResult>
-  rerank(query: string, documents: string[], params?: RerankParams): Promise<RerankResult[]>
+  embedding(
+    text: string,
+    params?: { embd_normalize?: number },
+  ): Promise<EmbeddingResult>
+  rerank(
+    query: string,
+    documents: string[],
+    params?: RerankParams,
+  ): Promise<RerankResult[]>
   saveSession(path: string): Promise<void>
   loadSession(path: string): Promise<void>
   release(): Promise<void>
@@ -440,7 +457,7 @@ export interface LlamaContext {
    * @param options Object containing path and optional n_batch
    * @returns boolean indicating if loading was successful
    */
-  initVocoder(options: { path: string, n_batch?: number }): boolean
+  initVocoder(options: { path: string; n_batch?: number }): boolean
 
   /**
    * Unload the vocoder model
@@ -459,7 +476,10 @@ export interface LlamaContext {
    * @param text Text to complete
    * @returns Formatted audio completion
    */
-  getFormattedAudioCompletion(speaker: string|null, text: string): {
+  getFormattedAudioCompletion(
+    speaker: string | null,
+    text: string,
+  ): {
     prompt: string
     grammar?: string
   }
@@ -476,7 +496,7 @@ export interface LlamaContext {
    * @param tokens Tokens to decode
    * @returns Promise resolving to decoded audio tokens
    */
-  decodeAudioTokens(tokens: number[]|Int32Array): Promise<Float32Array>
+  decodeAudioTokens(tokens: number[] | Int32Array): Promise<Float32Array>
 
   // Parallel decoding methods
 
@@ -485,7 +505,7 @@ export interface LlamaContext {
    * @param params Configuration for parallel mode
    * @returns boolean indicating if successful
    */
-  enableParallelMode(params: { n_parallel?: number, n_batch?: number }): boolean
+  enableParallelMode(params: { n_parallel?: number; n_batch?: number }): boolean
 
   /**
    * Disable parallel decoding mode
@@ -563,9 +583,11 @@ const getPlatformPackageName = (variant?: LibVariant): string => {
   return `@fugood/node-llama-${platform}-${arch}${variantSuffix}`
 }
 
-const loadPlatformPackage = async (packageName: string): Promise<Module | null> => {
+const loadPlatformPackage = async (
+  packageName: string,
+): Promise<Module | null> => {
   try {
-    return await import(packageName) as Module
+    return (await import(packageName)) as Module
   } catch (error) {
     return null
   }
@@ -579,7 +601,9 @@ export const loadModule = async (variant?: LibVariant): Promise<Module> => {
 
   module = await loadPlatformPackage(getPlatformPackageName())
   if (module) {
-    console.warn(`Not found package for variant "${variant}", fallback to default`)
+    console.warn(
+      `Not found package for variant "${variant}", fallback to default`,
+    )
     return module
   }
 
@@ -588,7 +612,9 @@ export const loadModule = async (variant?: LibVariant): Promise<Module> => {
   return (await import('../build/Release/index.node')) as Module
 }
 
-export const isLibVariantAvailable = async (variant?: LibVariant): Promise<boolean> => {
+export const isLibVariantAvailable = async (
+  variant?: LibVariant,
+): Promise<boolean> => {
   if (variant && variant !== 'default') {
     const module = await loadPlatformPackage(getPlatformPackageName(variant))
     return module != null

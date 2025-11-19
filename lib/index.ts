@@ -94,6 +94,10 @@ class LlamaContextWrapper {
     return this.ctx.getModelInfo()
   }
 
+  getUsedDevices(): string[] {
+    return this.ctx.getUsedDevices()
+  }
+
   isJinjaSupported(): boolean {
     const { minja } = this.ctx.getModelInfo().chatTemplates
     return !!minja?.toolUse || !!minja?.default
@@ -118,11 +122,7 @@ class LlamaContextWrapper {
       chat_template_kwargs?: Record<string, string>
     },
   ): FormattedChatResult {
-    const {
-      messages: chat,
-      has_media,
-      media_paths,
-    } = formatMediaChat(messages)
+    const { messages: chat, has_media, media_paths } = formatMediaChat(messages)
 
     const useJinja = this.isJinjaSupported() && params?.jinja
     let tmpl
@@ -169,8 +169,9 @@ class LlamaContextWrapper {
     options: LlamaCompletionOptions,
     callback?: (token: LlamaCompletionToken) => void,
   ): Promise<LlamaCompletionResult> {
-    const { messages, media_paths = options.media_paths } =
-      formatMediaChat(options.messages)
+    const { messages, media_paths = options.media_paths } = formatMediaChat(
+      options.messages,
+    )
     return this.ctx.completion(
       {
         ...options,
@@ -196,7 +197,10 @@ class LlamaContextWrapper {
     return this.ctx.detokenize(tokens)
   }
 
-  embedding(text: string, params?: { embd_normalize?: number }): Promise<EmbeddingResult> {
+  embedding(
+    text: string,
+    params?: { embd_normalize?: number },
+  ): Promise<EmbeddingResult> {
     return this.ctx.embedding(text, params)
   }
 
@@ -329,7 +333,7 @@ export const loadLlamaModelInfo = async (
 }
 
 export const getBackendDevicesInfo = async (
-  variant: LibVariant = 'default'
+  variant: LibVariant = 'default',
 ): Promise<import('./binding').BackendDeviceInfo[]> => {
   mods[variant] ??= await loadModule(variant)
   refreshNativeLogSetup()

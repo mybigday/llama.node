@@ -221,6 +221,41 @@ test('embedding', async () => {
   await model.release()
 })
 
+test('devices parameter', async () => {
+  // First, get available devices
+  const devices = await getBackendDevicesInfo()
+  console.log('Available devices:', devices)
+
+  expect(devices).toBeInstanceOf(Array)
+  expect(devices.length).toBeGreaterThan(0)
+
+  // Try to load a model with specific devices
+  const deviceNames = devices.map((d: any) => d.deviceName)
+  console.log('Device names:', deviceNames)
+
+  const model = await loadModel({
+    model: path.resolve(__dirname, './tiny-random-llama.gguf'),
+    n_ctx: 512,
+    n_gpu_layers: 0, // CPU only for this test
+    devices: deviceNames, // Use all available devices
+  })
+
+  const info = model.getModelInfo()
+  expect(info).toBeDefined()
+
+  // Check used devices
+  const usedDevices = model.getUsedDevices()
+  console.log('Used devices:', usedDevices)
+  expect(Array.isArray(usedDevices)).toBe(true)
+  expect(usedDevices.length).toBeGreaterThan(0)
+  // Verify that used devices are a subset of requested devices
+  usedDevices.forEach((device: string) => {
+    expect(deviceNames).toContain(device)
+  })
+
+  await model.release()
+})
+
 test('loadModelInfo', async () => {
   const result = await loadLlamaModelInfo(
     path.resolve(__dirname, './tiny-random-llama.gguf'),

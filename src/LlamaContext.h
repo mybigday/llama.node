@@ -31,6 +31,7 @@ public:
 private:
   Napi::Value GetSystemInfo(const Napi::CallbackInfo &info);
   Napi::Value GetModelInfo(const Napi::CallbackInfo &info);
+  Napi::Value GetUsedDevices(const Napi::CallbackInfo &info);
   Napi::Value GetFormattedChat(const Napi::CallbackInfo &info);
   Napi::Value Completion(const Napi::CallbackInfo &info);
   void StopCompletion(const Napi::CallbackInfo &info);
@@ -69,6 +70,7 @@ private:
   void CancelRequest(const Napi::CallbackInfo &info);
 
   std::string _info;
+  std::vector<std::string> _used_devices;
   Napi::Object _meta;
   LlamaCompletionWorker *_wip = nullptr;
 

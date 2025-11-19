@@ -105,6 +105,9 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
        InstanceMethod<&LlamaContext::GetModelInfo>(
            "getModelInfo",
            static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::GetUsedDevices>(
+           "getUsedDevices",
+           static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::GetFormattedChat>(
            "getFormattedChat",
            static_cast<napi_property_attributes>(napi_enumerable)),
@@ -306,6 +309,19 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   llama_backend_init();
   llama_numa_init(params.numa);
 
+  // Parse devices array
+  if (options.Has("devices") && options.Get("devices").IsArray()) {
+    auto devices_array = options.Get("devices").As<Napi::Array>();
+    for (size_t i = 0; i < devices_array.Length(); i++) {
+      auto device_name = devices_array.Get(i).ToString().Utf8Value();
+      auto * dev = ggml_backend_dev_by_name(device_name.c_str());
+      if (dev) {
+        params.devices.push_back(dev);
+      }
+      // Skip invalid device names silently
+    }
+  }
+
   std::vector<common_adapter_lora_info> lora;
   auto lora_path = get_option<std::string>(options, "lora", "");
   auto lora_scaled = get_option<float>(options, "lora_scaled", 1.0f);
@@ -377,6 +393,17 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
     Napi::TypeError::New(env, "Failed to load model").ThrowAsJavaScriptException();
   }
   _rn_ctx->attachThreadpoolsIfAvailable();
+
+  // Collect used devices from the loaded model
+  if (_rn_ctx->llama_init.model) {
+    const auto &model_devices = _rn_ctx->llama_init.model->devices;
+    for (auto dev : model_devices) {
+      const char *dev_name = ggml_backend_dev_name(dev);
+      if (dev_name != nullptr) {
+        _used_devices.push_back(std::string(dev_name));
+      }
+    }
+  }
 
   // Release progress callback after model is loaded
   if (has_progress_callback) {
@@ -583,6 +610,15 @@ Napi::Value LlamaContext::GetModelInfo(const Napi::CallbackInfo &info) {
   return details;
 }
 
+// getUsedDevices(): string[]
+Napi::Value LlamaContext::GetUsedDevices(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  Napi::Array devices = Napi::Array::New(env, _used_devices.size());
+  for (size_t i = 0; i < _used_devices.size(); i++) {
+    devices[i] = Napi::String::New(env, _used_devices[i]);
+  }
+  return devices;
+}
 
 
 // getFormattedChat(
