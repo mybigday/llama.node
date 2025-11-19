@@ -198,7 +198,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bin-${{ matrix.package }}
-          path: packages/${{ matrix.package }}
+          path: |
+            build
+            packages/${{ matrix.package }}
           retention-days: ${{ inputs.artifacts-retention-days }}
       - name: Publish to NPM
         if: steps.run.outputs.should-run == 'true' && (github.event.inputs.publish == 'YES' || inputs.publish == 'YES')
