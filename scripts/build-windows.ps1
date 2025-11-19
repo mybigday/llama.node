@@ -94,13 +94,20 @@ if ($target -eq "all" -or $target -eq "cuda") {
 
 if ($target -eq "all" -or $target -eq "snapdragon") {
   . "externals/Hexagon_SDK/Hexagon_SDK/6.4.0.2/setup_sdk_env.ps1"
+  
+  # Set OpenCL paths (headers are in OpenCL-Headers, lib is in OpenCL-SDK)
+  $openclIncludePath = Resolve-Path "externals/OpenCL-Headers"
+  $openclLibPath = Resolve-Path "externals/OpenCL-SDK/lib/OpenCL.lib"
+  
   npx cmake-js rebuild -C -a $arch $cmakeArgs `
     --CDVARIANT=snapdragon `
     --CDGGML_OPENMP=0 `
     --CDGGML_OPENCL=1 `
     --CDGGML_HEXAGON=1 `
     --CDHEXAGON_SDK_ROOT="$env:HEXAGON_SDK_ROOT" `
-    --CDPREBUILT_LIB_DIR=windows_aarch64
+    --CDPREBUILT_LIB_DIR=windows_aarch64 `
+    --CDOpenCL_LIBRARY="$openclLibPath" `
+    --CDOpenCL_INCLUDE_DIR="$openclIncludePath"
   if ($LASTEXITCODE -ne 0) {
     throw "build failed"
   }

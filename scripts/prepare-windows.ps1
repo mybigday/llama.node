@@ -78,9 +78,10 @@ if ($target -eq "snapdragon") {
     # Clone OpenCL-ICD-Loader
     git clone --depth 1 --branch v2024.10.24 https://github.com/KhronosGroup/OpenCL-ICD-Loader.git externals/OpenCL-ICD-Loader
     
-    # Build OpenCL-ICD-Loader
-    Write-Host "Building OpenCL ICD Loader..."
+    # Build OpenCL-ICD-Loader for ARM64
+    Write-Host "Building OpenCL ICD Loader for ARM64..."
     cmake -S externals/OpenCL-ICD-Loader -B externals/OpenCL-ICD-Loader/build `
+      -A ARM64 `
       -DOPENCL_ICD_LOADER_HEADERS_DIR="$(Resolve-Path 'externals/OpenCL-Headers')" `
       -DCMAKE_INSTALL_PREFIX="$(Resolve-Path 'externals/OpenCL-SDK')"
     cmake --build externals/OpenCL-ICD-Loader/build --config Release
