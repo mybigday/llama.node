@@ -8,6 +8,16 @@ $ErrorActionPreference='Stop'
 
 $nativeArch = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture
 
+$openclVersion = $env:OPENCL_VERSION
+if ($openclVersion -eq $null) {
+  $openclVersion = "2024.10.24"
+}
+
+$hexagonSdkVersion = $env:HEXAGON_SDK_VERSION
+if ($hexagonSdkVersion -eq $null) {
+  $hexagonSdkVersion = "6.4.0.2"
+}
+
 if ($arch -eq "native") {
   if ($nativeArch -eq "Arm64") {
     $arch = "arm64"
@@ -58,12 +68,12 @@ if ($target -eq "snapdragon") {
   if (-Not (Test-Path $sdkPath)) {
     Write-Host "Downloading Hexagon SDK..."
     New-Item -ItemType Directory -Force -Path "externals" | Out-Null
-    Invoke-WebRequest -Uri "https://softwarecenter.qualcomm.com/api/download/software/sdks/Hexagon_SDK/Windows/6.4.0.2/Hexagon_SDK_WinNT.zip" -OutFile "externals/Hexagon_SDK_WinNT.zip"
+    Invoke-WebRequest -Uri "https://softwarecenter.qualcomm.com/api/download/software/sdks/Hexagon_SDK/Windows/$hexagonSdkVersion/Hexagon_SDK_WinNT.zip" -OutFile "externals/Hexagon_SDK_WinNT.zip"
     Write-Host "Extracting Hexagon SDK..."
     Expand-Archive -Path "externals/Hexagon_SDK_WinNT.zip" -DestinationPath "externals/Hexagon_SDK" -Force
   }
 
-  . "externals/Hexagon_SDK/Hexagon_SDK/6.4.0.2/setup_sdk_env.ps1"
+  . "externals/Hexagon_SDK/Hexagon_SDK/$hexagonSdkVersion/setup_sdk_env.ps1"
 
   # Download OpenCL SDK
   $openclPath = "externals/OpenCL-SDK"
@@ -73,10 +83,10 @@ if ($target -eq "snapdragon") {
     New-Item -ItemType Directory -Force -Path "externals/OpenCL-SDK" | Out-Null
     
     # Clone OpenCL-Headers
-    git clone --depth 1 --branch v2024.10.24 https://github.com/KhronosGroup/OpenCL-Headers.git externals/OpenCL-Headers
+    git clone --depth 1 --branch v$openclVersion https://github.com/KhronosGroup/OpenCL-Headers.git externals/OpenCL-Headers
     
     # Clone OpenCL-ICD-Loader
-    git clone --depth 1 --branch v2024.10.24 https://github.com/KhronosGroup/OpenCL-ICD-Loader.git externals/OpenCL-ICD-Loader
+    git clone --depth 1 --branch v$openclVersion https://github.com/KhronosGroup/OpenCL-ICD-Loader.git externals/OpenCL-ICD-Loader
     
     # Build OpenCL-ICD-Loader for ARM64
     Write-Host "Building OpenCL ICD Loader for ARM64..."

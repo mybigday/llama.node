@@ -30,6 +30,10 @@ on:
       NPM_TOKEN:
         required: true
 
+env:
+  HEXAGON_SDK_VERSION: '6.4.0.2'
+  OPENCL_VERSION: '2025.07.22'
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}

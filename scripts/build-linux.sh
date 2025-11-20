@@ -7,6 +7,8 @@ set -e
 ARCH=${ARCH:-$(uname -m)}
 TARGET=${TARGET:-"default"}
 
+HEXAGON_SDK_VERSION=${HEXAGON_SDK_VERSION:-"6.4.0.2"}
+
 while [[ "$#" -gt 0 ]]; do
   case $1 in
     -a|--arch) ARCH="$2"; shift ;;
@@ -69,7 +71,7 @@ else
       exit 1
     fi
 
-    source externals/Hexagon_SDK/Hexagon_SDK/6.4.0.2/setup_sdk_env.source
+    source externals/Hexagon_SDK/Hexagon_SDK/$HEXAGON_SDK_VERSION/setup_sdk_env.source
     
     # Check if cross-compilation is needed
     if [ $(uname -m) == "x86_64" ] && [ $ARCH == "arm64" ]; then
@@ -93,6 +95,7 @@ else
         --CDGGML_OPENCL_EMBED_KERNELS=ON \
         --CDGGML_HEXAGON=1 \
         --CDHEXAGON_SDK_ROOT="$HEXAGON_SDK_ROOT" \
+        --CDGGML_HEXAGON_HTP_DEBUG=OFF \
       )
       
       # Build with toolchain

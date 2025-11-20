@@ -11,6 +11,11 @@ $env:CMAKE_BUILD_PARALLEL_LEVEL = [Environment]::ProcessorCount
 
 $nativeArch = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture
 
+$hexagonSdkVersion = $env:HEXAGON_SDK_VERSION
+if ($hexagonSdkVersion -eq $null) {
+  $hexagonSdkVersion = "6.4.0.2"
+}
+
 if ($arch -eq "native") {
   if ($nativeArch -eq "Arm64") {
     $arch = "arm64"
@@ -93,7 +98,7 @@ if ($target -eq "all" -or $target -eq "cuda") {
 # Snapdragon
 
 if ($target -eq "all" -or $target -eq "snapdragon") {
-  . "externals/Hexagon_SDK/Hexagon_SDK/6.4.0.2/setup_sdk_env.ps1"
+  . "externals/Hexagon_SDK/Hexagon_SDK/$hexagonSdkVersion/setup_sdk_env.ps1"
   
   # Set OpenCL paths (headers are in OpenCL-Headers, lib is in OpenCL-SDK)
   $openclIncludePath = Resolve-Path "externals/OpenCL-Headers"
@@ -104,7 +109,7 @@ if ($target -eq "all" -or $target -eq "snapdragon") {
     --CDGGML_OPENMP=0 `
     --CDGGML_OPENCL=1 `
     --CDGGML_HEXAGON=1 `
-    --CDHEXAGON_SDK_ROOT="$(Resolve-Path 'externals/Hexagon_SDK/Hexagon_SDK/6.4.0.2')" `
+    --CDHEXAGON_SDK_ROOT="$HEXAGON_SDK_ROOT" `
     --CDPREBUILT_LIB_DIR=windows_aarch64 `
     --CDOpenCL_LIBRARY="$openclLibPath" `
     --CDOpenCL_INCLUDE_DIR="$openclIncludePath"
