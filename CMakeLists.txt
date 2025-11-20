@@ -44,7 +44,8 @@ else()
 endif()
 
 if (TO_PACKAGE)
-  set(PLATFORM_BINARY_DIR ${CMAKE_SOURCE_DIR}/packages/node-llama-${PLATFORM}-${ARCH}${VARIANT})
+  set(PACKAGE_NAME "node-llama-${PLATFORM}-${ARCH}${VARIANT}")
+  set(PLATFORM_BINARY_DIR ${CMAKE_SOURCE_DIR}/packages/${PACKAGE_NAME})
 else()
   set(PLATFORM_BINARY_DIR ${CMAKE_SOURCE_DIR}/build/Release)
 endif()
@@ -186,6 +187,13 @@ if (NOT MSVC AND CMAKE_SYSTEM_NAME STREQUAL "Windows")
   string(REGEX REPLACE "/DELAYLOAD:NODE.EXE" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
 
   set(CMAKE_JS_LIB win_dynamic_load)
+endif()
+
+if (TO_PACKAGE AND GGML_HEXAGON)
+  set(NODE_RPATH "node_modules/@fugood/${PACKAGE_NAME}")
+  set(ELECTRON_ASAR_RPATH "resources/app.asar.unpacked/node_modules/@fugood/${PACKAGE_NAME}")
+  set(ELECTRON_RES_RPATH "resources/node_modules/@fugood/${PACKAGE_NAME}")
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-rpath,${NODE_RPATH} -Wl,-rpath,${ELECTRON_ASAR_RPATH} -Wl,-rpath,${ELECTRON_RES_RPATH}")
 endif()
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES} ${CMAKE_JS_SRC})
