@@ -1,3 +1,8 @@
+import { createRequire } from 'node:module'
+import path from 'node:path'
+
+const _require = require ?? createRequire(path.join(process.cwd(), 'node_modules'))
+
 export type MessagePart = {
   type: string
   text?: string
@@ -594,6 +599,17 @@ const loadPlatformPackage = async (
 }
 
 export const loadModule = async (variant?: LibVariant): Promise<Module> => {
+  try {
+    if (variant === 'snapdragon' && process.platform === 'linux') {
+      const packagePath = path.resolve(_require.resolve(getPlatformPackageName(variant)), '../')
+      if (process.env.LD_LIBRARY_PATH) {
+        process.env.LD_LIBRARY_PATH += `:${packagePath}`
+      } else {
+        process.env.LD_LIBRARY_PATH = packagePath
+      }
+    }
+  } catch {}
+
   let module = await loadPlatformPackage(getPlatformPackageName(variant))
   if (module) {
     return module

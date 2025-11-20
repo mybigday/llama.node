@@ -43,8 +43,8 @@ if [ $TARGET == "snapdragon" ]; then
       # Build OpenCL ICD Loader for arm64
       if [ ! -f "externals/opencl-arm64/lib/libOpenCL.so" ]; then
         mkdir -p externals/opencl-arm64
-        git clone --depth 1 --branch v2024.05.08 https://github.com/KhronosGroup/OpenCL-Headers.git externals/OpenCL-Headers
-        git clone --depth 1 --branch v2024.05.08 https://github.com/KhronosGroup/OpenCL-ICD-Loader.git externals/OpenCL-ICD-Loader
+        git clone --depth 1 --branch v2022.05.18 https://github.com/KhronosGroup/OpenCL-Headers.git externals/OpenCL-Headers
+        git clone --depth 1 --branch v2022.05.18 https://github.com/KhronosGroup/OpenCL-ICD-Loader.git externals/OpenCL-ICD-Loader
         
         # Calculate absolute paths before changing directory
         TOOLCHAIN_FILE="$(realpath cmake/aarch64-linux-gnu.toolchain.cmake)"

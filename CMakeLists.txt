@@ -237,3 +237,15 @@ if (GGML_CLBLAST AND TO_PACKAGE)
     )
   endif()
 endif()
+
+if (GGML_HEXAGON)
+  get_target_property(HTP_LIBS_DIR ggml-hexagon BINARY_DIR)
+  add_custom_command(
+    TARGET copy_assets
+    COMMAND ${CMAKE_COMMAND} -E copy ${HTP_LIBS_DIR}/libggml-htp-v73.so ${PLATFORM_BINARY_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy ${HTP_LIBS_DIR}/libggml-htp-v75.so ${PLATFORM_BINARY_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy ${HTP_LIBS_DIR}/libggml-htp-v79.so ${PLATFORM_BINARY_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy ${HTP_LIBS_DIR}/libggml-htp-v81.so ${PLATFORM_BINARY_DIR}
+    COMMENT "Copying HTP libraries to bin folder"
+  )
+endif()

@@ -108,6 +108,8 @@
   },
   "exclude": [
     "src/llama.cpp/",
-    "src/llama.rn/"
+    "src/llama.rn/",
+    "build/",
+    "externals/"
   ]
 }
