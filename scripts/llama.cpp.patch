@@ -1,8 +1,8 @@
 diff --git a/src/llama.cpp/common/CMakeLists.txt b/src/llama.cpp/common/CMakeLists.txt
-index 706fa32ee..248459903 100644
+index bb168e835..cfc0e2c2e 100644
 --- a/src/llama.cpp/common/CMakeLists.txt
 +++ b/src/llama.cpp/common/CMakeLists.txt
-@@ -141,9 +141,16 @@ if (LLAMA_LLGUIDANCE)
+@@ -143,9 +143,16 @@ if (LLAMA_LLGUIDANCE)
      set(LLAMA_COMMON_EXTRA_LIBS ${LLAMA_COMMON_EXTRA_LIBS} llguidance ${LLGUIDANCE_PLATFORM_LIBS})
  endif ()
  
@@ -21,7 +21,7 @@ index 706fa32ee..248459903 100644
  
  #
 diff --git a/src/llama.cpp/common/chat.cpp b/src/llama.cpp/common/chat.cpp
-index 938872e82..6364f173f 100644
+index 6fa05a604..87dfa7a8b 100644
 --- a/src/llama.cpp/common/chat.cpp
 +++ b/src/llama.cpp/common/chat.cpp
 @@ -6,9 +6,6 @@
@@ -51,7 +51,7 @@ index 938872e82..6364f173f 100644
  struct templates_params {
      json messages;
      json tools;
-@@ -811,7 +798,7 @@ static std::string apply(
+@@ -817,7 +804,7 @@ static std::string apply(
          tmpl_inputs.extra_context.merge_patch(*additional_context);
      }
      // TODO: add flag to control date/time, if only for testing purposes.
@@ -61,7 +61,7 @@ index 938872e82..6364f173f 100644
      minja::chat_template_options tmpl_opts;
      // To avoid double BOS / EOS tokens, we're manually removing begining / trailing tokens
 diff --git a/src/llama.cpp/common/chat.h b/src/llama.cpp/common/chat.h
-index 50efb0d4e..f471a84c7 100644
+index 754c411e2..71241a6cc 100644
 --- a/src/llama.cpp/common/chat.h
 +++ b/src/llama.cpp/common/chat.h
 @@ -9,7 +9,18 @@
@@ -85,10 +85,10 @@ index 50efb0d4e..f471a84c7 100644
  struct common_chat_tool_call {
      std::string name;
 diff --git a/src/llama.cpp/common/common.cpp b/src/llama.cpp/common/common.cpp
-index 4dc95dcba..ea0ea86c0 100644
+index f3cc55247..65398844f 100644
 --- a/src/llama.cpp/common/common.cpp
 +++ b/src/llama.cpp/common/common.cpp
-@@ -1155,6 +1155,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
+@@ -1162,6 +1162,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
          mparams.n_gpu_layers = params.n_gpu_layers;
      }
  
@@ -97,10 +97,10 @@ index 4dc95dcba..ea0ea86c0 100644
      mparams.split_mode      = params.split_mode;
      mparams.tensor_split    = params.tensor_split;
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index f42c083fa..c573cc812 100644
+index de5b404dd..d30d252c9 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
-@@ -274,6 +274,7 @@ struct lr_opt {
+@@ -281,6 +281,7 @@ struct lr_opt {
  struct ggml_opt_optimizer_params common_opt_lr_pars(void * userdata);
  
  struct common_params {
@@ -109,7 +109,7 @@ index f42c083fa..c573cc812 100644
      int32_t n_ctx                 =  4096; // context size
      int32_t n_batch               =  2048; // logical batch size for prompt processing (must be >=32 to use BLAS)
 diff --git a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
-index e52e050a8..c1000c162 100644
+index d0cab0bcb..48d532838 100644
 --- a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
 +++ b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
 @@ -106,7 +106,7 @@ function(ggml_add_cpu_backend_variant_impl tag_name)
