@@ -42,23 +42,23 @@ export type LlamaModelOptions = {
   flash_attn_type?: 'auto' | 'on' | 'off'
   flash_attn?: boolean // Deprecated: use flash_attn_type instead
   cache_type_k?:
-  | 'f16'
-  | 'f32'
-  | 'q8_0'
-  | 'q4_0'
-  | 'q4_1'
-  | 'iq4_nl'
-  | 'q5_0'
-  | 'q5_1'
+    | 'f16'
+    | 'f32'
+    | 'q8_0'
+    | 'q4_0'
+    | 'q4_1'
+    | 'iq4_nl'
+    | 'q5_0'
+    | 'q5_1'
   cache_type_v?:
-  | 'f16'
-  | 'f32'
-  | 'q8_0'
-  | 'q4_0'
-  | 'q4_1'
-  | 'iq4_nl'
-  | 'q5_0'
-  | 'q5_1'
+    | 'f16'
+    | 'f32'
+    | 'q8_0'
+    | 'q4_0'
+    | 'q4_1'
+    | 'iq4_nl'
+    | 'q5_0'
+    | 'q5_1'
   /**
    * Enable context shifting to handle prompts larger than context size
    */
@@ -387,7 +387,7 @@ export type ToolCall = {
 }
 
 export interface LlamaContext {
-  new(
+  new (
     options: LlamaModelOptions,
     onProgress?: (progress: number) => void,
   ): LlamaContext
