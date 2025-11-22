@@ -121,6 +121,19 @@ index d0cab0bcb..48d532838 100644
          else()
              check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
              if (NOT "${GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E}" STREQUAL "")
+diff --git a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
+index cabd301ad..140ff3650 100644
+--- a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
++++ b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
+@@ -3682,6 +3682,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+         } catch (std::exception const &exc) {
+             GGML_LOG_ERROR("ggml-hex: failed to create device/session %zu\n", i);
+             devices[i].context = nullptr;
++            opt_ndev = i;
++            break;
+         }
+     }
+ }
 diff --git a/src/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt b/src/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
 index de01336cd..29b1a043d 100644
 --- a/src/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
@@ -143,15 +156,3 @@ index de01336cd..29b1a043d 100644
          list(APPEND VULKAN_SHADER_GEN_CMAKE_ARGS -DCMAKE_TOOLCHAIN_FILE=${HOST_CMAKE_TOOLCHAIN_FILE})
          message(STATUS "vulkan-shaders-gen toolchain file: ${HOST_CMAKE_TOOLCHAIN_FILE}")
      endif()
-diff --git a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-index 7e7a7e7a7..e1e1e1e1e 100644
---- a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-+++ b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-@@ -9,6 +9,7 @@
- #include <chrono>
- #include <mutex>
- #include <string>
-+#include <stdexcept>
- 
- #ifdef _WIN32
- #    include <sal.h>
