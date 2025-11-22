@@ -306,6 +306,16 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
     params.tensor_buft_overrides.push_back({nullptr, nullptr});
   }
 
+  auto cpu_mask = get_option<std::string>(options, "cpu_mask", "");
+  if (!cpu_mask.empty()) {
+    params.cpuparams.mask_valid = true;
+    if (!parse_cpu_mask(cpu_mask, params.cpuparams.cpumask)) {
+      Napi::TypeError::New(env, "Invalid cpu_mask").ThrowAsJavaScriptException();
+    }
+  }
+
+  params.cpuparams.strict_cpu = get_option<bool>(options, "cpu_strict", false);
+
   llama_backend_init();
   llama_numa_init(params.numa);
 

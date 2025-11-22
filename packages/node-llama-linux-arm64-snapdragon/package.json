@@ -1,0 +1,46 @@
+{
+  "name": "@fugood/node-llama-linux-arm64-snapdragon",
+  "version": "1.3.4",
+  "description": "Native module for An another Node binding of llama.cpp (linux-arm64-snapdragon)",
+  "main": "index.node",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mybigday/llama.node.git"
+  },
+  "keywords": [
+    "llama",
+    "llm",
+    "ai",
+    "genai",
+    "Local LLM",
+    "llama.cpp",
+    "linux",
+    "arm64",
+    "native",
+    "qualcomm",
+    "snapdragon",
+    "opencl",
+    "hexagon"
+  ],
+  "author": "Hans <hans.chen@bricks.tools>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mybigday/llama.node/issues"
+  },
+  "homepage": "https://github.com/mybigday/llama.node#readme",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
+  },
+  "files": [
+    "index.node",
+    "*.so"
+  ],
+  "variant": "snapdragon"
+}

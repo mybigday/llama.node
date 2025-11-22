@@ -26,6 +26,12 @@ export type LlamaModelOptions = {
   n_batch?: number
   n_ubatch?: number
   /**
+   * CPU affinity mask
+   * Example: '0xfc'
+   */
+  cpu_mask?: string
+  cpu_strict?: boolean
+  /**
    * Number of parallel sequences to support (sets n_seq_max).
    * This determines the maximum number of parallel slots that can be used.
    * Default: 8
@@ -574,7 +580,7 @@ export interface Module {
   LlamaContext: LlamaContext
 }
 
-export type LibVariant = 'default' | 'vulkan' | 'cuda'
+export type LibVariant = 'default' | 'vulkan' | 'cuda' | 'snapdragon'
 
 const getPlatformPackageName = (variant?: LibVariant): string => {
   const platform = process.platform

@@ -8,6 +8,16 @@ $ErrorActionPreference='Stop'
 
 $nativeArch = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture
 
+$openclVersion = $env:OPENCL_VERSION
+if ($openclVersion -eq $null) {
+  $openclVersion = "2024.10.24"
+}
+
+$hexagonSdkVersion = $env:HEXAGON_SDK_VERSION
+if ($hexagonSdkVersion -eq $null) {
+  $hexagonSdkVersion = "6.4.0.2"
+}
+
 if ($arch -eq "native") {
   if ($nativeArch -eq "Arm64") {
     $arch = "arm64"
@@ -51,3 +61,48 @@ if ($toolchain -eq "mingw-clang") {
 
   choco install ninja -y
 }
+
+if ($target -eq "snapdragon") {
+  # Download Hexagon SDK
+  $sdkPath = "externals/Hexagon_SDK"
+  if (-Not (Test-Path $sdkPath)) {
+    Write-Host "Downloading Hexagon SDK..."
+    New-Item -ItemType Directory -Force -Path "externals" | Out-Null
+    Invoke-WebRequest -Uri "https://softwarecenter.qualcomm.com/api/download/software/sdks/Hexagon_SDK/Windows/$hexagonSdkVersion/Hexagon_SDK_WinNT.zip" -OutFile "externals/Hexagon_SDK_WinNT.zip"
+    Write-Host "Extracting Hexagon SDK..."
+    Expand-Archive -Path "externals/Hexagon_SDK_WinNT.zip" -DestinationPath "externals/Hexagon_SDK" -Force
+  }
+
+  . "externals/Hexagon_SDK/Hexagon_SDK/$hexagonSdkVersion/setup_sdk_env.ps1"
+
+  # Download OpenCL SDK
+  $openclPath = "externals/OpenCL-SDK"
+  if (-Not (Test-Path $openclPath)) {
+    Write-Host "Downloading OpenCL SDK..."
+    New-Item -ItemType Directory -Force -Path "externals" | Out-Null
+    New-Item -ItemType Directory -Force -Path "externals/OpenCL-SDK" | Out-Null
+    
+    # Clone OpenCL-Headers
+    git clone --depth 1 --branch v$openclVersion https://github.com/KhronosGroup/OpenCL-Headers.git externals/OpenCL-Headers
+    
+    # Clone OpenCL-ICD-Loader
+    git clone --depth 1 --branch v$openclVersion https://github.com/KhronosGroup/OpenCL-ICD-Loader.git externals/OpenCL-ICD-Loader
+    
+    # Build OpenCL-ICD-Loader for ARM64
+    Write-Host "Building OpenCL ICD Loader for ARM64..."
+    cmake -S externals/OpenCL-ICD-Loader -B externals/OpenCL-ICD-Loader/build `
+      -A ARM64 `
+      -DOPENCL_ICD_LOADER_HEADERS_DIR="$(Resolve-Path 'externals/OpenCL-Headers')" `
+      -DCMAKE_INSTALL_PREFIX="$(Resolve-Path 'externals/OpenCL-SDK')"
+    cmake --build externals/OpenCL-ICD-Loader/build --config Release
+    cmake --install externals/OpenCL-ICD-Loader/build --config Release
+  }
+
+  $env:OpenCL_INCLUDE_DIR = "$(Resolve-Path 'externals/OpenCL-Headers')"
+  $env:OpenCL_LIBRARY = "$(Resolve-Path 'externals/OpenCL-SDK/lib/OpenCL.lib')"
+  if ($env:GITHUB_ENV -ne $null) {
+    Add-Content -Path $env:GITHUB_ENV -Value "OpenCL_INCLUDE_DIR=$env:OpenCL_INCLUDE_DIR"
+    Add-Content -Path $env:GITHUB_ENV -Value "OpenCL_LIBRARY=$env:OpenCL_LIBRARY"
+  }
+}
+

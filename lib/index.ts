@@ -309,7 +309,35 @@ export const loadModel = async (
   mods[variant] ??= await loadModule(options.lib_variant)
   refreshNativeLogSetup()
 
-  const nativeCtx = new mods[variant].LlamaContext(options, onProgress)
+  const { devices } = options
+  let filteredDevs: Array<string> = []
+  if (Array.isArray(devices)) {
+    filteredDevs = [...devices]
+
+    // Handle HTP* to use all HTP devices on Hexagon
+    if (variant === 'snapdragon' && devices.includes('HTP*')) {
+      const backendDevices = await getBackendDevicesInfo(variant)
+      const htpDevices = backendDevices
+        .filter((d) => d.deviceName.startsWith('HTP'))
+        .map((d) => d.deviceName)
+      filteredDevs = filteredDevs.reduce((acc, dev) => {
+        if (dev.startsWith('HTP*')) {
+          acc.push(...htpDevices)
+        } else if (!dev.startsWith('HTP')) {
+          acc.push(dev)
+        }
+        return acc
+      }, [] as Array<string>)
+    }
+  }
+
+  const nativeCtx = new mods[variant].LlamaContext(
+    {
+      ...options,
+      devices: filteredDevs.length > 0 ? filteredDevs : undefined,
+    },
+    onProgress,
+  )
   return new LlamaContextWrapper(nativeCtx)
 }
 

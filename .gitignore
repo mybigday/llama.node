@@ -11,6 +11,11 @@ tmp.sess
 *.node
 package-lock.json
 *-result.wav
+*.dll
+*.so
+*.dylib
+
+.python-version
 
 local-plan/
 local-plan-done/

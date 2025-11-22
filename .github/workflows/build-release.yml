@@ -30,6 +30,10 @@ on:
       NPM_TOKEN:
         required: true
 
+env:
+  HEXAGON_SDK_VERSION: '6.4.0.2'
+  OPENCL_VERSION: '2025.07.22'
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -113,6 +117,19 @@ jobs:
             target: vulkan
             package: node-llama-win32-arm64-vulkan
             toolchain: mingw-clang
+          # Linux arm64 Snapdragon (cross-compiled on x86_64)
+          - os: ubuntu-24.04
+            arch: arm64
+            target: snapdragon
+            package: node-llama-linux-arm64-snapdragon
+            cross-compile: true
+          # TODO: uncomment this when Windows arm64 Snapdragon is supported
+          # # Windows arm64 Snapdragon
+          # - os: windows-latest
+          #   arch: arm64
+          #   target: snapdragon
+          #   package: node-llama-win32-arm64-snapdragon
+          #   toolchain: mingw-clang
     steps:
       - name: Run this job?
         id: run
@@ -186,7 +203,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bin-${{ matrix.package }}
-          path: packages/${{ matrix.package }}
+          path: |
+            build
+            packages/${{ matrix.package }}
           retention-days: ${{ inputs.artifacts-retention-days }}
       - name: Publish to NPM
         if: steps.run.outputs.should-run == 'true' && (github.event.inputs.publish == 'YES' || inputs.publish == 'YES')
