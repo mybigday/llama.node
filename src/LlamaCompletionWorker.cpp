@@ -10,14 +10,14 @@ Napi::Array TokenProbsToArray(Napi::Env env, llama_context* ctx, const std::vect
     const auto &prob = probs[i];
     Napi::Object token_obj = Napi::Object::New(env);
 
-    std::string token_str = common_token_to_piece(ctx, prob.tok);
+    std::string token_str = rnllama::tokens_to_output_formatted_string(ctx, prob.tok);
     token_obj.Set("content", Napi::String::New(env, token_str));
 
     Napi::Array token_probs = Napi::Array::New(env);
     for (size_t j = 0; j < prob.probs.size(); j++) {
       const auto &p = prob.probs[j];
       Napi::Object prob_obj = Napi::Object::New(env);
-      std::string tok_str = common_token_to_piece(ctx, p.tok);
+      std::string tok_str = rnllama::tokens_to_output_formatted_string(ctx, p.tok);
       prob_obj.Set("tok_str", Napi::String::New(env, tok_str));
       prob_obj.Set("prob", Napi::Number::New(env, p.prob));
       token_probs.Set(j, prob_obj);
