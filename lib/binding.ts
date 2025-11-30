@@ -1,3 +1,5 @@
+import path from 'path'
+
 export type MessagePart = {
   type: string
   text?: string
@@ -600,7 +602,23 @@ const loadPlatformPackage = async (
 }
 
 export const loadModule = async (variant?: LibVariant): Promise<Module> => {
-  let module = await loadPlatformPackage(getPlatformPackageName(variant))
+  const packageName = getPlatformPackageName(variant)
+
+  // Set ADSP_LIBRARY_PATH for load HTP libs
+  if (variant === 'snapdragon') {
+    const adspLibraryPath = process.env.ADSP_LIBRARY_PATH
+    if (!adspLibraryPath) {
+      try {
+        process.env.ADSP_LIBRARY_PATH = path.dirname(
+          require.resolve(packageName),
+        )
+      } catch {
+        /* no-op */
+      }
+    }
+  }
+
+  let module = await loadPlatformPackage(packageName)
   if (module) {
     return module
   }
