@@ -21,7 +21,7 @@ index bb168e835..cfc0e2c2e 100644
  
  #
 diff --git a/src/llama.cpp/common/chat.cpp b/src/llama.cpp/common/chat.cpp
-index 6fa05a604..87dfa7a8b 100644
+index b4a0f985e..2383d2ea9 100644
 --- a/src/llama.cpp/common/chat.cpp
 +++ b/src/llama.cpp/common/chat.cpp
 @@ -6,9 +6,6 @@
@@ -51,7 +51,7 @@ index 6fa05a604..87dfa7a8b 100644
  struct templates_params {
      json messages;
      json tools;
-@@ -817,7 +804,7 @@ static std::string apply(
+@@ -709,7 +696,7 @@ static std::string apply(
          tmpl_inputs.extra_context.merge_patch(*additional_context);
      }
      // TODO: add flag to control date/time, if only for testing purposes.
