@@ -124,7 +124,7 @@ class LlamaContextWrapper {
   ): FormattedChatResult {
     const { messages: chat, has_media, media_paths } = formatMediaChat(messages)
 
-    const useJinja = this.isJinjaSupported() && params?.jinja
+    const useJinja = this.isJinjaSupported() && (params?.jinja ?? true)
     let tmpl
     if (template) tmpl = template // Force replace if provided
 

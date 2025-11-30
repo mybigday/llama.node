@@ -78,88 +78,98 @@ test('multimodal with images', async () => {
   console.log(result)
 
   expect(await model.isMultimodalEnabled()).toBe(true)
-  
+
   // Test multimodal support capabilities
   const support = await model.getMultimodalSupport()
   expect(support).toHaveProperty('vision', true)
   expect(support).toHaveProperty('audio', false)
-  
+
   await model.releaseMultimodal()
   expect(await model.isMultimodalEnabled()).toBe(false)
 
   await model.release()
 })
 
-const modelPath = path.resolve(__dirname, './Llama-3.2-1B-Instruct-Q4_K_M.gguf');
+const modelPath = path.resolve(__dirname, './Llama-3.2-1B-Instruct-Q4_K_M.gguf')
 
-;(fs.existsSync(modelPath) ? test : test.skip)('multimodal with audio', async () => {
-  const model = await loadModel({
-    model: path.resolve(__dirname, './Llama-3.2-1B-Instruct-Q4_K_M.gguf'),
-    n_gpu_layers: 0,
-    n_ctx: 512,
-  })
+;(fs.existsSync(modelPath) ? test : test.skip)(
+  'multimodal with audio',
+  async () => {
+    const model = await loadModel({
+      model: path.resolve(__dirname, './Llama-3.2-1B-Instruct-Q4_K_M.gguf'),
+      n_gpu_layers: 0,
+      n_ctx: 512,
+    })
 
-  const mmproj_path = path.resolve(__dirname, './mmproj-ultravox-v0_5-llama-3_2-1b-f16.gguf')
+    const mmproj_path = path.resolve(
+      __dirname,
+      './mmproj-ultravox-v0_5-llama-3_2-1b-f16.gguf',
+    )
 
-  await model.initMultimodal({ path: mmproj_path, use_gpu: false })
+    await model.initMultimodal({ path: mmproj_path, use_gpu: false })
 
-  const formatted = model.getFormattedChat([
-    {
-      role: 'system',
-      content: 'You are a helpful assistant that can answer questions and help with tasks.',
-    },
-    {
-      role: 'user',
-      content: [
+    const formatted = model.getFormattedChat(
+      [
         {
-          type: 'text',
-          text: 'What is the content of this audio?',
+          role: 'system',
+          content:
+            'You are a helpful assistant that can answer questions and help with tasks.',
         },
         {
-          type: 'input_audio',
-          input_audio: {
-            url: path.resolve(__dirname, './jfk.wav'),
-            format: 'wav',
-          }
-        }
-      ]
-    }
-  ])
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: 'What is the content of this audio?',
+            },
+            {
+              type: 'input_audio',
+              input_audio: {
+                url: path.resolve(__dirname, './jfk.wav'),
+                format: 'wav',
+              },
+            },
+          ],
+        },
+      ],
+      undefined,
+      { jinja: false },
+    )
 
-  expect(formatted.media_paths).toHaveLength(1)
-  expect({
-    ...formatted,
-    media_paths: ['<audio-path>'],
-  }).toMatchSnapshot()
+    expect(formatted.media_paths).toHaveLength(1)
+    expect({
+      ...formatted,
+      media_paths: ['<audio-path>'],
+    }).toMatchSnapshot()
 
+    // Test with multiple images
+    const result = await model.completion({
+      ...formatted,
+      temperature: 0,
+      n_predict: 100,
+      seed: 0,
+    })
 
-  // Test with multiple images
-  const result = await model.completion({
-    ...formatted,
-    temperature: 0,
-    n_predict: 100,
-    seed: 0,
-  })
+    expect(result.text.length).toBeGreaterThan(0)
+    expect(result.content).toBe(result.text)
+    expect(result).toMatchObject({
+      tokens_predicted: expect.any(Number),
+      tokens_evaluated: expect.any(Number),
+      text: expect.stringMatching(/The content of this audio is a/),
+    })
 
-  expect(result.text.length).toBeGreaterThan(0)
-  expect(result.content).toBe(result.text)
-  expect(result).toMatchObject({
-    tokens_predicted: expect.any(Number),
-    tokens_evaluated: expect.any(Number),
-    text: expect.stringMatching(/The content of this audio is a/),
-  })
+    console.log(result)
 
-  console.log(result)
+    expect(await model.isMultimodalEnabled()).toBe(true)
 
-  expect(await model.isMultimodalEnabled()).toBe(true)
-  
-  // Test multimodal support capabilities
-  const support = await model.getMultimodalSupport()
-  expect(support).toHaveProperty('vision', false)
-  expect(support).toHaveProperty('audio', true)
+    // Test multimodal support capabilities
+    const support = await model.getMultimodalSupport()
+    expect(support).toHaveProperty('vision', false)
+    expect(support).toHaveProperty('audio', true)
 
-  await model.releaseMultimodal()
-  expect(await model.isMultimodalEnabled()).toBe(false)
+    await model.releaseMultimodal()
+    expect(await model.isMultimodalEnabled()).toBe(false)
 
-  await model.release()
-})
+    await model.release()
+  },
+)

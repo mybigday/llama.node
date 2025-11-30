@@ -95,7 +95,6 @@ for (let i = 0; i < EXAMPLE_PROMPTS.length; i++) {
   const formattedChat = model.getFormattedChat(
     messages,
     undefined,
-    { jinja: true }
   )
   const t1_formatChat = Date.now()
   console.log(`  → Format chat time: ${t1_formatChat - t0_formatChat}ms`)
@@ -144,7 +143,6 @@ const requests = preTokenizedPrompts.map(async ({ prompt, messages, statePath, l
         messages,
         reasoning_format: 'auto',
         n_predict: 50,
-        jinja: true,
         temperature: 0.7,
         // State management parameters
         load_state_path: loadStatePath,
