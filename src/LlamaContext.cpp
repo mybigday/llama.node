@@ -657,7 +657,7 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
   auto params =
       has_params ? info[2].As<Napi::Object>() : Napi::Object::New(env);
 
-  if (get_option<bool>(params, "jinja", false)) {
+  if (get_option<bool>(params, "jinja", true)) {
     std::string json_schema_str = "";
     if (!is_nil(params.Get("response_format"))) {
       auto response_format = params.Get("response_format").As<Napi::Object>();
@@ -912,7 +912,7 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   if (options.Has("messages") && options.Get("messages").IsArray()) {
     auto messages = options.Get("messages").As<Napi::Array>();
     auto chat_template = get_option<std::string>(options, "chat_template", "");
-    auto jinja = get_option<bool>(options, "jinja", false);
+    auto jinja = get_option<bool>(options, "jinja", true);
     if (jinja) {
       auto tools_str =
           !is_nil(options.Get("tools"))
