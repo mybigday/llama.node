@@ -1,5 +1,5 @@
 import { loadModel } from '../lib/index.js'
-// Catch segfaults if happens (please install segfault-handler first, but):
+// Catch segfaults if happens (please install segfault-handler first, but don't add dependency to git):
 // import SegfaultHandler from 'segfault-handler'
 // SegfaultHandler.registerHandler('example-device-info-crash.log')
 
