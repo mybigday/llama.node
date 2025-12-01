@@ -122,10 +122,29 @@ index 7e53a57b7..a328d4db4 100644
              check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
              if (NOT "${GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E}" STREQUAL "")
 diff --git a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-index 72a82a891..7869ad323 100644
+index 72a82a891..0060d0007 100644
 --- a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
 +++ b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-@@ -3417,6 +3417,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+@@ -3401,10 +3401,17 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+         }
+     }
+ 
++#if defined(__ANDROID__)
+     if(opt_arch < 75) {
+         opt_ndev = 1;
+-        GGML_LOG_WARN("ggml-hex: forcing ndev to 1 for SoCs archs lower than v75.\n");
++        GGML_LOG_WARN("ggml-hex: forcing ndev to 1 for SoCs archs lower than v75 for Android.\n");
+     }
++#else
++    if(opt_arch < 73) {
++        opt_ndev = 1;
++        GGML_LOG_WARN("ggml-hex: forcing ndev to 1 for SoCs archs lower than v73 for Linux and Windows.\n");
++    }
++#endif
+ 
+     GGML_LOG_INFO("ggml-hex: Hexagon Arch version v%d\n", opt_arch);
+ 
+@@ -3417,6 +3424,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
          } catch (std::exception const &exc) {
              GGML_LOG_ERROR("ggml-hex: failed to create device/session %zu\n", i);
              devices[i].context = nullptr;
