@@ -113,6 +113,11 @@ async function main() {
     //   path: path.join(testDir, 'WavTokenizer.gguf'),
     //   url: 'https://huggingface.co/ggml-org/WavTokenizer/resolve/main/WavTokenizer-Large-75-Q5_1.gguf?download=true',
     // },
+    // Uncomment to download model use in examples
+    // {
+    //   path: path.join(path.join(__dirname, '../examples'), 'gpt-oss-20b-mxfp4.gguf'),
+    //   url: 'https://huggingface.co/ggml-org/gpt-oss-20b-GGUF/resolve/main/gpt-oss-20b-mxfp4.gguf?download=true',
+    // },
   ]
 
   for (const file of files) {
