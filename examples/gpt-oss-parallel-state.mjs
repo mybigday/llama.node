@@ -3,6 +3,8 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
 
+const libVariant = process.env.LLAMA_LIB_VARIANT || 'default'
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // Helper to generate a simple hash for a question (for state file naming)
@@ -10,7 +12,7 @@ const hashString = (str) => {
   let hash = 0
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i)
-    hash = ((hash << 5) - hash) + char
+    hash = (hash << 5) - hash + char
     hash &= hash // Convert to 32bit integer
   }
   return Math.abs(hash).toString(36)
@@ -44,22 +46,29 @@ const EXAMPLE_PROMPTS = [
   'Explain quantum computing in simple terms.', // Should load state from second request
 ]
 
-const SYSTEM_PROMPT = 'You are a helpful AI assistant. Be concise and direct in your responses.'
+const SYSTEM_PROMPT =
+  'You are a helpful AI assistant. Be concise and direct in your responses.'
 
 console.log('Loading model...')
-const model = await loadModel({
-  model: import.meta.resolve('./gpt-oss-20b-mxfp4.gguf').replace('file://', ''),
-  n_ctx: 8192,
-  n_gpu_layers: 99,
-  use_mlock: true,
-  use_mmap: true,
-  flash_attn_type: 'auto',
-  cache_type_k: 'q8_0',
-  cache_type_v: 'q8_0',
-  n_parallel: 8,
-}, (progress) => {
-  if (progress % 10 === 0) console.log(`Loading ${progress}%`)
-})
+const model = await loadModel(
+  {
+    model: import.meta
+      .resolve('./gpt-oss-20b-mxfp4.gguf')
+      .replace('file://', ''),
+    n_ctx: 8192,
+    n_gpu_layers: 99,
+    use_mlock: true,
+    use_mmap: true,
+    flash_attn_type: 'auto',
+    cache_type_k: 'q8_0',
+    cache_type_v: 'q8_0',
+    n_parallel: 8,
+    lib_variant: libVariant,
+  },
+  (progress) => {
+    if (progress % 10 === 0) console.log(`Loading ${progress}%`)
+  },
+)
 
 console.log('Enabling parallel mode...')
 await model.parallel.enable({
@@ -68,13 +77,21 @@ await model.parallel.enable({
 })
 
 console.log('\n=== Parallel Completion with State Management Demo ===\n')
-console.log('This demo shows how to use load_state_path and save_state_path to cache')
-console.log('question-specific state. When a question is asked multiple times, the')
-console.log('state from the first request is reused, significantly improving performance.\n')
+console.log(
+  'This demo shows how to use load_state_path and save_state_path to cache',
+)
+console.log(
+  'question-specific state. When a question is asked multiple times, the',
+)
+console.log(
+  'state from the first request is reused, significantly improving performance.\n',
+)
 
 // Pre-tokenize all prompts SEQUENTIALLY to avoid lock contention
 console.log('Pre-tokenizing all prompts...')
-const modelPath = import.meta.resolve('./gpt-oss-20b-mxfp4.gguf').replace('file://', '')
+const modelPath = import.meta
+  .resolve('./gpt-oss-20b-mxfp4.gguf')
+  .replace('file://', '')
 const preTokenizedPrompts = []
 
 const t0_total = Date.now()
@@ -92,10 +109,7 @@ for (let i = 0; i < EXAMPLE_PROMPTS.length; i++) {
 
   const t0_formatChat = Date.now()
   // Format chat to get the formatted prompt for tokenization
-  const formattedChat = model.getFormattedChat(
-    messages,
-    undefined,
-  )
+  const formattedChat = model.getFormattedChat(messages, undefined)
   const t1_formatChat = Date.now()
   console.log(`  → Format chat time: ${t1_formatChat - t0_formatChat}ms`)
 
@@ -106,9 +120,14 @@ for (let i = 0; i < EXAMPLE_PROMPTS.length; i++) {
     const tokenizeResult = await model.tokenize(formattedChat.prompt)
     const t1 = Date.now()
     questionTokenCount = tokenizeResult.tokens.length
-    console.log(`  [${i + 1}/${EXAMPLE_PROMPTS.length}] Tokenized "${prompt.substring(0, 40)}..." → ${questionTokenCount} tokens (${t1 - t0}ms)`)
+    console.log(
+      `  [${i + 1}/${EXAMPLE_PROMPTS.length}] Tokenized "${prompt.substring(0, 40)}..." → ${questionTokenCount} tokens (${t1 - t0}ms)`,
+    )
   } catch (error) {
-    console.error(`  [${i + 1}/${EXAMPLE_PROMPTS.length}] ✗ Error tokenizing prompt:`, error)
+    console.error(
+      `  [${i + 1}/${EXAMPLE_PROMPTS.length}] ✗ Error tokenizing prompt:`,
+      error,
+    )
     questionTokenCount = 0
   }
 
@@ -124,64 +143,78 @@ const t1_total = Date.now()
 console.log(`✓ Pre-tokenization complete in ${t1_total - t0_total}ms\n`)
 
 // Now process all requests in parallel using pre-computed tokenization results
-const requests = preTokenizedPrompts.map(async ({ prompt, messages, statePath, loadStatePath, questionTokenCount }, i) => {
-  const startTime = Date.now()
-  console.log(`\n[${i + 1}/${EXAMPLE_PROMPTS.length}] Processing: "${prompt}"`)
-
-  try {
-    if (loadStatePath) {
-      console.log(`  ✓ Loading existing state from: ${path.basename(statePath)}`)
-    } else {
-      console.log(`  ○ No existing state, will save to: ${path.basename(statePath)}`)
-    }
-
-    console.log(`  → Question tokens: ${questionTokenCount}`)
-
-    // Queue the completion with state management
-    const request = await model.parallel.completion(
-      {
-        messages,
-        reasoning_format: 'auto',
-        n_predict: 50,
-        temperature: 0.7,
-        // State management parameters
-        load_state_path: loadStatePath,
-        save_state_path: questionTokenCount > 0 ? statePath : undefined,
-        save_state_size: questionTokenCount > 0 ? questionTokenCount : undefined,
-      },
-      (_requestId, data) => {
-        // Stream tokens (optional)
-        if (data.token) {
-          process.stdout.write(data.token)
-        }
-      }
+const requests = preTokenizedPrompts.map(
+  async (
+    { prompt, messages, statePath, loadStatePath, questionTokenCount },
+    i,
+  ) => {
+    const startTime = Date.now()
+    console.log(
+      `\n[${i + 1}/${EXAMPLE_PROMPTS.length}] Processing: "${prompt}"`,
     )
 
-    // Wait for completion
-    const result = await request.promise
-    const duration = ((Date.now() - startTime) / 1000).toFixed(2)
+    try {
+      if (loadStatePath) {
+        console.log(
+          `  ✓ Loading existing state from: ${path.basename(statePath)}`,
+        )
+      } else {
+        console.log(
+          `  ○ No existing state, will save to: ${path.basename(statePath)}`,
+        )
+      }
 
-    console.log(`\n  ✓ Completed in ${duration}s`)
-    console.log(`  → Response: ${result.text.substring(0, 100)}${result.text.length > 100 ? '...' : ''}`)
+      console.log(`  → Question tokens: ${questionTokenCount}`)
 
-    if (questionTokenCount > 0) {
-      console.log(`  ✓ State saved to: ${path.basename(statePath)}`)
+      // Queue the completion with state management
+      const request = await model.parallel.completion(
+        {
+          messages,
+          reasoning_format: 'auto',
+          n_predict: 50,
+          temperature: 0.7,
+          // State management parameters
+          load_state_path: loadStatePath,
+          save_state_path: questionTokenCount > 0 ? statePath : undefined,
+          save_state_size:
+            questionTokenCount > 0 ? questionTokenCount : undefined,
+        },
+        (_requestId, data) => {
+          // Stream tokens (optional)
+          if (data.token) {
+            process.stdout.write(data.token)
+          }
+        },
+      )
+
+      // Wait for completion
+      const result = await request.promise
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2)
+
+      console.log(`\n  ✓ Completed in ${duration}s`)
+      console.log(
+        `  → Response: ${result.text.substring(0, 100)}${result.text.length > 100 ? '...' : ''}`,
+      )
+
+      if (questionTokenCount > 0) {
+        console.log(`  ✓ State saved to: ${path.basename(statePath)}`)
+      }
+
+      return result
+    } catch (error) {
+      console.error(`\n  ✗ Error:`, error.message)
+      return null
     }
-
-    return result
-  } catch (error) {
-    console.error(`\n  ✗ Error:`, error.message)
-    return null
-  }
-})
+  },
+)
 
 // Wait for all requests to complete
 const results = await Promise.all(requests)
 
 console.log('\n\n=== Demo Complete ===')
 console.log(`Total requests: ${EXAMPLE_PROMPTS.length}`)
-console.log(`Successful: ${results.filter(r => r !== null).length}`)
-console.log(`Failed: ${results.filter(r => r === null).length}`)
+console.log(`Successful: ${results.filter((r) => r !== null).length}`)
+console.log(`Failed: ${results.filter((r) => r === null).length}`)
 console.log('\nState files saved to: examples/state/')
 console.log('To clear saved state files, run:')
 console.log('  rm -rf examples/state/')

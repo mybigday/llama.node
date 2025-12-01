@@ -1,5 +1,7 @@
 import { loadModel } from '../lib/index.js'
 
+const libVariant = process.env.LLAMA_LIB_VARIANT || 'default'
+
 const model = await loadModel(
   {
     n_ctx: 8192,
@@ -12,6 +14,7 @@ const model = await loadModel(
     flash_attn_type: 'auto',
     cache_type_k: 'q8_0',
     cache_type_v: 'q8_0',
+    lib_variant: libVariant,
   },
   (progress) => {
     if (progress % 10 === 0) console.log(`Loading ${progress}%`)
