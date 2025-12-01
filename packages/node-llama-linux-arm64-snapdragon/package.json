@@ -1,6 +1,6 @@
 {
   "name": "@fugood/node-llama-linux-arm64-snapdragon",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Native module for An another Node binding of llama.cpp (linux-arm64-snapdragon)",
   "main": "index.node",
   "os": [
