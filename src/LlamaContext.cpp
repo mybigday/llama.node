@@ -321,14 +321,19 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
 
   // Parse devices array
   if (options.Has("devices") && options.Get("devices").IsArray()) {
+    std::vector<ggml_backend_dev_t> devs;
     auto devices_array = options.Get("devices").As<Napi::Array>();
     for (size_t i = 0; i < devices_array.Length(); i++) {
       auto device_name = devices_array.Get(i).ToString().Utf8Value();
       auto * dev = ggml_backend_dev_by_name(device_name.c_str());
       if (dev) {
-        params.devices.push_back(dev);
+        devs.push_back(dev);
       }
       // Skip invalid device names silently
+    }
+    if (!devs.empty()) {
+      params.devices = devs;
+      params.devices.push_back(nullptr); // nullptr terminator required by llama.cpp
     }
   }
 
