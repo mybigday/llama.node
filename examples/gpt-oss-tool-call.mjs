@@ -1,7 +1,7 @@
-import SegfaultHandler from 'segfault-handler'
 import { loadModel } from '../lib/index.js'
-
-SegfaultHandler.registerHandler('example-device-info-crash.log')
+// Catch segfaults if happens (please install segfault-handler first, but):
+// import SegfaultHandler from 'segfault-handler'
+// SegfaultHandler.registerHandler('example-device-info-crash.log')
 
 const libVariant = process.env.LLAMA_LIB_VARIANT || 'default'
 

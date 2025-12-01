@@ -1,7 +1,4 @@
-import SegfaultHandler from 'segfault-handler'
 import { getBackendDevicesInfo } from '../lib/index.js'
-
-SegfaultHandler.registerHandler('example-device-info-crash.log')
 
 const libVariant = process.env.LLAMA_LIB_VARIANT || 'default'
 
