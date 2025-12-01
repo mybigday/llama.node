@@ -2,7 +2,7 @@ import { getBackendDevicesInfo } from '../lib/index.js'
 
 const libVariant = process.env.LLAMA_LIB_VARIANT || 'default'
 
-console.log(`Querying backend devices for variant: ${variant}\n`)
+console.log(`Querying backend devices for variant: ${libVariant}\n`)
 
 // Get information about available backend devices
 const devices = await getBackendDevicesInfo(libVariant)
@@ -24,6 +24,3 @@ devices.forEach((device, index) => {
   }
   console.log()
 })
-
-console.log('Usage: node examples/device-info.mjs [variant]')
-console.log('  variant: default, vulkan, or cuda')
