@@ -616,6 +616,8 @@ export const loadModule = async (variant?: LibVariant): Promise<Module> => {
         /* no-op */
       }
     }
+    const nDev = process.env.GGML_HEXAGON_NDEV
+    if (!nDev) process.env.GGML_HEXAGON_NDEV = '16'
   }
 
   let module = await loadPlatformPackage(packageName)
