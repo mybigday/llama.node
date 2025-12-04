@@ -99,7 +99,7 @@ endif()
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 if (MINGW)
-  add_definitions(-D_WIN32_WINNT=0x0601)
+  add_definitions(-D_WIN32_WINNT=0x0A00)
 endif()
 
 # VULKAN_SDK
