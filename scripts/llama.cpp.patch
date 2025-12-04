@@ -1,8 +1,8 @@
 diff --git a/src/llama.cpp/common/CMakeLists.txt b/src/llama.cpp/common/CMakeLists.txt
-index bb168e835..cfc0e2c2e 100644
+index 377b26846..1873b5206 100644
 --- a/src/llama.cpp/common/CMakeLists.txt
 +++ b/src/llama.cpp/common/CMakeLists.txt
-@@ -143,9 +143,16 @@ if (LLAMA_LLGUIDANCE)
+@@ -149,9 +149,16 @@ if (LLAMA_LLGUIDANCE)
      set(LLAMA_COMMON_EXTRA_LIBS ${LLAMA_COMMON_EXTRA_LIBS} llguidance ${LLGUIDANCE_PLATFORM_LIBS})
  endif ()
  
@@ -20,8 +20,22 @@ index bb168e835..cfc0e2c2e 100644
  
  
  #
+diff --git a/src/llama.cpp/common/chat-peg-parser.cpp b/src/llama.cpp/common/chat-peg-parser.cpp
+index 74a7b6a46..7b7a1bd50 100644
+--- a/src/llama.cpp/common/chat-peg-parser.cpp
++++ b/src/llama.cpp/common/chat-peg-parser.cpp
+@@ -1,9 +1,5 @@
+ #include "chat-peg-parser.h"
+ 
+-#include <nlohmann/json.hpp>
+-
+-using json = nlohmann::json;
+-
+ static std::string_view trim_trailing_space(std::string_view sv) {
+     while (!sv.empty() && std::isspace(static_cast<unsigned char>(sv.back()))) {
+         sv.remove_suffix(1);
 diff --git a/src/llama.cpp/common/chat.cpp b/src/llama.cpp/common/chat.cpp
-index b4a0f985e..2383d2ea9 100644
+index 41a5bb42d..da5cf4b94 100644
 --- a/src/llama.cpp/common/chat.cpp
 +++ b/src/llama.cpp/common/chat.cpp
 @@ -6,9 +6,6 @@
@@ -34,7 +48,7 @@ index b4a0f985e..2383d2ea9 100644
  #include <algorithm>
  #include <cstdio>
  #include <cctype>
-@@ -126,16 +123,6 @@ std::vector<common_chat_msg_diff> common_chat_msg_diff::compute_diffs(const comm
+@@ -134,16 +131,6 @@ std::vector<common_chat_msg_diff> common_chat_msg_diff::compute_diffs(const comm
      return diffs;
  }
  
@@ -51,7 +65,7 @@ index b4a0f985e..2383d2ea9 100644
  struct templates_params {
      json messages;
      json tools;
-@@ -709,7 +696,7 @@ static std::string apply(
+@@ -720,7 +707,7 @@ static std::string apply(
          tmpl_inputs.extra_context.merge_patch(*additional_context);
      }
      // TODO: add flag to control date/time, if only for testing purposes.
@@ -61,10 +75,10 @@ index b4a0f985e..2383d2ea9 100644
      minja::chat_template_options tmpl_opts;
      // To avoid double BOS / EOS tokens, we're manually removing begining / trailing tokens
 diff --git a/src/llama.cpp/common/chat.h b/src/llama.cpp/common/chat.h
-index 754c411e2..71241a6cc 100644
+index 6085510a4..263076ce2 100644
 --- a/src/llama.cpp/common/chat.h
 +++ b/src/llama.cpp/common/chat.h
-@@ -9,7 +9,18 @@
+@@ -10,7 +10,18 @@
  #include <vector>
  #include <map>
  
@@ -85,10 +99,10 @@ index 754c411e2..71241a6cc 100644
  struct common_chat_tool_call {
      std::string name;
 diff --git a/src/llama.cpp/common/common.cpp b/src/llama.cpp/common/common.cpp
-index 0d7fd9a93..6bf3cc7ab 100644
+index f07af1d86..1b10c7b13 100644
 --- a/src/llama.cpp/common/common.cpp
 +++ b/src/llama.cpp/common/common.cpp
-@@ -1217,6 +1217,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
+@@ -1236,6 +1236,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
          mparams.n_gpu_layers = params.n_gpu_layers;
      }
  
@@ -97,10 +111,10 @@ index 0d7fd9a93..6bf3cc7ab 100644
      mparams.split_mode      = params.split_mode;
      mparams.tensor_split    = params.tensor_split;
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index 2f23d0baa..e4e6c795e 100644
+index 179113a4d..78aa24bc3 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
-@@ -299,6 +299,7 @@ struct lr_opt {
+@@ -302,6 +302,7 @@ struct lr_opt {
  struct ggml_opt_optimizer_params common_opt_lr_pars(void * userdata);
  
  struct common_params {
