@@ -1516,6 +1516,11 @@ void LlamaContext::ClearCache(const Napi::CallbackInfo &info) {
     Napi::TypeError::New(env, "Context is disposed").ThrowAsJavaScriptException();
     return;
   }
+  if (_rn_ctx->completion != nullptr && _rn_ctx->completion->is_predicting) {
+    Napi::TypeError::New(env, "Cannot clear cache while completion is in progress")
+        .ThrowAsJavaScriptException();
+    return;
+  }
 
   bool clear_data = false;
   if (info.Length() >= 1 && info[0].IsBoolean()) {
