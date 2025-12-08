@@ -299,6 +299,16 @@ class LlamaContextWrapper {
   decodeAudioTokens(tokens: number[] | Int32Array): Promise<Float32Array> {
     return this.ctx.decodeAudioTokens(tokens)
   }
+
+  /**
+   * Clear the KV and recurrent caches.
+   * This is faster than recreating the context and useful for preventing
+   * cache contamination between chat sessions.
+   * @param clearData If true, also clears the cache data (default: false)
+   */
+  clearCache(clearData?: boolean): void {
+    this.ctx.clearCache(clearData)
+  }
 }
 
 export const loadModel = async (

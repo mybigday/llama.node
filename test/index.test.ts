@@ -520,3 +520,44 @@ test('getBackendDevicesInfo', async () => {
     }
   }
 })
+
+test('clearCache', async () => {
+  const model = await loadModel({
+    model: path.resolve(__dirname, './tiny-random-llama.gguf'),
+  })
+
+  // Run first completion to populate the cache
+  const result1 = await model.completion({
+    prompt: 'Hello, my name is',
+    temperature: 0,
+    n_predict: 5,
+    seed: 0,
+  })
+  expect(result1.tokens_predicted).toBeGreaterThan(0)
+
+  // Clear cache without clearing data (default)
+  model.clearCache()
+
+  // Run second completion - should work fine after cache clear
+  const result2 = await model.completion({
+    prompt: 'The weather today is',
+    temperature: 0,
+    n_predict: 5,
+    seed: 0,
+  })
+  expect(result2.tokens_predicted).toBeGreaterThan(0)
+
+  // Clear cache with clearData = true
+  model.clearCache(true)
+
+  // Run third completion - should still work fine
+  const result3 = await model.completion({
+    prompt: 'Once upon a time',
+    temperature: 0,
+    n_predict: 5,
+    seed: 0,
+  })
+  expect(result3.tokens_predicted).toBeGreaterThan(0)
+
+  await model.release()
+})

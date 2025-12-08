@@ -200,6 +200,9 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
            static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::CancelRequest>(
            "cancelRequest",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::ClearCache>(
+           "clearCache",
            static_cast<napi_property_attributes>(napi_enumerable))});
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
@@ -1504,4 +1507,20 @@ Napi::Value LlamaContext::DecodeAudioTokens(const Napi::CallbackInfo &info) {
   auto *worker = new DecodeAudioTokenWorker(info, _rn_ctx, tokens);
   worker->Queue();
   return worker->Promise();
+}
+
+// clearCache(clearData?: boolean): void
+void LlamaContext::ClearCache(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (!_rn_ctx) {
+    Napi::TypeError::New(env, "Context is disposed").ThrowAsJavaScriptException();
+    return;
+  }
+
+  bool clear_data = false;
+  if (info.Length() >= 1 && info[0].IsBoolean()) {
+    clear_data = info[0].ToBoolean().Value();
+  }
+
+  _rn_ctx->clearCache(clear_data);
 }

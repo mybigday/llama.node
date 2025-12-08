@@ -565,6 +565,14 @@ export interface LlamaContext {
    */
   cancelRequest(requestId: number): void
 
+  /**
+   * Clear the KV and recurrent caches.
+   * This is faster than recreating the context and useful for preventing
+   * cache contamination between chat sessions.
+   * @param clearData If true, also clears the cache data (default: false)
+   */
+  clearCache(clearData?: boolean): void
+
   // static
   loadModelInfo(path: string, skip: string[]): Promise<GGUFModelInfo>
   toggleNativeLog(

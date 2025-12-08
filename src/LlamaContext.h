@@ -69,6 +69,9 @@ private:
   Napi::Value QueueRerank(const Napi::CallbackInfo &info);
   void CancelRequest(const Napi::CallbackInfo &info);
 
+  // Cache management
+  void ClearCache(const Napi::CallbackInfo &info);
+
   std::string _info;
   std::vector<std::string> _used_devices;
   Napi::Object _meta;
