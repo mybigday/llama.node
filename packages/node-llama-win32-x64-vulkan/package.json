@@ -1,6 +1,6 @@
 {
   "name": "@fugood/node-llama-win32-x64-vulkan",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "description": "Native module for An another Node binding of llama.cpp (win32-x64-vulkan)",
   "main": "index.node",
   "os": [
