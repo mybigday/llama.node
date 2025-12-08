@@ -42,6 +42,7 @@ else
   # default
   if [ $TARGET == "all" ] || [ $TARGET == "default" ]; then
     npx cmake-js rebuild -C --CDTO_PACKAGE=ON --CDCLANG_USE_GOMP=ON --CDGGML_NATIVE=OFF \
+      --CDGGML_OPENMP=0 \
       --CDGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16
   fi
 
@@ -50,6 +51,7 @@ else
     npx cmake-js rebuild -C --CDTO_PACKAGE=ON \
       --CDCLANG_USE_GOMP=ON \
       --CDGGML_NATIVE=OFF \
+      --CDGGML_OPENMP=0 \
       --CDGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16 \
       --CDGGML_VULKAN=1 \
       --CDVULKAN_SDK="$(realpath 'externals/arm64-Vulkan-SDK')" \
@@ -61,6 +63,7 @@ else
     npx cmake-js rebuild -C --CDTO_PACKAGE=ON \
       --CDCLANG_USE_GOMP=ON \
       --CDGGML_NATIVE=OFF \
+      --CDGGML_OPENMP=0 \
       --CDGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16 \
       --CDGGML_CUDA=1 \
       --CDVARIANT=cuda \
@@ -92,19 +95,19 @@ else
       --CDPREBUILT_LIB_DIR=UbuntuARM_aarch64 \
       --CDVARIANT=snapdragon \
     )
-    
+
     # Check if cross-compilation is needed
     if [ $(uname -m) == "x86_64" ] && [ $ARCH == "arm64" ]; then
       echo "Cross-compiling for arm64 using GCC..."
 
       ARGS+=( --CDCMAKE_TOOLCHAIN_FILE="$(realpath cmake/aarch64-linux-gnu.toolchain.cmake)" )
-      
+
       # Try to find OpenCL library for arm64
       OPENCL_LIB_PATH=""
       if [ -f "externals/opencl-arm64/lib/libOpenCL.so" ]; then
         OPENCL_LIB_PATH="$(realpath externals/opencl-arm64/lib/libOpenCL.so)"
       fi
-      
+
       # Build with toolchain
       if [ -n "$OPENCL_LIB_PATH" ]; then
         ARGS+=(
