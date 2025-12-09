@@ -16,6 +16,7 @@ import type {
   JinjaFormattedChatResult,
   Tool,
   GGUFModelInfo,
+  BenchResult,
 } from './binding'
 import { BUILD_NUMBER, BUILD_COMMIT } from './version'
 import { LlamaParallelAPI } from './parallel'
@@ -308,6 +309,18 @@ class LlamaContextWrapper {
    */
   clearCache(clearData?: boolean): void {
     this.ctx.clearCache(clearData)
+  }
+
+  /**
+   * Run a benchmark to measure model performance
+   * @param pp Number of tokens to process for prompt processing benchmark
+   * @param tg Number of tokens to generate for text generation benchmark
+   * @param pl Parallel level (number of sequences)
+   * @param nr Number of repetitions
+   * @returns Benchmark results including timing and speed metrics
+   */
+  async bench(pp: number, tg: number, pl: number, nr: number): Promise<BenchResult> {
+    return this.ctx.bench(pp, tg, pl, nr)
   }
 }
 

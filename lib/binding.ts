@@ -309,6 +309,45 @@ export type BackendDeviceInfo = {
   metadata?: Record<string, any>
 }
 
+export type BenchResult = {
+  /** Maximum KV cache size */
+  nKvMax: number
+  /** Batch size */
+  nBatch: number
+  /** Micro-batch size */
+  nUBatch: number
+  /** Flash attention type (0=disabled, 1=enabled, 2=auto) */
+  flashAttn: number
+  /** Whether prompt processing is shared */
+  isPpShared: boolean
+  /** Number of GPU layers */
+  nGpuLayers: number
+  /** Number of threads */
+  nThreads: number
+  /** Number of threads for batch processing */
+  nThreadsBatch: number
+  /** Prompt processing tokens count */
+  pp: number
+  /** Text generation tokens count */
+  tg: number
+  /** Parallel level */
+  pl: number
+  /** KV cache used */
+  nKv: number
+  /** Time for prompt processing (ms) */
+  tPp: number
+  /** Speed of prompt processing (tokens/sec) */
+  speedPp: number
+  /** Time for text generation (ms) */
+  tTg: number
+  /** Speed of text generation (tokens/sec) */
+  speedTg: number
+  /** Total time (ms) */
+  t: number
+  /** Overall speed (tokens/sec) */
+  speed: number
+}
+
 export type ModelInfo = {
   desc: string
   nEmbd: number
@@ -572,6 +611,16 @@ export interface LlamaContext {
    * @param clearData If true, also clears the cache data (default: false)
    */
   clearCache(clearData?: boolean): void
+
+  /**
+   * Run a benchmark to measure model performance
+   * @param pp Number of tokens to process for prompt processing benchmark
+   * @param tg Number of tokens to generate for text generation benchmark
+   * @param pl Parallel level (number of sequences)
+   * @param nr Number of repetitions
+   * @returns Benchmark results
+   */
+  bench(pp: number, tg: number, pl: number, nr: number): Promise<BenchResult>
 
   // static
   loadModelInfo(path: string, skip: string[]): Promise<GGUFModelInfo>

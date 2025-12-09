@@ -203,6 +203,9 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
            static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::ClearCache>(
            "clearCache",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::Bench>(
+           "bench",
            static_cast<napi_property_attributes>(napi_enumerable))});
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
@@ -1528,4 +1531,70 @@ void LlamaContext::ClearCache(const Napi::CallbackInfo &info) {
   }
 
   _rn_ctx->clearCache(clear_data);
+}
+
+// bench(pp: number, tg: number, pl: number, nr: number): Promise<BenchResult>
+Napi::Value LlamaContext::Bench(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+
+  if (info.Length() < 4) {
+    Napi::TypeError::New(env, "Expected 4 arguments: pp, tg, pl, nr")
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  if (!_rn_ctx) {
+    Napi::TypeError::New(env, "Context is disposed").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  if (!_rn_ctx->completion) {
+    Napi::TypeError::New(env, "Completion context not initialized")
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  int pp = info[0].ToNumber().Int32Value();
+  int tg = info[1].ToNumber().Int32Value();
+  int pl = info[2].ToNumber().Int32Value();
+  int nr = info[3].ToNumber().Int32Value();
+
+  std::string result;
+  try {
+    result = _rn_ctx->completion->bench(pp, tg, pl, nr);
+  } catch (const std::exception &e) {
+    Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  // Parse the JSON result and return as object
+  try {
+    auto parsed = json::parse(result);
+    Napi::Object benchResult = Napi::Object::New(env);
+
+    benchResult.Set("nKvMax", Napi::Number::New(env, parsed["n_kv_max"].get<int>()));
+    benchResult.Set("nBatch", Napi::Number::New(env, parsed["n_batch"].get<int>()));
+    benchResult.Set("nUBatch", Napi::Number::New(env, parsed["n_ubatch"].get<int>()));
+    benchResult.Set("flashAttn", Napi::Number::New(env, parsed["flash_attn"].get<int>()));
+    benchResult.Set("isPpShared", Napi::Boolean::New(env, parsed["is_pp_shared"].get<int>() != 0));
+    benchResult.Set("nGpuLayers", Napi::Number::New(env, parsed["n_gpu_layers"].get<int>()));
+    benchResult.Set("nThreads", Napi::Number::New(env, parsed["n_threads"].get<int>()));
+    benchResult.Set("nThreadsBatch", Napi::Number::New(env, parsed["n_threads_batch"].get<int>()));
+    benchResult.Set("pp", Napi::Number::New(env, parsed["pp"].get<int>()));
+    benchResult.Set("tg", Napi::Number::New(env, parsed["tg"].get<int>()));
+    benchResult.Set("pl", Napi::Number::New(env, parsed["pl"].get<int>()));
+    benchResult.Set("nKv", Napi::Number::New(env, parsed["n_kv"].get<int>()));
+    benchResult.Set("tPp", Napi::Number::New(env, parsed["t_pp"].get<double>()));
+    benchResult.Set("speedPp", Napi::Number::New(env, parsed["speed_pp"].get<double>()));
+    benchResult.Set("tTg", Napi::Number::New(env, parsed["t_tg"].get<double>()));
+    benchResult.Set("speedTg", Napi::Number::New(env, parsed["speed_tg"].get<double>()));
+    benchResult.Set("t", Napi::Number::New(env, parsed["t"].get<double>()));
+    benchResult.Set("speed", Napi::Number::New(env, parsed["speed"].get<double>()));
+
+    return benchResult;
+  } catch (const std::exception &e) {
+    Napi::Error::New(env, std::string("Failed to parse benchmark result: ") + e.what())
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
 }

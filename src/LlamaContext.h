@@ -72,6 +72,9 @@ private:
   // Cache management
   void ClearCache(const Napi::CallbackInfo &info);
 
+  // Benchmarking
+  Napi::Value Bench(const Napi::CallbackInfo &info);
+
   std::string _info;
   std::vector<std::string> _used_devices;
   Napi::Object _meta;
