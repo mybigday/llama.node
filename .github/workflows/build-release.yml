@@ -77,12 +77,12 @@ jobs:
             target: vulkan
             package: node-llama-linux-arm64-vulkan
           # macOS x64
-          - os: macos-13
+          - os: macos-15-intel
             arch: x64
             target: default
             package: node-llama-darwin-x64
           # macOS arm64
-          - os: macos-14
+          - os: macos-15
             arch: arm64
             target: default
             package: node-llama-darwin-arm64
@@ -149,7 +149,7 @@ jobs:
       - uses: actions/checkout@v4
         if: steps.run.outputs.should-run == 'true'
         with:
-          submodules: "true"
+          submodules: 'true'
       - name: ccache cache
         if: steps.run.outputs.should-run == 'true'
         uses: actions/cache@v4
