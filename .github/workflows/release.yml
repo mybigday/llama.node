@@ -4,9 +4,16 @@ on:
     tags:
       - v*
   workflow_dispatch:
+    inputs:
+      skip_release_native:
+        description: 'Skip the release_native job'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   release_native:
+    if: ${{ !inputs.skip_release_native }}
     uses: ./.github/workflows/build-release.yml
     with:
       publish: YES
@@ -16,6 +23,7 @@ jobs:
       contents: write
       pull-requests: read
     needs: release_native
+    if: ${{ always() && (needs.release_native.result == 'success' || needs.release_native.result == 'skipped') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
