@@ -1,6 +1,6 @@
 {
   "name": "@fugood/node-llama-win32-x64-cuda",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "description": "Native module for An another Node binding of llama.cpp (win32-x64-cuda)",
   "main": "index.node",
   "os": [
