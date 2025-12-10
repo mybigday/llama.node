@@ -27,9 +27,6 @@ on:
       publish:
         type: string
         default: 'NO'
-    secrets:
-      NPM_TOKEN:
-        required: true
 
 permissions:
   id-token: write # Required for OIDC
@@ -214,6 +211,4 @@ jobs:
           retention-days: ${{ inputs.artifacts-retention-days }}
       - name: Publish to NPM
         if: steps.run.outputs.should-run == 'true' && (github.event.inputs.publish == 'YES' || inputs.publish == 'YES')
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm run publish-if-need packages/${{ matrix.package }}
