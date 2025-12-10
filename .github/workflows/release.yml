@@ -11,10 +11,6 @@ on:
         default: false
         type: boolean
 
-permissions:
-  id-token: write # Required for OIDC
-  contents: read
-
 jobs:
   release_native:
     if: ${{ !inputs.skip_release_native }}
@@ -53,4 +49,6 @@ jobs:
       - run: npm install --omit=optional
       - run: npm run build
       - name: Publish to NPM
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm run publish-if-need
