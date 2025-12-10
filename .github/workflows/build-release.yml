@@ -1,4 +1,5 @@
 name: Build release artifacts
+
 on:
   workflow_dispatch:
     inputs:
@@ -29,6 +30,10 @@ on:
     secrets:
       NPM_TOKEN:
         required: true
+
+permissions:
+  id-token: write # Required for OIDC
+  contents: read
 
 env:
   HEXAGON_SDK_VERSION: '6.4.0.2'
