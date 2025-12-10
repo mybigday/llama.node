@@ -175,7 +175,10 @@ jobs:
           cache: true
       - name: Install dependencies
         if: steps.run.outputs.should-run == 'true'
-        run: npm run copy-rn-llama-source && npm install --omit=optional
+        run: |
+          npm install -g npm@latest
+          npm run copy-rn-llama-source
+          npm ci --omit=optional
       - name: Install Vulkan SDK
         if: steps.run.outputs.should-run == 'true' && matrix.target == 'vulkan'
         uses: jakoch/install-vulkan-sdk-action@v1.2.4
