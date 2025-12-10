@@ -50,7 +50,7 @@ jobs:
           merge-multiple: true
       - run: npm install -g npm@latest
       - run: npm run copy-rn-llama-source
-      - run: npm ci --omit=optional
+      - run: npm install --omit=optional
       - run: npm run build
       - name: Publish to NPM
         run: npm run publish-if-need

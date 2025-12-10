@@ -178,7 +178,7 @@ jobs:
         run: |
           npm install -g npm@latest
           npm run copy-rn-llama-source
-          npm ci --omit=optional
+          npm install --omit=optional
       - name: Install Vulkan SDK
         if: steps.run.outputs.should-run == 'true' && matrix.target == 'vulkan'
         uses: jakoch/install-vulkan-sdk-action@v1.2.4
