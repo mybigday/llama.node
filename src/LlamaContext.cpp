@@ -416,8 +416,8 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   _rn_ctx->attachThreadpoolsIfAvailable();
 
   // Collect used devices from the loaded model
-  if (_rn_ctx->llama_init.model) {
-    const auto &model_devices = _rn_ctx->llama_init.model->devices;
+  if (_rn_ctx->llama_init->model()) {
+    const auto &model_devices = _rn_ctx->llama_init->model()->devices;
     for (auto dev : model_devices) {
       const char *dev_name = ggml_backend_dev_name(dev);
       if (dev_name != nullptr) {

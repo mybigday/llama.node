@@ -1,8 +1,8 @@
 diff --git a/src/llama.cpp/common/CMakeLists.txt b/src/llama.cpp/common/CMakeLists.txt
-index 377b26846..1873b5206 100644
+index 0182767c2..f8c4a4f63 100644
 --- a/src/llama.cpp/common/CMakeLists.txt
 +++ b/src/llama.cpp/common/CMakeLists.txt
-@@ -149,9 +149,16 @@ if (LLAMA_LLGUIDANCE)
+@@ -151,9 +151,16 @@ if (LLAMA_LLGUIDANCE)
      set(LLAMA_COMMON_EXTRA_LIBS ${LLAMA_COMMON_EXTRA_LIBS} llguidance ${LLGUIDANCE_PLATFORM_LIBS})
  endif ()
  
@@ -21,21 +21,20 @@ index 377b26846..1873b5206 100644
  
  #
 diff --git a/src/llama.cpp/common/chat-peg-parser.cpp b/src/llama.cpp/common/chat-peg-parser.cpp
-index 74a7b6a46..7b7a1bd50 100644
+index 1bcba9cd8..b7cd68734 100644
 --- a/src/llama.cpp/common/chat-peg-parser.cpp
 +++ b/src/llama.cpp/common/chat-peg-parser.cpp
-@@ -1,9 +1,5 @@
- #include "chat-peg-parser.h"
+@@ -2,7 +2,7 @@
  
--#include <nlohmann/json.hpp>
--
+ #include <nlohmann/json.hpp>
+ 
 -using json = nlohmann::json;
--
- static std::string_view trim_trailing_space(std::string_view sv) {
-     while (!sv.empty() && std::isspace(static_cast<unsigned char>(sv.back()))) {
-         sv.remove_suffix(1);
++using json = nlohmann::ordered_json;
+ 
+ static std::string_view trim_trailing_space(std::string_view sv, int max = -1) {
+     int count = 0;
 diff --git a/src/llama.cpp/common/chat.cpp b/src/llama.cpp/common/chat.cpp
-index c371edaa5..ec032e351 100644
+index 0a426f447..ab02be247 100644
 --- a/src/llama.cpp/common/chat.cpp
 +++ b/src/llama.cpp/common/chat.cpp
 @@ -7,9 +7,6 @@
@@ -65,7 +64,7 @@ index c371edaa5..ec032e351 100644
  struct templates_params {
      json messages;
      json tools;
-@@ -732,7 +719,7 @@ static std::string apply(
+@@ -751,7 +738,7 @@ static std::string apply(
          tmpl_inputs.extra_context.merge_patch(*additional_context);
      }
      // TODO: add flag to control date/time, if only for testing purposes.
@@ -99,10 +98,10 @@ index 6085510a4..263076ce2 100644
  struct common_chat_tool_call {
      std::string name;
 diff --git a/src/llama.cpp/common/common.cpp b/src/llama.cpp/common/common.cpp
-index 0497f90a2..29b36f3fe 100644
+index 5a8cf5248..8010a990e 100644
 --- a/src/llama.cpp/common/common.cpp
 +++ b/src/llama.cpp/common/common.cpp
-@@ -1280,6 +1280,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
+@@ -1343,6 +1343,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
          mparams.n_gpu_layers = params.n_gpu_layers;
      }
  
@@ -111,16 +110,16 @@ index 0497f90a2..29b36f3fe 100644
      mparams.split_mode      = params.split_mode;
      mparams.tensor_split    = params.tensor_split;
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index d28e48991..562203d02 100644
+index d70744840..dea8c4546 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
-@@ -302,6 +302,7 @@ struct lr_opt {
+@@ -307,6 +307,7 @@ struct lr_opt {
  struct ggml_opt_optimizer_params common_opt_lr_pars(void * userdata);
  
  struct common_params {
 +    bool vocab_only               = false;
-     int32_t n_predict             =    -1; // new tokens to predict
-     int32_t n_ctx                 =  4096; // context size
+     int32_t n_predict             =    -1; // max. number of new tokens to predict, -1 == no limit
+     int32_t n_ctx                 =     0; // context size, 0 == context the model was trained with
      int32_t n_batch               =  2048; // logical batch size for prompt processing (must be >=32 to use BLAS)
 diff --git a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
 index fc31089f3..aa9befe4c 100644
@@ -136,10 +135,10 @@ index fc31089f3..aa9befe4c 100644
              check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
              if (NOT "${GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E}" STREQUAL "")
 diff --git a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-index 72a82a891..1b681f4dd 100644
+index 514f086f6..792abaa58 100644
 --- a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
 +++ b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-@@ -3216,11 +3216,26 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
+@@ -3213,11 +3213,26 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
      GGML_UNUSED(dev);
  }
  
@@ -169,7 +168,7 @@ index 72a82a891..1b681f4dd 100644
      GGML_UNUSED(dev);
  }
  
-@@ -3401,10 +3416,17 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+@@ -3398,10 +3413,17 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
          }
      }
  
@@ -188,7 +187,7 @@ index 72a82a891..1b681f4dd 100644
  
      GGML_LOG_INFO("ggml-hex: Hexagon Arch version v%d\n", opt_arch);
  
-@@ -3417,6 +3439,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+@@ -3414,6 +3436,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
          } catch (std::exception const &exc) {
              GGML_LOG_ERROR("ggml-hex: failed to create device/session %zu\n", i);
              devices[i].context = nullptr;
