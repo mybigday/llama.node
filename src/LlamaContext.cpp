@@ -250,6 +250,8 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   }
 
   common_params params;
+  params.fit_params = false;
+
   params.model.path = get_option<std::string>(options, "model", "");
   if (params.model.path.empty()) {
     Napi::TypeError::New(env, "Model is required").ThrowAsJavaScriptException();
