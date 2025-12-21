@@ -1,25 +1,23 @@
 diff --git a/src/llama.cpp/common/CMakeLists.txt b/src/llama.cpp/common/CMakeLists.txt
-index 0182767c2..f8c4a4f63 100644
+index f7b99159e..fa37fed19 100644
 --- a/src/llama.cpp/common/CMakeLists.txt
 +++ b/src/llama.cpp/common/CMakeLists.txt
-@@ -151,9 +151,16 @@ if (LLAMA_LLGUIDANCE)
+@@ -154,8 +154,14 @@ if (LLAMA_LLGUIDANCE)
      set(LLAMA_COMMON_EXTRA_LIBS ${LLAMA_COMMON_EXTRA_LIBS} llguidance ${LLGUIDANCE_PLATFORM_LIBS})
  endif ()
  
+-target_link_libraries(${TARGET} PRIVATE ${LLAMA_COMMON_EXTRA_LIBS} PUBLIC llama Threads::Threads)
 +# Add Windows socket libraries unconditionally on Windows
 +if (WIN32)
 +    set(LLAMA_COMMON_WIN_LIBS ws2_32)
 +else()
 +    set(LLAMA_COMMON_WIN_LIBS "")
 +endif()
-+
- target_include_directories(${TARGET} PUBLIC . ../vendor)
- target_compile_features   (${TARGET} PUBLIC cxx_std_17)
--target_link_libraries     (${TARGET} PRIVATE ${LLAMA_COMMON_EXTRA_LIBS} PUBLIC llama Threads::Threads)
-+target_link_libraries     (${TARGET} PRIVATE ${LLAMA_COMMON_EXTRA_LIBS} ${LLAMA_COMMON_WIN_LIBS} PUBLIC llama Threads::Threads)
  
++target_link_libraries(${TARGET} PRIVATE ${LLAMA_COMMON_EXTRA_LIBS} ${LLAMA_COMMON_WIN_LIBS} PUBLIC llama Threads::Threads)
  
  #
+ # copy the license files
 diff --git a/src/llama.cpp/common/chat-peg-parser.cpp b/src/llama.cpp/common/chat-peg-parser.cpp
 index 1bcba9cd8..b7cd68734 100644
 --- a/src/llama.cpp/common/chat-peg-parser.cpp
@@ -110,7 +108,7 @@ index d4e8c7405..af3dec813 100644
      mparams.split_mode      = params.split_mode;
      mparams.tensor_split    = params.tensor_split;
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index 3e314f4c8..5750a4057 100644
+index 334372073..e912b593a 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
 @@ -307,6 +307,7 @@ struct lr_opt {
