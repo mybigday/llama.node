@@ -299,9 +299,9 @@ describe('Parallel Decoding', () => {
       const status = context.parallel.getStatus()
 
       expect(status).toBeDefined()
-      expect(status.nParallel).toBe(2)
-      expect(status.activeSlots).toBe(0)
-      expect(status.queuedRequests).toBe(0)
+      expect(status.n_parallel).toBe(2)
+      expect(status.active_slots).toBe(0)
+      expect(status.queued_requests).toBe(0)
       expect(status.requests).toEqual([])
     })
 
@@ -326,16 +326,16 @@ describe('Parallel Decoding', () => {
       // If there are requests, check their structure
       if (status.requests.length > 0) {
         const req = status.requests[0]
-        expect(req.requestId).toBeDefined()
+        expect(req.request_id).toBeDefined()
         expect(req.type).toBe('completion')
         expect(['queued', 'processing_prompt', 'generating', 'done']).toContain(
           req.state,
         )
-        expect(typeof req.promptLength).toBe('number')
-        expect(typeof req.tokensGenerated).toBe('number')
-        expect(typeof req.promptMs).toBe('number')
-        expect(typeof req.generationMs).toBe('number')
-        expect(typeof req.tokensPerSecond).toBe('number')
+        expect(typeof req.prompt_length).toBe('number')
+        expect(typeof req.tokens_generated).toBe('number')
+        expect(typeof req.prompt_ms).toBe('number')
+        expect(typeof req.generation_ms).toBe('number')
+        expect(typeof req.tokens_per_second).toBe('number')
       }
 
       // Stop the request to clean up (catch the rejection)
@@ -385,9 +385,9 @@ describe('Parallel Decoding', () => {
 
       // Each update should have the correct structure
       for (const status of statusUpdates) {
-        expect(status.nParallel).toBe(2)
-        expect(typeof status.activeSlots).toBe('number')
-        expect(typeof status.queuedRequests).toBe('number')
+        expect(status.n_parallel).toBe(2)
+        expect(typeof status.active_slots).toBe('number')
+        expect(typeof status.queued_requests).toBe('number')
         expect(Array.isArray(status.requests)).toBe(true)
       }
     }, 5000)
@@ -445,10 +445,10 @@ describe('Parallel Decoding', () => {
       const status = context.parallel.getStatus()
 
       // Should show the parallel configuration
-      expect(status.nParallel).toBe(3)
+      expect(status.n_parallel).toBe(3)
 
       // Total of active + queued should be at least our requests (some may have completed)
-      const totalTracked = status.activeSlots + status.queuedRequests
+      const totalTracked = status.active_slots + status.queued_requests
 
       // Clean up (catch rejections from stopping)
       await Promise.all(

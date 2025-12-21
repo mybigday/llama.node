@@ -823,22 +823,22 @@ Napi::Value LlamaContext::GetParallelStatus(const Napi::CallbackInfo &info) {
   auto status = _rn_ctx->slot_manager->get_status();
 
   Napi::Object result = Napi::Object::New(env);
-  result.Set("nParallel", Napi::Number::New(env, status.n_parallel));
-  result.Set("activeSlots", Napi::Number::New(env, status.active_slots));
-  result.Set("queuedRequests", Napi::Number::New(env, status.queued_requests));
+  result.Set("n_parallel", Napi::Number::New(env, status.n_parallel));
+  result.Set("active_slots", Napi::Number::New(env, status.active_slots));
+  result.Set("queued_requests", Napi::Number::New(env, status.queued_requests));
 
   Napi::Array requests = Napi::Array::New(env);
   for (size_t i = 0; i < status.requests.size(); i++) {
     const auto& req = status.requests[i];
     Napi::Object reqObj = Napi::Object::New(env);
-    reqObj.Set("requestId", Napi::Number::New(env, req.request_id));
+    reqObj.Set("request_id", Napi::Number::New(env, req.request_id));
     reqObj.Set("type", Napi::String::New(env, req.type));
     reqObj.Set("state", Napi::String::New(env, req.state));
-    reqObj.Set("promptLength", Napi::Number::New(env, req.prompt_length));
-    reqObj.Set("tokensGenerated", Napi::Number::New(env, req.tokens_generated));
-    reqObj.Set("promptMs", Napi::Number::New(env, req.prompt_ms));
-    reqObj.Set("generationMs", Napi::Number::New(env, req.generation_ms));
-    reqObj.Set("tokensPerSecond", Napi::Number::New(env, req.tokens_per_second));
+    reqObj.Set("prompt_length", Napi::Number::New(env, req.prompt_length));
+    reqObj.Set("tokens_generated", Napi::Number::New(env, req.tokens_generated));
+    reqObj.Set("prompt_ms", Napi::Number::New(env, req.prompt_ms));
+    reqObj.Set("generation_ms", Napi::Number::New(env, req.generation_ms));
+    reqObj.Set("tokens_per_second", Napi::Number::New(env, req.tokens_per_second));
     requests.Set(i, reqObj);
   }
   result.Set("requests", requests);
@@ -884,22 +884,22 @@ Napi::Value LlamaContext::SubscribeParallelStatus(const Napi::CallbackInfo &info
 
       auto callback = [](Napi::Env env, Napi::Function jsCallback, StatusData* data) {
         Napi::Object result = Napi::Object::New(env);
-        result.Set("nParallel", Napi::Number::New(env, data->status.n_parallel));
-        result.Set("activeSlots", Napi::Number::New(env, data->status.active_slots));
-        result.Set("queuedRequests", Napi::Number::New(env, data->status.queued_requests));
+        result.Set("n_parallel", Napi::Number::New(env, data->status.n_parallel));
+        result.Set("active_slots", Napi::Number::New(env, data->status.active_slots));
+        result.Set("queued_requests", Napi::Number::New(env, data->status.queued_requests));
 
         Napi::Array requests = Napi::Array::New(env);
         for (size_t i = 0; i < data->status.requests.size(); i++) {
           const auto& req = data->status.requests[i];
           Napi::Object reqObj = Napi::Object::New(env);
-          reqObj.Set("requestId", Napi::Number::New(env, req.request_id));
+          reqObj.Set("request_id", Napi::Number::New(env, req.request_id));
           reqObj.Set("type", Napi::String::New(env, req.type));
           reqObj.Set("state", Napi::String::New(env, req.state));
-          reqObj.Set("promptLength", Napi::Number::New(env, req.prompt_length));
-          reqObj.Set("tokensGenerated", Napi::Number::New(env, req.tokens_generated));
-          reqObj.Set("promptMs", Napi::Number::New(env, req.prompt_ms));
-          reqObj.Set("generationMs", Napi::Number::New(env, req.generation_ms));
-          reqObj.Set("tokensPerSecond", Napi::Number::New(env, req.tokens_per_second));
+          reqObj.Set("prompt_length", Napi::Number::New(env, req.prompt_length));
+          reqObj.Set("tokens_generated", Napi::Number::New(env, req.tokens_generated));
+          reqObj.Set("prompt_ms", Napi::Number::New(env, req.prompt_ms));
+          reqObj.Set("generation_ms", Napi::Number::New(env, req.generation_ms));
+          reqObj.Set("tokens_per_second", Napi::Number::New(env, req.tokens_per_second));
           requests.Set(i, reqObj);
         }
         result.Set("requests", requests);
