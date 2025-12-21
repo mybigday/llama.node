@@ -374,8 +374,9 @@ describe('Parallel Decoding', () => {
       // Wait for some status updates
       await new Promise((resolve) => setTimeout(resolve, 500))
 
-      // Stop the request
+      // Stop the request (catch the rejection)
       request.stop()
+      await request.promise.catch(() => {})
 
       // Unsubscribe
       subscription.remove()
@@ -415,8 +416,9 @@ describe('Parallel Decoding', () => {
       // Wait a bit
       await new Promise((resolve) => setTimeout(resolve, 300))
 
-      // Stop the request
+      // Stop the request (catch the rejection)
       request.stop()
+      await request.promise.catch(() => {})
 
       // Should not have received any updates after unsubscribing
       // (might have received 0-1 updates before unsubscribe completed)
