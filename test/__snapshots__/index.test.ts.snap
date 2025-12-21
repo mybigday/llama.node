@@ -148,6 +148,7 @@ exports[`completion with tools 1`] = `
 {
   "additional_stops": [],
   "chat_format": 11,
+  "chat_parser": "",
   "grammar": "any-tool-call ::= ( calc-call ) space
 calc-args ::= "{" space  (calc-args-expression-kv )? "}" space
 calc-args-expression-kv ::= "\\"expression\\"" space ":" space string
