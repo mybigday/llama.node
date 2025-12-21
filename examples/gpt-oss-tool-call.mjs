@@ -1,4 +1,5 @@
 import { loadModel } from '../lib/index.js'
+import fs from 'fs'
 // Catch segfaults if happens (please install segfault-handler first, but don't add dependency to git):
 // import SegfaultHandler from 'segfault-handler'
 // SegfaultHandler.registerHandler('example-device-info-crash.log')
@@ -10,7 +11,7 @@ const model = await loadModel(
     n_ctx: 8192,
     n_gpu_layers: 99,
     model: import.meta
-      .resolve('./gpt-oss-20b-mxfp4.gguf')
+      .resolve('./nvidia_Nemotron-3-Nano-30B-A3B-Q4_0.gguf')
       .replace('file://', ''),
     use_mlock: true,
     use_mmap: true,

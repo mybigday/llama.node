@@ -37,6 +37,7 @@ LlamaCompletionWorker::LlamaCompletionWorker(
     int32_t chat_format,
     bool thinking_forced_open,
     std::string reasoning_format,
+    const std::string &chat_parser,
     const std::vector<std::string> &media_paths,
     const std::vector<llama_token> &guide_tokens,
     bool has_vocoder,
@@ -46,6 +47,7 @@ LlamaCompletionWorker::LlamaCompletionWorker(
       _params(params), _stop_words(stop_words), _chat_format(chat_format),
       _thinking_forced_open(thinking_forced_open),
       _reasoning_format(reasoning_format),
+      _chat_parser(chat_parser),
       _media_paths(media_paths), _guide_tokens(guide_tokens),
       _prefill_text(prefill_text),
       _has_vocoder(has_vocoder), _tts_type(tts_type_val) {
@@ -121,7 +123,7 @@ void LlamaCompletionWorker::Execute() {
     }
 
     // Begin completion with chat format and reasoning settings
-    completion->beginCompletion(_chat_format, common_reasoning_format_from_name(_reasoning_format), _thinking_forced_open);
+    completion->beginCompletion(_chat_format, common_reasoning_format_from_name(_reasoning_format), _thinking_forced_open, _chat_parser);
 
     // Main completion loop
     int token_count = 0;

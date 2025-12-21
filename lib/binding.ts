@@ -120,6 +120,8 @@ export type LlamaCompletionOptions = {
   tool_choice?: string
   enable_thinking?: boolean
   thinking_forced_open?: boolean
+  /** Serialized PEG parser for chat output parsing (required for PEG format types) */
+  chat_parser?: string
   prompt?: string
   /**
    * Text to prefill the response with.
@@ -415,6 +417,8 @@ export type JinjaFormattedChatResult = {
   thinking_forced_open: boolean
   preserved_tokens: string[]
   additional_stops: string[]
+  /** Serialized PEG parser for chat output parsing (required for PEG format types) */
+  chat_parser: string
 }
 
 export type Tool = {

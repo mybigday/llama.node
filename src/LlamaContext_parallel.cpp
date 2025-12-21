@@ -98,6 +98,7 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
   int32_t chat_format = get_option<int32_t>(options, "chat_format", 0);
   bool thinking_forced_open = get_option<bool>(options, "thinking_forced_open", false);
   std::string reasoning_format = get_option<std::string>(options, "reasoning_format", "none");
+  std::string chat_parser = get_option<std::string>(options, "chat_parser", "");
 
   // Parse parameters
   common_params params = _rn_ctx->params;
@@ -238,6 +239,7 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
 
       chat_format = chatParams.format;
       thinking_forced_open = chatParams.thinking_forced_open;
+      chat_parser = chatParams.parser;
 
       for (const auto &token : chatParams.preserved_tokens) {
         auto ids =
@@ -385,6 +387,7 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
     chat_format,
     reasoning_format_enum,
     thinking_forced_open,
+    chat_parser,
     prefill_text,
     load_state_path,
     save_state_path,

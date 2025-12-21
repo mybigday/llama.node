@@ -23,6 +23,7 @@ public:
                         int32_t chat_format,
                         bool thinking_forced_open,
                         std::string reasoning_format,
+                        const std::string &chat_parser = "",
                         const std::vector<std::string> &media_paths = {},
                         const std::vector<llama_token> &guide_tokens = {},
                         bool has_vocoder = false,
@@ -50,6 +51,7 @@ private:
   int32_t _chat_format;
   bool _thinking_forced_open;
   std::string _reasoning_format;
+  std::string _chat_parser;
   std::vector<std::string> _media_paths;
   std::vector<llama_token> _guide_tokens;
   std::string _prefill_text;

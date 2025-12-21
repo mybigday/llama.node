@@ -762,6 +762,8 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
           i, Napi::String::New(env, chatParams.additional_stops[i].c_str()));
     }
     result.Set("additional_stops", additional_stops);
+    // chat_parser: string (serialized PEG parser for chat output parsing)
+    result.Set("chat_parser", chatParams.parser);
 
     return result;
   } else {
@@ -823,6 +825,7 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   int32_t chat_format = get_option<int32_t>(options, "chat_format", 0);
   bool thinking_forced_open = get_option<bool>(options, "thinking_forced_open", false);
   std::string reasoning_format = get_option<std::string>(options, "reasoning_format", "none");
+  std::string chat_parser = get_option<std::string>(options, "chat_parser", "");
 
   common_params params = _rn_ctx->params;
   auto grammar_from_params = get_option<std::string>(options, "grammar", "");
@@ -961,6 +964,7 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
 
       chat_format = chatParams.format;
       thinking_forced_open = chatParams.thinking_forced_open;
+      chat_parser = chatParams.parser;
 
       for (const auto &token : chatParams.preserved_tokens) {
         auto ids =
@@ -1076,7 +1080,7 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
 
   auto *worker =
       new LlamaCompletionWorker(info, _rn_ctx, callback, params, stop_words,
-                                chat_format, thinking_forced_open, reasoning_format, media_paths, guide_tokens,
+                                chat_format, thinking_forced_open, reasoning_format, chat_parser, media_paths, guide_tokens,
                                 _rn_ctx->has_vocoder, _rn_ctx->tts_wrapper ? _rn_ctx->tts_wrapper->type : rnllama::UNKNOWN, prefill_text);
   worker->Queue();
   _wip = worker;
