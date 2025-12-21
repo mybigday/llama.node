@@ -201,6 +201,15 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
        InstanceMethod<&LlamaContext::CancelRequest>(
            "cancelRequest",
            static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::GetParallelStatus>(
+           "getParallelStatus",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::SubscribeParallelStatus>(
+           "subscribeParallelStatus",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::UnsubscribeParallelStatus>(
+           "unsubscribeParallelStatus",
+           static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::ClearCache>(
            "clearCache",
            static_cast<napi_property_attributes>(napi_enumerable)),

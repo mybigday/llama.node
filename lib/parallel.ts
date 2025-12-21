@@ -4,6 +4,7 @@ import type {
   LlamaCompletionOptions,
   LlamaCompletionToken,
   RerankParams,
+  ParallelStatus,
 } from './binding'
 import { formatMediaChat } from './utils'
 
@@ -277,5 +278,37 @@ export class LlamaParallelAPI {
    */
   isEnabled(): boolean {
     return this.enabled
+  }
+
+  /**
+   * Get current parallel processing status (one-time snapshot)
+   * @returns Current parallel status
+   */
+  getStatus(): ParallelStatus {
+    if (!this.enabled) {
+      throw new Error('Parallel mode is not enabled. Call enable() first.')
+    }
+    return this.context.getParallelStatus()
+  }
+
+  /**
+   * Subscribe to parallel processing status changes
+   * @param callback Called whenever parallel status changes
+   * @returns Object with remove() method to unsubscribe
+   */
+  subscribeToStatus(
+    callback: (status: ParallelStatus) => void,
+  ): { remove: () => void } {
+    if (!this.enabled) {
+      throw new Error('Parallel mode is not enabled. Call enable() first.')
+    }
+
+    const { subscriberId } = this.context.subscribeParallelStatus(callback)
+
+    return {
+      remove: () => {
+        this.context.unsubscribeParallelStatus(subscriberId)
+      },
+    }
   }
 }

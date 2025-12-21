@@ -439,6 +439,24 @@ export type ToolCall = {
   id?: string
 }
 
+export type ParallelRequestStatus = {
+  requestId: number
+  type: 'completion' | 'embedding' | 'rerank'
+  state: 'queued' | 'processing_prompt' | 'generating' | 'done'
+  promptLength: number
+  tokensGenerated: number
+  promptMs: number
+  generationMs: number
+  tokensPerSecond: number
+}
+
+export type ParallelStatus = {
+  nParallel: number
+  activeSlots: number
+  queuedRequests: number
+  requests: ParallelRequestStatus[]
+}
+
 export interface LlamaContext {
   new (
     options: LlamaModelOptions,
@@ -615,6 +633,27 @@ export interface LlamaContext {
    * @param requestId Request ID to cancel
    */
   cancelRequest(requestId: number): void
+
+  /**
+   * Get current parallel processing status (one-time snapshot)
+   * @returns Current parallel status
+   */
+  getParallelStatus(): ParallelStatus
+
+  /**
+   * Subscribe to parallel processing status changes
+   * @param callback Called whenever parallel status changes
+   * @returns Subscriber ID that can be used to unsubscribe
+   */
+  subscribeParallelStatus(
+    callback: (status: ParallelStatus) => void,
+  ): { subscriberId: number }
+
+  /**
+   * Unsubscribe from parallel processing status changes
+   * @param subscriberId Subscriber ID returned from subscribeParallelStatus
+   */
+  unsubscribeParallelStatus(subscriberId: number): void
 
   /**
    * Clear the KV and recurrent caches.

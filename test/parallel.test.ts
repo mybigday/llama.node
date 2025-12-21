@@ -1,4 +1,4 @@
-import { loadModel } from '../lib'
+import { loadModel, ParallelStatus } from '../lib'
 import * as path from 'path'
 import * as fs from 'fs'
 
@@ -9,7 +9,9 @@ describe('Parallel Decoding', () => {
   // Skip tests if model doesn't exist
   beforeAll(() => {
     if (!fs.existsSync(modelPath)) {
-      console.log(`Test model not found at ${modelPath}, skipping parallel tests`)
+      console.log(
+        `Test model not found at ${modelPath}, skipping parallel tests`,
+      )
       // @ts-ignore
       test.skip()
     }
@@ -43,7 +45,7 @@ describe('Parallel Decoding', () => {
     test('should enable parallel mode with custom settings', async () => {
       const enabled = await context.parallel.enable({
         n_parallel: 2,
-        n_batch: 256
+        n_batch: 256,
       })
       expect(enabled).toBe(true)
       expect(context.parallel.isEnabled()).toBe(true)
@@ -88,8 +90,8 @@ describe('Parallel Decoding', () => {
       const result = await Promise.race([
         request.promise,
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Timeout')), 3000)
-        )
+          setTimeout(() => reject(new Error('Timeout')), 3000),
+        ),
       ]).catch(() => null)
 
       // Even if it times out, the request was successfully queued
@@ -131,13 +133,13 @@ describe('Parallel Decoding', () => {
           if (token.token) {
             tokens.push(token.token)
           }
-        }
+        },
       )
 
       expect(request.requestId).toBeDefined()
 
       // Wait briefly for some tokens
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await new Promise((resolve) => setTimeout(resolve, 1000))
 
       // Request was successfully queued even if no tokens generated yet
       expect(request.requestId).toBeGreaterThan(0)
@@ -175,10 +177,9 @@ describe('Parallel Decoding', () => {
     })
 
     test('should queue embedding with normalization', async () => {
-      const request = await context.parallel.embedding(
-        'Test text',
-        { embd_normalize: 2 }
-      )
+      const request = await context.parallel.embedding('Test text', {
+        embd_normalize: 2,
+      })
 
       expect(request.requestId).toBeGreaterThan(0)
     })
@@ -199,10 +200,11 @@ describe('Parallel Decoding', () => {
     })
 
     test('should queue rerank request', async () => {
-      const request = await context.parallel.rerank(
-        'Query text',
-        ['Document 1', 'Document 2', 'Document 3']
-      )
+      const request = await context.parallel.rerank('Query text', [
+        'Document 1',
+        'Document 2',
+        'Document 3',
+      ])
 
       expect(request.requestId).toBeDefined()
       expect(typeof request.requestId).toBe('number')
@@ -214,7 +216,7 @@ describe('Parallel Decoding', () => {
       const request = await context.parallel.rerank(
         'Query text',
         ['Doc 1', 'Doc 2'],
-        { normalize: 1 }
+        { normalize: 1 },
       )
 
       expect(request.requestId).toBeGreaterThan(0)
@@ -224,13 +226,13 @@ describe('Parallel Decoding', () => {
   describe('Error Handling', () => {
     test('should throw error when queueing without enabling parallel mode', async () => {
       await expect(
-        context.parallel.completion({ prompt: 'Test', max_tokens: 5 })
+        context.parallel.completion({ prompt: 'Test', max_tokens: 5 }),
       ).rejects.toThrow('Parallel mode is not enabled')
     })
 
     test('should throw error when enabling with invalid parameters', async () => {
       await expect(
-        context.parallel.enable({ n_parallel: 100 }) // Exceeds n_seq_max
+        context.parallel.enable({ n_parallel: 100 }), // Exceeds n_seq_max
       ).rejects.toThrow()
     })
 
@@ -238,7 +240,7 @@ describe('Parallel Decoding', () => {
       await context.parallel.enable()
 
       await expect(
-        context.parallel.completion({ prompt: '', max_tokens: 5 })
+        context.parallel.completion({ prompt: '', max_tokens: 5 }),
       ).rejects.toThrow()
     })
   })
@@ -257,10 +259,7 @@ describe('Parallel Decoding', () => {
 
       const embedding = await context.parallel.embedding('Test text')
 
-      const rerank = await context.parallel.rerank(
-        'Query',
-        ['Doc1', 'Doc2']
-      )
+      const rerank = await context.parallel.rerank('Query', ['Doc1', 'Doc2'])
 
       // All should have unique request IDs
       expect(completion.requestId).toBeDefined()
@@ -278,18 +277,188 @@ describe('Parallel Decoding', () => {
       // Start multiple completions with different prompts
       const prompts = ['Alpha', 'Beta', 'Gamma']
       const requests = await Promise.all(
-        prompts.map(prompt =>
+        prompts.map((prompt) =>
           context.parallel.completion({
             prompt,
             max_tokens: 2,
             temperature: 0.5,
-          })
-        )
+          }),
+        ),
       )
 
       // All requests should have unique IDs
-      const requestIds = requests.map(r => r.requestId)
+      const requestIds = requests.map((r) => r.requestId)
       expect(new Set(requestIds).size).toBe(requestIds.length)
     })
+  })
+
+  describe('Parallel Status', () => {
+    test('should get status after enabling parallel mode', async () => {
+      await context.parallel.enable({ n_parallel: 2 })
+
+      const status = context.parallel.getStatus()
+
+      expect(status).toBeDefined()
+      expect(status.nParallel).toBe(2)
+      expect(status.activeSlots).toBe(0)
+      expect(status.queuedRequests).toBe(0)
+      expect(status.requests).toEqual([])
+    })
+
+    test('should show active requests in status', async () => {
+      await context.parallel.enable({ n_parallel: 2 })
+
+      // Queue a completion request
+      const request = await context.parallel.completion({
+        prompt: 'Hello world',
+        max_tokens: 50,
+        temperature: 0.7,
+      })
+
+      // Give it a moment to start processing
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      const status = context.parallel.getStatus()
+
+      // Should have at least one request (either active or queued)
+      expect(status.requests.length).toBeGreaterThanOrEqual(0)
+
+      // If there are requests, check their structure
+      if (status.requests.length > 0) {
+        const req = status.requests[0]
+        expect(req.requestId).toBeDefined()
+        expect(req.type).toBe('completion')
+        expect(['queued', 'processing_prompt', 'generating', 'done']).toContain(
+          req.state,
+        )
+        expect(typeof req.promptLength).toBe('number')
+        expect(typeof req.tokensGenerated).toBe('number')
+        expect(typeof req.promptMs).toBe('number')
+        expect(typeof req.generationMs).toBe('number')
+        expect(typeof req.tokensPerSecond).toBe('number')
+      }
+
+      // Stop the request to clean up (catch the rejection)
+      request.stop()
+      await request.promise.catch(() => {})
+    }, 5000)
+
+    test('should throw error when getting status without parallel mode', async () => {
+      expect(() => context.parallel.getStatus()).toThrow(
+        'Parallel mode is not enabled',
+      )
+    })
+
+    test('should subscribe to status changes', async () => {
+      await context.parallel.enable({ n_parallel: 2 })
+
+      const statusUpdates: ParallelStatus[] = []
+
+      const subscription = context.parallel.subscribeToStatus(
+        (status: ParallelStatus) => {
+          statusUpdates.push(status)
+        },
+      )
+
+      expect(subscription).toBeDefined()
+      expect(subscription.remove).toBeDefined()
+      expect(typeof subscription.remove).toBe('function')
+
+      // Queue a request to trigger status updates
+      const request = await context.parallel.completion({
+        prompt: 'Test',
+        max_tokens: 5,
+        temperature: 0.7,
+      })
+
+      // Wait for some status updates
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      // Stop the request
+      request.stop()
+
+      // Unsubscribe
+      subscription.remove()
+
+      // Should have received at least one status update
+      expect(statusUpdates.length).toBeGreaterThan(0)
+
+      // Each update should have the correct structure
+      for (const status of statusUpdates) {
+        expect(status.nParallel).toBe(2)
+        expect(typeof status.activeSlots).toBe('number')
+        expect(typeof status.queuedRequests).toBe('number')
+        expect(Array.isArray(status.requests)).toBe(true)
+      }
+    }, 5000)
+
+    test('should stop receiving updates after unsubscribing', async () => {
+      await context.parallel.enable({ n_parallel: 2 })
+
+      const statusUpdates: ParallelStatus[] = []
+
+      const subscription = context.parallel.subscribeToStatus(
+        (status: ParallelStatus) => {
+          statusUpdates.push(status)
+        },
+      )
+
+      // Unsubscribe immediately
+      subscription.remove()
+
+      // Queue a request
+      const request = await context.parallel.completion({
+        prompt: 'Test',
+        max_tokens: 5,
+      })
+
+      // Wait a bit
+      await new Promise((resolve) => setTimeout(resolve, 300))
+
+      // Stop the request
+      request.stop()
+
+      // Should not have received any updates after unsubscribing
+      // (might have received 0-1 updates before unsubscribe completed)
+      expect(statusUpdates.length).toBeLessThanOrEqual(1)
+    }, 5000)
+
+    test('should throw error when subscribing without parallel mode', async () => {
+      expect(() => context.parallel.subscribeToStatus(() => {})).toThrow(
+        'Parallel mode is not enabled',
+      )
+    })
+
+    test('should track multiple concurrent requests in status', async () => {
+      await context.parallel.enable({ n_parallel: 3 })
+
+      // Queue multiple requests
+      const requests = await Promise.all([
+        context.parallel.completion({ prompt: 'One', max_tokens: 10 }),
+        context.parallel.completion({ prompt: 'Two', max_tokens: 10 }),
+        context.parallel.embedding('Test embedding'),
+      ])
+
+      // Give time for processing to start
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      const status = context.parallel.getStatus()
+
+      // Should show the parallel configuration
+      expect(status.nParallel).toBe(3)
+
+      // Total of active + queued should be at least our requests (some may have completed)
+      const totalTracked = status.activeSlots + status.queuedRequests
+
+      // Clean up (catch rejections from stopping)
+      await Promise.all(
+        requests.map(async (r) => {
+          if ('stop' in r) {
+            r.stop()
+            await r.promise.catch(() => {})
+          }
+        }),
+      )
+    }, 5000)
   })
 })

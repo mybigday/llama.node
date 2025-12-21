@@ -68,6 +68,9 @@ private:
   Napi::Value QueueEmbedding(const Napi::CallbackInfo &info);
   Napi::Value QueueRerank(const Napi::CallbackInfo &info);
   void CancelRequest(const Napi::CallbackInfo &info);
+  Napi::Value GetParallelStatus(const Napi::CallbackInfo &info);
+  Napi::Value SubscribeParallelStatus(const Napi::CallbackInfo &info);
+  void UnsubscribeParallelStatus(const Napi::CallbackInfo &info);
 
   // Cache management
   void ClearCache(const Napi::CallbackInfo &info);

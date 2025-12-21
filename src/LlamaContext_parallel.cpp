@@ -804,3 +804,127 @@ void LlamaContext::CancelRequest(const Napi::CallbackInfo &info) {
     _rn_ctx->slot_manager->cancel_request(requestId);
   }
 }
+
+// GetParallelStatus(): ParallelStatus
+Napi::Value LlamaContext::GetParallelStatus(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+
+  if (!_rn_ctx) {
+    Napi::TypeError::New(env, "Context is disposed").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  if (!_rn_ctx->parallel_mode_enabled || !_rn_ctx->slot_manager) {
+    Napi::TypeError::New(env, "Parallel mode is not enabled. Call enableParallelMode() first.")
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  auto status = _rn_ctx->slot_manager->get_status();
+
+  Napi::Object result = Napi::Object::New(env);
+  result.Set("nParallel", Napi::Number::New(env, status.n_parallel));
+  result.Set("activeSlots", Napi::Number::New(env, status.active_slots));
+  result.Set("queuedRequests", Napi::Number::New(env, status.queued_requests));
+
+  Napi::Array requests = Napi::Array::New(env);
+  for (size_t i = 0; i < status.requests.size(); i++) {
+    const auto& req = status.requests[i];
+    Napi::Object reqObj = Napi::Object::New(env);
+    reqObj.Set("requestId", Napi::Number::New(env, req.request_id));
+    reqObj.Set("type", Napi::String::New(env, req.type));
+    reqObj.Set("state", Napi::String::New(env, req.state));
+    reqObj.Set("promptLength", Napi::Number::New(env, req.prompt_length));
+    reqObj.Set("tokensGenerated", Napi::Number::New(env, req.tokens_generated));
+    reqObj.Set("promptMs", Napi::Number::New(env, req.prompt_ms));
+    reqObj.Set("generationMs", Napi::Number::New(env, req.generation_ms));
+    reqObj.Set("tokensPerSecond", Napi::Number::New(env, req.tokens_per_second));
+    requests.Set(i, reqObj);
+  }
+  result.Set("requests", requests);
+
+  return result;
+}
+
+// SubscribeParallelStatus(callback: (status: ParallelStatus) => void): { subscriberId: number }
+Napi::Value LlamaContext::SubscribeParallelStatus(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+
+  if (!_rn_ctx) {
+    Napi::TypeError::New(env, "Context is disposed").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  if (!_rn_ctx->parallel_mode_enabled || !_rn_ctx->slot_manager) {
+    Napi::TypeError::New(env, "Parallel mode is not enabled. Call enableParallelMode() first.")
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  if (!info[0].IsFunction()) {
+    Napi::TypeError::New(env, "Callback function is required").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  // Create thread-safe function for the callback
+  Napi::ThreadSafeFunction tsfn = Napi::ThreadSafeFunction::New(
+    env,
+    info[0].As<Napi::Function>(),
+    "ParallelStatusCallback",
+    0,
+    1
+  );
+
+  // Subscribe to status changes
+  int32_t subscriberId = _rn_ctx->slot_manager->add_status_subscriber(
+    [tsfn](const llama_rn_parallel_status& status) {
+      struct StatusData {
+        llama_rn_parallel_status status;
+      };
+
+      auto callback = [](Napi::Env env, Napi::Function jsCallback, StatusData* data) {
+        Napi::Object result = Napi::Object::New(env);
+        result.Set("nParallel", Napi::Number::New(env, data->status.n_parallel));
+        result.Set("activeSlots", Napi::Number::New(env, data->status.active_slots));
+        result.Set("queuedRequests", Napi::Number::New(env, data->status.queued_requests));
+
+        Napi::Array requests = Napi::Array::New(env);
+        for (size_t i = 0; i < data->status.requests.size(); i++) {
+          const auto& req = data->status.requests[i];
+          Napi::Object reqObj = Napi::Object::New(env);
+          reqObj.Set("requestId", Napi::Number::New(env, req.request_id));
+          reqObj.Set("type", Napi::String::New(env, req.type));
+          reqObj.Set("state", Napi::String::New(env, req.state));
+          reqObj.Set("promptLength", Napi::Number::New(env, req.prompt_length));
+          reqObj.Set("tokensGenerated", Napi::Number::New(env, req.tokens_generated));
+          reqObj.Set("promptMs", Napi::Number::New(env, req.prompt_ms));
+          reqObj.Set("generationMs", Napi::Number::New(env, req.generation_ms));
+          reqObj.Set("tokensPerSecond", Napi::Number::New(env, req.tokens_per_second));
+          requests.Set(i, reqObj);
+        }
+        result.Set("requests", requests);
+
+        jsCallback.Call({result});
+        delete data;
+      };
+
+      auto* data = new StatusData{status};
+      auto callStatus = tsfn.BlockingCall(data, callback);
+      if (callStatus != napi_ok) {
+        delete data;
+      }
+    }
+  );
+
+  Napi::Object result = Napi::Object::New(env);
+  result.Set("subscriberId", Napi::Number::New(env, subscriberId));
+  return result;
+}
+
+// UnsubscribeParallelStatus(subscriberId: number): void
+void LlamaContext::UnsubscribeParallelStatus(const Napi::CallbackInfo &info) {
+  if (_rn_ctx && _rn_ctx->parallel_mode_enabled && _rn_ctx->slot_manager) {
+    int32_t subscriberId = info[0].ToNumber().Int32Value();
+    _rn_ctx->slot_manager->remove_status_subscriber(subscriberId);
+  }
+}
