@@ -198,7 +198,7 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
   if (options.Has("messages") && options.Get("messages").IsArray()) {
     auto messages = options.Get("messages").As<Napi::Array>();
     auto chat_template = get_option<std::string>(options, "chat_template", "");
-    auto jinja = get_option<bool>(options, "jinja", false);
+    auto jinja = get_option<bool>(options, "jinja", true);
     if (jinja) {
       auto tools_str =
           !is_nil(options.Get("tools"))
