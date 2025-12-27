@@ -7,7 +7,7 @@ const model = await loadModel(
     n_ctx: 8192,
     n_gpu_layers: 99,
     model: import.meta
-      .resolve('./nvidia_Nemotron-3-Nano-30B-A3B-Q4_0.gguf')
+      .resolve('./gpt-oss-20b-mxfp4.gguf')
       .replace('file://', ''),
     use_mlock: true,
     use_mmap: true,
@@ -80,7 +80,6 @@ const results = await Promise.all(
         tools,
         tool_choice: 'auto',
         n_predict: -1,
-        jinja: true
       },
       (requestId, data) => {
         console.log(`Request ${requestId}:`, data.token)
