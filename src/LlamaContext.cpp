@@ -585,7 +585,7 @@ Napi::Value LlamaContext::GetModelInfo(const Napi::CallbackInfo &info) {
   for (int i = 0; i < count; i++) {
     char key[256];
     llama_model_meta_key_by_index(model, i, key, sizeof(key));
-    char val[4096];
+    char val[16384];
     llama_model_meta_val_str_by_index(model, i, val, sizeof(val));
 
     metadata.Set(key, val);
