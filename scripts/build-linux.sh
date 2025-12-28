@@ -43,6 +43,8 @@ else
   if [ $TARGET == "all" ] || [ $TARGET == "default" ]; then
     npx cmake-js rebuild -C --CDTO_PACKAGE=ON --CDCLANG_USE_GOMP=ON --CDGGML_NATIVE=OFF \
       --CDGGML_OPENMP=0 \
+      --CDGGML_BLAS=ON \
+      --CDGGML_BLAS_VENDOR=OpenBLAS \
       --CDGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16
   fi
 
@@ -52,6 +54,8 @@ else
       --CDCLANG_USE_GOMP=ON \
       --CDGGML_NATIVE=OFF \
       --CDGGML_OPENMP=0 \
+      --CDGGML_BLAS=ON \
+      --CDGGML_BLAS_VENDOR=OpenBLAS \
       --CDGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16 \
       --CDGGML_VULKAN=1 \
       --CDVULKAN_SDK="$(realpath 'externals/arm64-Vulkan-SDK')" \
@@ -64,6 +68,8 @@ else
       --CDCLANG_USE_GOMP=ON \
       --CDGGML_NATIVE=OFF \
       --CDGGML_OPENMP=0 \
+      --CDGGML_BLAS=ON \
+      --CDGGML_BLAS_VENDOR=OpenBLAS \
       --CDGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16 \
       --CDGGML_CUDA=1 \
       --CDVARIANT=cuda \
@@ -86,6 +92,8 @@ else
       --CDGGML_NATIVE=OFF \
       --CDGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16 \
       --CDGGML_OPENMP=0 \
+      --CDGGML_BLAS=ON \
+      --CDGGML_BLAS_VENDOR=OpenBLAS \
       --CDGGML_OPENCL=1 \
       --CDGGML_OPENCL_SMALL_ALLOC=ON \
       --CDGGML_OPENCL_USE_ADRENO_KERNELS=ON \
