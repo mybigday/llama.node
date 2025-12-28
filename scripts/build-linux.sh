@@ -39,10 +39,23 @@ if [ $ARCH == "x86_64" ]; then
       --CDCMAKE_CUDA_ARCHITECTURES=89 # > GeForce RTX 40 series
   fi
 else
+  # Find OpenBLAS library and include paths for arm64
+  OPENBLAS_LIB=$(find /usr/lib -name "libopenblas*.so" 2>/dev/null | head -1)
+  BLAS_ARGS=""
+  if [ -n "$OPENBLAS_LIB" ]; then
+    BLAS_ARGS="--CDBLAS_LIBRARIES=$OPENBLAS_LIB"
+    # Use /usr/include as BLAS_INCLUDE_DIRS to skip pkg-config lookup
+    # cblas.h is at /usr/include/aarch64-linux-gnu/ or /usr/include/
+    BLAS_ARGS="$BLAS_ARGS --CDBLAS_INCLUDE_DIRS=/usr/include"
+  fi
+
   # default
   if [ $TARGET == "all" ] || [ $TARGET == "default" ]; then
     npx cmake-js rebuild -C --CDTO_PACKAGE=ON --CDCLANG_USE_GOMP=ON --CDGGML_NATIVE=OFF \
       --CDGGML_OPENMP=0 \
+      --CDGGML_BLAS=ON \
+      --CDGGML_BLAS_VENDOR=OpenBLAS \
+      $BLAS_ARGS \
       --CDGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16
   fi
 
@@ -52,6 +65,9 @@ else
       --CDCLANG_USE_GOMP=ON \
       --CDGGML_NATIVE=OFF \
       --CDGGML_OPENMP=0 \
+      --CDGGML_BLAS=ON \
+      --CDGGML_BLAS_VENDOR=OpenBLAS \
+      $BLAS_ARGS \
       --CDGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16 \
       --CDGGML_VULKAN=1 \
       --CDVULKAN_SDK="$(realpath 'externals/arm64-Vulkan-SDK')" \
@@ -64,6 +80,9 @@ else
       --CDCLANG_USE_GOMP=ON \
       --CDGGML_NATIVE=OFF \
       --CDGGML_OPENMP=0 \
+      --CDGGML_BLAS=ON \
+      --CDGGML_BLAS_VENDOR=OpenBLAS \
+      $BLAS_ARGS \
       --CDGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16 \
       --CDGGML_CUDA=1 \
       --CDVARIANT=cuda \
@@ -99,7 +118,7 @@ else
     # Check if cross-compilation is needed
     if [ $(uname -m) == "x86_64" ] && [ $ARCH == "arm64" ]; then
       echo "Cross-compiling for arm64 using GCC..."
-
+      # Disable BLAS for cross-compilation (no arm64 OpenBLAS available on x86_64 host)
       ARGS+=( --CDCMAKE_TOOLCHAIN_FILE="$(realpath cmake/aarch64-linux-gnu.toolchain.cmake)" )
 
       # Try to find OpenCL library for arm64
@@ -116,6 +135,11 @@ else
         )
       fi
     else
+      # Native arm64 build - enable BLAS
+      ARGS+=( --CDGGML_BLAS=ON --CDGGML_BLAS_VENDOR=OpenBLAS )
+      if [ -n "$BLAS_ARGS" ]; then
+        ARGS+=( $BLAS_ARGS )
+      fi
       ARGS=( -C "${ARGS[@]}" )
     fi
     npx cmake-js rebuild "${ARGS[@]}"
