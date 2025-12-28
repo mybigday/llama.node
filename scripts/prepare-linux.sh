@@ -64,5 +64,5 @@ if [ $TARGET == "snapdragon" ]; then
 
   source externals/Hexagon_SDK/Hexagon_SDK/$HEXAGON_SDK_VERSION/setup_sdk_env.source
 else
-  run_as_root apt-get install -qy lsb-release wget llvm clang lld cmake ninja-build libomp-dev libopenblas-dev ccache
+  run_as_root apt-get install -qy lsb-release wget llvm clang lld cmake ninja-build libomp-dev libopenblas-dev ccache pkg-config
 fi

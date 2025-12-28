@@ -39,12 +39,14 @@ if [ $ARCH == "x86_64" ]; then
       --CDCMAKE_CUDA_ARCHITECTURES=89 # > GeForce RTX 40 series
   fi
 else
-  # Find OpenBLAS library path for arm64
+  # Find OpenBLAS library and include paths for arm64
   OPENBLAS_LIB=$(find /usr/lib -name "libopenblas*.so" 2>/dev/null | head -1)
+  BLAS_ARGS=""
   if [ -n "$OPENBLAS_LIB" ]; then
     BLAS_ARGS="--CDBLAS_LIBRARIES=$OPENBLAS_LIB"
-  else
-    BLAS_ARGS=""
+    # Use /usr/include as BLAS_INCLUDE_DIRS to skip pkg-config lookup
+    # cblas.h is at /usr/include/aarch64-linux-gnu/ or /usr/include/
+    BLAS_ARGS="$BLAS_ARGS --CDBLAS_INCLUDE_DIRS=/usr/include"
   fi
 
   # default
