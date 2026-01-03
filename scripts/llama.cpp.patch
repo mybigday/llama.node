@@ -32,7 +32,7 @@ index 1bcba9cd8..b7cd68734 100644
  static std::string_view trim_trailing_space(std::string_view sv, int max = -1) {
      int count = 0;
 diff --git a/src/llama.cpp/common/chat.cpp b/src/llama.cpp/common/chat.cpp
-index 0a426f447..ab02be247 100644
+index b98ab21ce..2f782837a 100644
 --- a/src/llama.cpp/common/chat.cpp
 +++ b/src/llama.cpp/common/chat.cpp
 @@ -7,9 +7,6 @@
@@ -62,7 +62,7 @@ index 0a426f447..ab02be247 100644
  struct templates_params {
      json messages;
      json tools;
-@@ -751,7 +738,7 @@ static std::string apply(
+@@ -752,7 +739,7 @@ static std::string apply(
          tmpl_inputs.extra_context.merge_patch(*additional_context);
      }
      // TODO: add flag to control date/time, if only for testing purposes.
@@ -72,7 +72,7 @@ index 0a426f447..ab02be247 100644
      minja::chat_template_options tmpl_opts;
      // To avoid double BOS / EOS tokens, we're manually removing begining / trailing tokens
 diff --git a/src/llama.cpp/common/chat.h b/src/llama.cpp/common/chat.h
-index 6085510a4..263076ce2 100644
+index 8bd4a325f..333b3301f 100644
 --- a/src/llama.cpp/common/chat.h
 +++ b/src/llama.cpp/common/chat.h
 @@ -10,7 +10,18 @@
@@ -96,19 +96,19 @@ index 6085510a4..263076ce2 100644
  struct common_chat_tool_call {
      std::string name;
 diff --git a/src/llama.cpp/common/common.cpp b/src/llama.cpp/common/common.cpp
-index d4e8c7405..af3dec813 100644
+index 79c475612..cf189f8bc 100644
 --- a/src/llama.cpp/common/common.cpp
 +++ b/src/llama.cpp/common/common.cpp
-@@ -1343,6 +1343,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
-         mparams.n_gpu_layers = params.n_gpu_layers;
+@@ -1342,6 +1342,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
+         mparams.devices = params.devices.data();
      }
  
 +    mparams.vocab_only      = params.vocab_only;
+     mparams.n_gpu_layers    = params.n_gpu_layers;
      mparams.main_gpu        = params.main_gpu;
      mparams.split_mode      = params.split_mode;
-     mparams.tensor_split    = params.tensor_split;
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index 334372073..e912b593a 100644
+index f8bc686b6..555ba044a 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
 @@ -307,6 +307,7 @@ struct lr_opt {
@@ -120,7 +120,7 @@ index 334372073..e912b593a 100644
      int32_t n_ctx                 =     0; // context size, 0 == context the model was trained with
      int32_t n_batch               =  2048; // logical batch size for prompt processing (must be >=32 to use BLAS)
 diff --git a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
-index 28fb7612e..63f7e1ca1 100644
+index 7622d0bf4..d2edcfddb 100644
 --- a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
 +++ b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
 @@ -106,7 +106,7 @@ function(ggml_add_cpu_backend_variant_impl tag_name)
@@ -133,14 +133,13 @@ index 28fb7612e..63f7e1ca1 100644
              check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
              if (NOT "${GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E}" STREQUAL "")
 diff --git a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-index 6a00abacc..9e12459b6 100644
+index 13b96d61f..5fa163442 100644
 --- a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
 +++ b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-@@ -3226,11 +3226,26 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
+@@ -2680,9 +2680,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
      GGML_UNUSED(dev);
  }
  
-+
 +// ~2GB per session for now
 +#define GGML_HEXAGON_SESSION_MEMORY_DEFAULT (2ULL * 1024 * 1024 * 1024)
 +// Max to 3.5GB
@@ -149,7 +148,6 @@ index 6a00abacc..9e12459b6 100644
  static void ggml_backend_hexagon_device_get_memory(ggml_backend_dev_t dev, size_t * free, size_t * total) {
 -    // ~2GB per session for now
 -    *free  = 2ULL * 1024 * 1024 * 1024;
--    *total = *free;
 +    const char * str_mem = getenv("GGML_HEXAGON_SESSION_MEMORY");
 +    if (str_mem) {
 +        *free = std::stoull(str_mem);
@@ -161,32 +159,34 @@ index 6a00abacc..9e12459b6 100644
 +    } else {
 +        *free = GGML_HEXAGON_SESSION_MEMORY_DEFAULT;
 +    }
++
+     *total = *free;
  
-+    *total = *free;
      GGML_UNUSED(dev);
- }
- 
-@@ -3413,10 +3428,17 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+@@ -2879,10 +2894,17 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
          }
      }
  
-+#if defined(__ANDROID__)
-     if(opt_arch < 75) {
-         opt_ndev = 1;
+-    if (opt_arch < 75) {
+-        opt_ndev = 1;
 -        GGML_LOG_WARN("ggml-hex: forcing ndev to 1 for SoCs archs lower than v75.\n");
-+        GGML_LOG_WARN("ggml-hex: forcing ndev to 1 for SoCs archs lower than v75 for Android.\n");
-+    }
-+#else
-+    if(opt_arch < 73) {
-+        opt_ndev = 1;
-+        GGML_LOG_WARN("ggml-hex: forcing ndev to 1 for SoCs archs lower than v73 for Linux and Windows.\n");
-     }
-+#endif
+-    }
++    #if defined(__ANDROID__)
++        if(opt_arch < 75) {
++            opt_ndev = 1;
++            GGML_LOG_WARN("ggml-hex: forcing ndev to 1 for SoCs archs lower than v75 for Android.\n");
++        }
++    #else
++        if(opt_arch < 73) {
++            opt_ndev = 1;
++            GGML_LOG_WARN("ggml-hex: forcing ndev to 1 for SoCs archs lower than v73 for Linux and Windows.\n");
++        }
++    #endif
  
      GGML_LOG_INFO("ggml-hex: Hexagon Arch version v%d\n", opt_arch);
  
-@@ -3429,6 +3451,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
-         } catch (std::exception const &exc) {
+@@ -2895,6 +2917,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+         } catch (const std::exception & exc) {
              GGML_LOG_ERROR("ggml-hex: failed to create device/session %zu\n", i);
              devices[i].context = nullptr;
 +            opt_ndev = i;
