@@ -32,7 +32,7 @@ index 1bcba9cd8..b7cd68734 100644
  static std::string_view trim_trailing_space(std::string_view sv, int max = -1) {
      int count = 0;
 diff --git a/src/llama.cpp/common/chat.cpp b/src/llama.cpp/common/chat.cpp
-index b98ab21ce..2f782837a 100644
+index 22e527bab..c3d0affca 100644
 --- a/src/llama.cpp/common/chat.cpp
 +++ b/src/llama.cpp/common/chat.cpp
 @@ -7,9 +7,6 @@
@@ -96,10 +96,10 @@ index 8bd4a325f..333b3301f 100644
  struct common_chat_tool_call {
      std::string name;
 diff --git a/src/llama.cpp/common/common.cpp b/src/llama.cpp/common/common.cpp
-index 79c475612..cf189f8bc 100644
+index 41b2b6833..fe9ba05aa 100644
 --- a/src/llama.cpp/common/common.cpp
 +++ b/src/llama.cpp/common/common.cpp
-@@ -1342,6 +1342,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
+@@ -1361,6 +1361,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
          mparams.devices = params.devices.data();
      }
  
@@ -108,10 +108,10 @@ index 79c475612..cf189f8bc 100644
      mparams.main_gpu        = params.main_gpu;
      mparams.split_mode      = params.split_mode;
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index f8bc686b6..555ba044a 100644
+index d6fd0d37a..477209ce5 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
-@@ -307,6 +307,7 @@ struct lr_opt {
+@@ -310,6 +310,7 @@ struct lr_opt {
  struct ggml_opt_optimizer_params common_opt_lr_pars(void * userdata);
  
  struct common_params {
@@ -133,10 +133,10 @@ index 7622d0bf4..d2edcfddb 100644
              check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
              if (NOT "${GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E}" STREQUAL "")
 diff --git a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-index 13b96d61f..5fa163442 100644
+index 365a24b49..83bf4ee62 100644
 --- a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
 +++ b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-@@ -2680,9 +2680,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
+@@ -2798,9 +2798,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
      GGML_UNUSED(dev);
  }
  
@@ -163,7 +163,7 @@ index 13b96d61f..5fa163442 100644
      *total = *free;
  
      GGML_UNUSED(dev);
-@@ -2879,10 +2894,17 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+@@ -3010,10 +3025,17 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
          }
      }
  
@@ -185,7 +185,7 @@ index 13b96d61f..5fa163442 100644
  
      GGML_LOG_INFO("ggml-hex: Hexagon Arch version v%d\n", opt_arch);
  
-@@ -2895,6 +2917,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+@@ -3026,6 +3048,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
          } catch (const std::exception & exc) {
              GGML_LOG_ERROR("ggml-hex: failed to create device/session %zu\n", i);
              devices[i].context = nullptr;
