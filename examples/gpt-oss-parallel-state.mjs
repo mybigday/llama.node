@@ -53,7 +53,7 @@ console.log('Loading model...')
 const model = await loadModel(
   {
     model: import.meta
-      .resolve('./gpt-oss-20b-mxfp4.gguf')
+      .resolve('./Nemotron-3-Nano-30B-A3B-Q4_0.gguf')
       .replace('file://', ''),
     n_ctx: 8192,
     n_gpu_layers: 99,
