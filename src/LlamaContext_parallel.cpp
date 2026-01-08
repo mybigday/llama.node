@@ -286,6 +286,7 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
   // Handle state management parameters
   std::string load_state_path = get_option<std::string>(options, "load_state_path", "");
   std::string save_state_path = get_option<std::string>(options, "save_state_path", "");
+  std::string save_prompt_state_path = get_option<std::string>(options, "save_prompt_state_path", "");
   int32_t load_state_size = get_option<int32_t>(options, "load_state_size", -1);
   int32_t save_state_size = get_option<int32_t>(options, "save_state_size", -1);
 
@@ -391,6 +392,7 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
     prefill_text,
     load_state_path,
     save_state_path,
+    save_prompt_state_path,
     load_state_size,
     save_state_size,
     [tsfn, hasCallback, chat_format, thinking_forced_open, context_valid, slot_manager](const completion_token_output& token) {
