@@ -96,7 +96,7 @@ console.log(
 // Pre-tokenize all prompts SEQUENTIALLY to avoid lock contention
 console.log('Pre-tokenizing all prompts...')
 const modelPath = import.meta
-  .resolve('./gpt-oss-20b-mxfp4.gguf')
+  .resolve('./Nemotron-3-Nano-30B-A3B-Q4_0.gguf')
   .replace('file://', '')
 const preTokenizedPrompts = []
 
