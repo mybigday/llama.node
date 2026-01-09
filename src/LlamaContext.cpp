@@ -595,6 +595,8 @@ Napi::Value LlamaContext::GetModelInfo(const Napi::CallbackInfo &info) {
   details.Set("nEmbd", llama_model_n_embd(model));
   details.Set("nParams", llama_model_n_params(model));
   details.Set("size", llama_model_size(model));
+  details.Set("is_recurrent", llama_model_is_recurrent(model));
+  details.Set("is_hybrid", llama_model_is_hybrid(model));
 
   Napi::Object chatTemplates = Napi::Object::New(info.Env());
   chatTemplates.Set("llamaChat", _rn_ctx->validateModelChatTemplate(false, nullptr));

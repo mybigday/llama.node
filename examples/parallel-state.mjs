@@ -70,6 +70,9 @@ const model = await loadModel(
   },
 )
 
+const modelInfo = model.getModelInfo()
+const usePromptState = modelInfo.is_recurrent || modelInfo.is_hybrid
+
 console.log('Enabling parallel mode...')
 await model.parallel.enable({
   n_parallel: 4,
@@ -78,7 +81,7 @@ await model.parallel.enable({
 
 console.log('\n=== Parallel Completion with State Management Demo ===\n')
 console.log(
-  'This demo shows how to use load_state_path and save_state_path to cache',
+  'This demo shows how to use load_state_path and prompt caching to reuse state',
 )
 console.log(
   'question-specific state. When a question is asked multiple times, the',
@@ -86,11 +89,14 @@ console.log(
 console.log(
   'state from the first request is reused, significantly improving performance.\n',
 )
+console.log(
+  `Model recurrent/hybrid: ${usePromptState ? 'yes' : 'no'} (using ${usePromptState ? 'save_prompt_state_path' : 'save_state_path'})\n`,
+)
 
 // Pre-tokenize all prompts SEQUENTIALLY to avoid lock contention
 console.log('Pre-tokenizing all prompts...')
 const modelPath = import.meta
-  .resolve('./gpt-oss-20b-mxfp4.gguf')
+  .resolve('./Nemotron-3-Nano-30B-A3B-Q4_0.gguf')
   .replace('file://', '')
 const preTokenizedPrompts = []
 
@@ -171,13 +177,18 @@ const requests = preTokenizedPrompts.map(
         {
           messages,
           reasoning_format: 'auto',
-          n_predict: 50,
+          n_predict: 1024,
           temperature: 0.7,
           // State management parameters
           load_state_path: loadStatePath,
-          save_state_path: questionTokenCount > 0 ? statePath : undefined,
+          save_prompt_state_path:
+            usePromptState && questionTokenCount > 0 ? statePath : undefined,
+          save_state_path:
+            !usePromptState && questionTokenCount > 0 ? statePath : undefined,
           save_state_size:
-            questionTokenCount > 0 ? questionTokenCount : undefined,
+            !usePromptState && questionTokenCount > 0
+              ? questionTokenCount
+              : undefined,
         },
         (_requestId, data) => {
           // Stream tokens (optional)

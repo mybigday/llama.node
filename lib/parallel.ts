@@ -1,10 +1,10 @@
 // Parallel decoding API implementation for llama.node
 import type {
   LlamaContext,
-  LlamaCompletionOptions,
   LlamaCompletionToken,
   RerankParams,
   ParallelStatus,
+  LlamaParallelCompletionOptions,
 } from './binding'
 import { formatMediaChat } from './utils'
 
@@ -68,7 +68,7 @@ export class LlamaParallelAPI {
    * @returns Object with requestId, promise for result, and stop function
    */
   async completion(
-    options: LlamaCompletionOptions,
+    options: LlamaParallelCompletionOptions,
     onToken?: (requestId: number, data: LlamaCompletionToken) => void,
   ): Promise<{
     requestId: number

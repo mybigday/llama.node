@@ -37,6 +37,8 @@ exports[`basic completion: model info 1`] = `
   },
   "desc": "llama ?B Q4_0",
   "isChatTemplateSupported": false,
+  "is_hybrid": false,
+  "is_recurrent": false,
   "metadata": {
     "general.architecture": "llama",
     "general.basename": "Llama-3.2",
@@ -350,6 +352,8 @@ exports[`works fine with vocab_only: model info 1`] = `
   },
   "desc": "",
   "isChatTemplateSupported": false,
+  "is_hybrid": false,
+  "is_recurrent": false,
   "metadata": {
     "general.architecture": "llama",
     "general.basename": "Llama-3.2",
