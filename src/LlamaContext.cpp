@@ -703,6 +703,7 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
         get_option<bool>(params, "parallel_tool_calls", false);
     auto tool_choice = get_option<std::string>(params, "tool_choice", "");
     auto enable_thinking = get_option<bool>(params, "enable_thinking", false);
+    auto reasoning_format = get_option<std::string>(params, "reasoning_format", "none");
     auto add_generation_prompt = get_option<bool>(params, "add_generation_prompt", true);
     auto now_str = get_option<std::string>(params, "now", "");
 
@@ -721,7 +722,7 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
     try {
       chatParams = _rn_ctx->getFormattedChatWithJinja(
           messages, chat_template, json_schema_str, tools_str,
-          parallel_tool_calls, tool_choice, enable_thinking,
+          parallel_tool_calls, tool_choice, enable_thinking, reasoning_format,
           add_generation_prompt, now_str, chat_template_kwargs);
     } catch (const nlohmann::json_abi_v3_12_0::detail::parse_error& e) {
       Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
@@ -962,7 +963,7 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
       try {
         chatParams = _rn_ctx->getFormattedChatWithJinja(
             json_stringify(messages), chat_template,
-            json_schema_str, tools_str, parallel_tool_calls, tool_choice, enable_thinking,
+            json_schema_str, tools_str, parallel_tool_calls, tool_choice, enable_thinking, reasoning_format,
             add_generation_prompt, now_str, chat_template_kwargs);
       } catch (const std::exception &e) {
         Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
