@@ -163,7 +163,7 @@ char ::= [^"\\\\\\x7F\\x00-\\x1F] | [\\\\] (["\\\\bfnrt] | "u" [0-9a-fA-F]{4})
 root ::= tool-call
 space ::= | " " | "\\n"{1,2} [ \\t]{0,20}
 string ::= "\\"" char* "\\"" space
-tool-call ::= calc-function-tag | wrappable-tool-call | ( "\`\`\`\\n" | "\`\`\`json\\n" | "\`\`\`xml\\n" ) space wrappable-tool-call space "\`\`\`" space
+tool-call ::= calc-function-tag | wrappable-tool-call | ( "\`\`\`\\n" | "\`\`\`json\\n" | "\`\`\`xml\\n" ) space wrappable-tool-call space "\`\`\`" space 
 wrappable-tool-call ::= ( any-tool-call | "<tool_call>" space any-tool-call "</tool_call>" | "<function_call>" space any-tool-call "</function_call>" | "<response>"  space any-tool-call "</response>" | "<tools>"     space any-tool-call "</tools>" | "<json>"      space any-tool-call "</json>" | "<xml>"      space any-tool-call "</xml>" | "<JSON>"      space any-tool-call "</JSON>" ) space
 ",
   "grammar_lazy": true,
