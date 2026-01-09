@@ -118,6 +118,7 @@ class LlamaContextWrapper {
       parallel_tool_calls?: boolean
       tool_choice?: string
       enable_thinking?: boolean
+      reasoning_format?: 'none' | 'auto' | 'deepseek'
       add_generation_prompt?: boolean
       now?: string | number
       chat_template_kwargs?: Record<string, string>
@@ -136,6 +137,7 @@ class LlamaContextWrapper {
       parallel_tool_calls: params?.parallel_tool_calls,
       tool_choice: params?.tool_choice,
       enable_thinking: params?.enable_thinking ?? true,
+      reasoning_format: params?.reasoning_format ?? 'none',
       add_generation_prompt: params?.add_generation_prompt,
       now: params?.now,
       chat_template_kwargs: params?.chat_template_kwargs

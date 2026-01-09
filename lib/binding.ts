@@ -112,7 +112,7 @@ export type CompletionResponseFormat = {
 export type LlamaCompletionOptions = {
   messages?: ChatMessage[]
   jinja?: boolean
-  reasoning_format?: string
+  reasoning_format?: 'none' | 'auto' | 'deepseek'
   chat_template?: string
   response_format?: CompletionResponseFormat
   tools?: Tool[]
@@ -484,6 +484,7 @@ export interface LlamaContext {
       parallel_tool_calls?: boolean
       tool_choice?: string
       enable_thinking?: boolean
+      reasoning_format?: 'none' | 'auto' | 'deepseek'
       add_generation_prompt?: boolean
       now?: string | number
       chat_template_kwargs?: Record<string, string>

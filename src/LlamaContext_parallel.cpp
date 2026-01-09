@@ -209,6 +209,7 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
       auto tool_choice =
           get_option<std::string>(options, "tool_choice", "none");
       auto enable_thinking = get_option<bool>(options, "enable_thinking", true);
+      auto reasoning_format = get_option<std::string>(options, "reasoning_format", "none");
       auto add_generation_prompt = get_option<bool>(options, "add_generation_prompt", true);
       auto now_str = get_option<std::string>(options, "now", "");
 
@@ -228,7 +229,7 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
       try {
         chatParams = _rn_ctx->getFormattedChatWithJinja(
             json_stringify(messages), chat_template,
-            json_schema_str, tools_str, parallel_tool_calls, tool_choice, enable_thinking,
+            json_schema_str, tools_str, parallel_tool_calls, tool_choice, enable_thinking, reasoning_format,
             add_generation_prompt, now_str, chat_template_kwargs);
       } catch (const std::exception &e) {
         Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
