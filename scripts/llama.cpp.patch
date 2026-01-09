@@ -96,7 +96,7 @@ index 8bd4a325f..333b3301f 100644
  struct common_chat_tool_call {
      std::string name;
 diff --git a/src/llama.cpp/common/common.cpp b/src/llama.cpp/common/common.cpp
-index 41b2b6833..fe9ba05aa 100644
+index 744f0b4ee..04fcebb9e 100644
 --- a/src/llama.cpp/common/common.cpp
 +++ b/src/llama.cpp/common/common.cpp
 @@ -1361,6 +1361,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
@@ -108,7 +108,7 @@ index 41b2b6833..fe9ba05aa 100644
      mparams.main_gpu        = params.main_gpu;
      mparams.split_mode      = params.split_mode;
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index d6fd0d37a..477209ce5 100644
+index 7794c0268..5b77ae0c3 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
 @@ -310,6 +310,7 @@ struct lr_opt {
