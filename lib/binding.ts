@@ -515,9 +515,20 @@ export interface LlamaContext {
   /**
    * Initialize multimodal support with a mmproj file
    * @param options Object containing path and optional use_gpu flag
+   * @param options.path Path to the multimodal projector model file (mmproj)
+   * @param options.use_gpu Whether to use GPU for multimodal processing (default: true)
+   * @param options.image_min_tokens Minimum number of tokens for image input (for dynamic resolution models)
+   * @param options.image_max_tokens Maximum number of tokens for image input (for dynamic resolution models).
+   *                                  Lower values reduce memory usage and improve speed for high-resolution images.
+   *                                  Recommended: 256-512 for faster inference, up to 4096 for maximum detail.
    * @returns boolean indicating if initialization was successful
    */
-  initMultimodal(options: { path: string; use_gpu?: boolean }): boolean
+  initMultimodal(options: {
+    path: string
+    use_gpu?: boolean
+    image_min_tokens?: number
+    image_max_tokens?: number
+  }): boolean
 
   /**
    * Check if multimodal support is enabled

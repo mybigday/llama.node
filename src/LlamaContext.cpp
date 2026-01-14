@@ -1333,7 +1333,7 @@ extern "C" void cleanup_logging() {
 }
 
 
-// initMultimodal(options: { path: string, use_gpu?: boolean }): boolean
+// initMultimodal(options: { path: string, use_gpu?: boolean, image_min_tokens?: number, image_max_tokens?: number }): boolean
 Napi::Value LlamaContext::InitMultimodal(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
 
@@ -1345,6 +1345,15 @@ Napi::Value LlamaContext::InitMultimodal(const Napi::CallbackInfo &info) {
   auto options = info[0].As<Napi::Object>();
   auto mmproj_path = options.Get("path").ToString().Utf8Value();
   auto use_gpu = options.Get("use_gpu").ToBoolean().Value();
+  int image_min_tokens = -1;
+  int image_max_tokens = -1;
+
+  if (options.Has("image_min_tokens") && options.Get("image_min_tokens").IsNumber()) {
+    image_min_tokens = options.Get("image_min_tokens").ToNumber().Int32Value();
+  }
+  if (options.Has("image_max_tokens") && options.Get("image_max_tokens").IsNumber()) {
+    image_max_tokens = options.Get("image_max_tokens").ToNumber().Int32Value();
+  }
 
   if (mmproj_path.empty()) {
     Napi::TypeError::New(env, "mmproj path is required")
@@ -1360,7 +1369,7 @@ Napi::Value LlamaContext::InitMultimodal(const Napi::CallbackInfo &info) {
 
   // Disable ctx_shift before initializing multimodal
   _rn_ctx->params.ctx_shift = false;
-  bool result = _rn_ctx->initMultimodal(mmproj_path, use_gpu);
+  bool result = _rn_ctx->initMultimodal(mmproj_path, use_gpu, image_min_tokens, image_max_tokens);
   if (!result) {
     Napi::Error::New(env, "Failed to initialize multimodal context")
         .ThrowAsJavaScriptException();

@@ -254,7 +254,12 @@ class LlamaContextWrapper {
     return this.ctx.getLoadedLoraAdapters()
   }
 
-  initMultimodal(options: { path: string; use_gpu?: boolean }): boolean {
+  initMultimodal(options: {
+    path: string
+    use_gpu?: boolean
+    image_min_tokens?: number
+    image_max_tokens?: number
+  }): boolean {
     return this.ctx.initMultimodal(options)
   }
 
