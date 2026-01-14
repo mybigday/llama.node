@@ -1,8 +1,8 @@
 diff --git a/src/llama.cpp/common/CMakeLists.txt b/src/llama.cpp/common/CMakeLists.txt
-index f7b99159e..fa37fed19 100644
+index 55222bdf6..b1755972e 100644
 --- a/src/llama.cpp/common/CMakeLists.txt
 +++ b/src/llama.cpp/common/CMakeLists.txt
-@@ -154,8 +154,14 @@ if (LLAMA_LLGUIDANCE)
+@@ -154,4 +154,11 @@ if (LLAMA_LLGUIDANCE)
      set(LLAMA_COMMON_EXTRA_LIBS ${LLAMA_COMMON_EXTRA_LIBS} llguidance ${LLGUIDANCE_PLATFORM_LIBS})
  endif ()
  
@@ -13,11 +13,8 @@ index f7b99159e..fa37fed19 100644
 +else()
 +    set(LLAMA_COMMON_WIN_LIBS "")
 +endif()
- 
++
 +target_link_libraries(${TARGET} PRIVATE ${LLAMA_COMMON_EXTRA_LIBS} ${LLAMA_COMMON_WIN_LIBS} PUBLIC llama Threads::Threads)
- 
- #
- # copy the license files
 diff --git a/src/llama.cpp/common/chat-peg-parser.cpp b/src/llama.cpp/common/chat-peg-parser.cpp
 index 1bcba9cd8..b7cd68734 100644
 --- a/src/llama.cpp/common/chat-peg-parser.cpp
@@ -32,7 +29,7 @@ index 1bcba9cd8..b7cd68734 100644
  static std::string_view trim_trailing_space(std::string_view sv, int max = -1) {
      int count = 0;
 diff --git a/src/llama.cpp/common/chat.cpp b/src/llama.cpp/common/chat.cpp
-index 22e527bab..c3d0affca 100644
+index d531388bc..e6712b368 100644
 --- a/src/llama.cpp/common/chat.cpp
 +++ b/src/llama.cpp/common/chat.cpp
 @@ -7,9 +7,6 @@
@@ -62,7 +59,7 @@ index 22e527bab..c3d0affca 100644
  struct templates_params {
      json messages;
      json tools;
-@@ -752,7 +739,7 @@ static std::string apply(
+@@ -753,7 +740,7 @@ static std::string apply(
          tmpl_inputs.extra_context.merge_patch(*additional_context);
      }
      // TODO: add flag to control date/time, if only for testing purposes.
@@ -72,7 +69,7 @@ index 22e527bab..c3d0affca 100644
      minja::chat_template_options tmpl_opts;
      // To avoid double BOS / EOS tokens, we're manually removing begining / trailing tokens
 diff --git a/src/llama.cpp/common/chat.h b/src/llama.cpp/common/chat.h
-index 8bd4a325f..333b3301f 100644
+index 454085e90..e01390cf9 100644
 --- a/src/llama.cpp/common/chat.h
 +++ b/src/llama.cpp/common/chat.h
 @@ -10,7 +10,18 @@
@@ -108,10 +105,10 @@ index 744f0b4ee..04fcebb9e 100644
      mparams.main_gpu        = params.main_gpu;
      mparams.split_mode      = params.split_mode;
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index 7794c0268..5b77ae0c3 100644
+index e60087dea..c21797cd8 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
-@@ -310,6 +310,7 @@ struct lr_opt {
+@@ -311,6 +311,7 @@ struct lr_opt {
  struct ggml_opt_optimizer_params common_opt_lr_pars(void * userdata);
  
  struct common_params {
