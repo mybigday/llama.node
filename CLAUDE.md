@@ -141,7 +141,7 @@ Images and audio are handled via the MTMD (multimodal) wrapper:
 
 Two template engines are supported:
 - **llama-chat**: Classic llama.cpp chat formatting
-- **Jinja**: Full Jinja2 template support via minja
+- **Jinja**: Full Jinja2 template support via llama.cpp's jinja engine
   - Supports tool calling, reasoning, response formats
   - Automatically handles grammar generation for JSON schemas
 

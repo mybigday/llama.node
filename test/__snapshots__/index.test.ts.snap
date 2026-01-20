@@ -21,19 +21,17 @@ exports[`basic completion 1`] = `
 exports[`basic completion: model info 1`] = `
 {
   "chatTemplates": {
-    "llamaChat": false,
-    "minja": {
+    "jinja": {
       "default": false,
       "defaultCaps": {
         "parallelToolCalls": false,
         "systemRole": true,
-        "toolCallId": false,
         "toolCalls": false,
-        "toolResponses": false,
         "tools": false,
       },
       "toolUse": false,
     },
+    "llamaChat": false,
   },
   "desc": "llama ?B Q4_0",
   "isChatTemplateSupported": false,
@@ -336,19 +334,17 @@ exports[`works fine with vocab_only: empty result 1`] = `
 exports[`works fine with vocab_only: model info 1`] = `
 {
   "chatTemplates": {
-    "llamaChat": false,
-    "minja": {
+    "jinja": {
       "default": false,
       "defaultCaps": {
         "parallelToolCalls": false,
         "systemRole": true,
-        "toolCallId": false,
         "toolCalls": false,
-        "toolResponses": false,
         "tools": false,
       },
       "toolUse": false,
     },
+    "llamaChat": false,
   },
   "desc": "",
   "isChatTemplateSupported": false,

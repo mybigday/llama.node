@@ -1,8 +1,8 @@
 diff --git a/src/llama.cpp/common/CMakeLists.txt b/src/llama.cpp/common/CMakeLists.txt
-index 723973ed7..e4b2c6537 100644
+index ae02c0bd7..f74d8bb26 100644
 --- a/src/llama.cpp/common/CMakeLists.txt
 +++ b/src/llama.cpp/common/CMakeLists.txt
-@@ -146,4 +146,11 @@ if (LLAMA_LLGUIDANCE)
+@@ -158,4 +158,11 @@ if (LLAMA_LLGUIDANCE)
      set(LLAMA_COMMON_EXTRA_LIBS ${LLAMA_COMMON_EXTRA_LIBS} llguidance ${LLGUIDANCE_PLATFORM_LIBS})
  endif ()
  
@@ -29,74 +29,89 @@ index 1bcba9cd8..b7cd68734 100644
  static std::string_view trim_trailing_space(std::string_view sv, int max = -1) {
      int count = 0;
 diff --git a/src/llama.cpp/common/chat.cpp b/src/llama.cpp/common/chat.cpp
-index d531388bc..e6712b368 100644
+index b29544dac..5fa2c6c17 100644
 --- a/src/llama.cpp/common/chat.cpp
 +++ b/src/llama.cpp/common/chat.cpp
-@@ -7,9 +7,6 @@
- #include "log.h"
- #include "regex-partial.h"
- 
--#include <minja/chat-template.hpp>
--#include <minja/minja.hpp>
--
- #include <algorithm>
- #include <cstdio>
- #include <cctype>
-@@ -135,16 +132,6 @@ std::vector<common_chat_msg_diff> common_chat_msg_diff::compute_diffs(const comm
-     return diffs;
+@@ -615,6 +615,37 @@ std::string common_chat_templates_source(const struct common_chat_templates * tm
+     return tmpls->template_default->source();
  }
  
--typedef minja::chat_template common_chat_template;
--
--struct common_chat_templates {
--    bool add_bos;
--    bool add_eos;
--    bool has_explicit_template; // Model had builtin template or template overridde was specified.
--    std::unique_ptr<common_chat_template> template_default; // always set (defaults to chatml)
--    std::unique_ptr<common_chat_template> template_tool_use;
--};
--
- struct templates_params {
-     json messages;
-     json tools;
-@@ -753,7 +740,7 @@ static std::string apply(
-         tmpl_inputs.extra_context.merge_patch(*additional_context);
++common_chat_template_caps common_chat_templates_get_caps(const struct common_chat_templates * tmpls, const std::string & variant) {
++    common_chat_template_caps result;
++    const common_chat_template * tmpl = nullptr;
++
++    if (!variant.empty() && variant == "tool_use") {
++        tmpl = tmpls->template_tool_use.get();
++    } else {
++        tmpl = tmpls->template_default.get();
++    }
++
++    if (tmpl) {
++        auto caps = tmpl->original_caps();
++        result.supports_tools = caps.supports_tools;
++        result.supports_tool_calls = caps.supports_tool_calls;
++        result.supports_system_role = caps.supports_system_role;
++        result.supports_parallel_tool_calls = caps.supports_parallel_tool_calls;
++    }
++
++    return result;
++}
++
++bool common_chat_templates_has_variant(const struct common_chat_templates * tmpls, const std::string & variant) {
++    if (variant.empty() || variant == "default") {
++        return tmpls->template_default != nullptr;
++    }
++    if (variant == "tool_use") {
++        return tmpls->template_tool_use != nullptr;
++    }
++    return false;
++}
++
+ common_chat_templates_ptr common_chat_templates_init(
+     const struct llama_model * model,
+     const std::string & chat_template_override,
+@@ -831,8 +862,9 @@ static std::string apply(
+     if (inputs.add_generation_prompt) {
+         inp["add_generation_prompt"] = true;
      }
-     // TODO: add flag to control date/time, if only for testing purposes.
--    // tmpl_inputs.now = std::chrono::system_clock::now();
-+    tmpl_inputs.now = inputs.now;
+-    if (inp["tools"].is_null()) {
+-        inp["tools"] = json::array();
++    // Remove tools key when null, so templates can check "{% if tools is defined %}"
++    if (inp["tools"].is_null() || (inp["tools"].is_array() && inp["tools"].empty())) {
++        inp.erase("tools");
+     }
  
-     minja::chat_template_options tmpl_opts;
-     // To avoid double BOS / EOS tokens, we're manually removing begining / trailing tokens
+     jinja::global_from_json(ctx, inp, inputs.mark_input);
 diff --git a/src/llama.cpp/common/chat.h b/src/llama.cpp/common/chat.h
-index 454085e90..e01390cf9 100644
+index 148801738..0317f1ab1 100644
 --- a/src/llama.cpp/common/chat.h
 +++ b/src/llama.cpp/common/chat.h
-@@ -10,7 +10,18 @@
- #include <vector>
- #include <map>
+@@ -222,6 +222,20 @@ common_chat_tool_choice common_chat_tool_choice_parse_oaicompat(const std::strin
  
--struct common_chat_templates;
-+#include "minja/chat-template.hpp"
-+#include "minja/minja.hpp"
-+
-+typedef minja::chat_template common_chat_template;
-+
-+struct common_chat_templates {
-+    bool add_bos;
-+    bool add_eos;
-+    bool has_explicit_template; // Model had builtin template or template overridde was specified.
-+    std::unique_ptr<common_chat_template> template_default; // always set (defaults to chatml)
-+    std::unique_ptr<common_chat_template> template_tool_use;
+ bool common_chat_templates_support_enable_thinking(const common_chat_templates * chat_templates);
+ 
++// Template capabilities structure (for exposing capabilities to external code)
++struct common_chat_template_caps {
++    bool supports_tools = true;
++    bool supports_tool_calls = true;
++    bool supports_system_role = true;
++    bool supports_parallel_tool_calls = true;
 +};
- 
- struct common_chat_tool_call {
-     std::string name;
++
++// Get template capabilities for a specific variant ("" for default, "tool_use" for tool_use template)
++common_chat_template_caps common_chat_templates_get_caps(const struct common_chat_templates * tmpls, const std::string & variant = "");
++
++// Check if a template variant exists
++bool common_chat_templates_has_variant(const struct common_chat_templates * tmpls, const std::string & variant);
++
+ // Parses a JSON array of messages in OpenAI's chat completion API format.
+ // T can be std::string containing JSON or nlohmann::ordered_json
+ template <class T> std::vector<common_chat_msg> common_chat_msgs_parse_oaicompat(const T & messages);
 diff --git a/src/llama.cpp/common/common.cpp b/src/llama.cpp/common/common.cpp
-index 744f0b4ee..04fcebb9e 100644
+index 26250abb6..72ceddcc7 100644
 --- a/src/llama.cpp/common/common.cpp
 +++ b/src/llama.cpp/common/common.cpp
-@@ -1361,6 +1361,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
+@@ -1360,6 +1360,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
          mparams.devices = params.devices.data();
      }
  
@@ -105,10 +120,10 @@ index 744f0b4ee..04fcebb9e 100644
      mparams.main_gpu        = params.main_gpu;
      mparams.split_mode      = params.split_mode;
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index e60087dea..c21797cd8 100644
+index b9566df62..c9425ad2f 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
-@@ -311,6 +311,7 @@ struct lr_opt {
+@@ -314,6 +314,7 @@ struct lr_opt {
  struct ggml_opt_optimizer_params common_opt_lr_pars(void * userdata);
  
  struct common_params {
@@ -130,10 +145,10 @@ index 7622d0bf4..d2edcfddb 100644
              check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
              if (NOT "${GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E}" STREQUAL "")
 diff --git a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-index 365a24b49..83bf4ee62 100644
+index 5b835c11c..681c00504 100644
 --- a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
 +++ b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-@@ -2798,9 +2798,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
+@@ -2819,9 +2819,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
      GGML_UNUSED(dev);
  }
  
@@ -160,7 +175,7 @@ index 365a24b49..83bf4ee62 100644
      *total = *free;
  
      GGML_UNUSED(dev);
-@@ -3010,10 +3025,17 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+@@ -3056,10 +3071,17 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
          }
      }
  
@@ -182,7 +197,7 @@ index 365a24b49..83bf4ee62 100644
  
      GGML_LOG_INFO("ggml-hex: Hexagon Arch version v%d\n", opt_arch);
  
-@@ -3026,6 +3048,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+@@ -3072,6 +3094,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
          } catch (const std::exception & exc) {
              GGML_LOG_ERROR("ggml-hex: failed to create device/session %zu\n", i);
              devices[i].context = nullptr;

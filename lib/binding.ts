@@ -374,24 +374,20 @@ export type ModelInfo = {
   is_hybrid: boolean
   chatTemplates: {
     llamaChat: boolean
-    minja: {
+    jinja: {
       default: boolean
       defaultCaps: {
         tools: boolean
         toolCalls: boolean
-        toolResponses: boolean
         systemRole: boolean
         parallelToolCalls: boolean
-        toolCallId: boolean
       }
       toolUse: boolean
       toolUseCaps?: {
         tools: boolean
         toolCalls: boolean
-        toolResponses: boolean
         systemRole: boolean
         parallelToolCalls: boolean
-        toolCallId: boolean
       }
     }
   }

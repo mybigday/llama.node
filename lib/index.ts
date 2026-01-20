@@ -100,8 +100,8 @@ class LlamaContextWrapper {
   }
 
   isJinjaSupported(): boolean {
-    const { minja } = this.ctx.getModelInfo().chatTemplates
-    return !!minja?.toolUse || !!minja?.default
+    const { jinja } = this.ctx.getModelInfo().chatTemplates
+    return !!jinja?.toolUse || !!jinja?.default
   }
 
   isLlamaChatSupported(): boolean {

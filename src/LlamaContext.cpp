@@ -10,6 +10,7 @@
 #include "DecodeAudioTokenWorker.h"
 #include "ggml.h"
 #include "gguf.h"
+#include "chat.h"
 #include "json-schema-to-grammar.h"
 #include <nlohmann/json.hpp>
 #include "llama-impl.h"
@@ -600,40 +601,27 @@ Napi::Value LlamaContext::GetModelInfo(const Napi::CallbackInfo &info) {
 
   Napi::Object chatTemplates = Napi::Object::New(info.Env());
   chatTemplates.Set("llamaChat", _rn_ctx->validateModelChatTemplate(false, nullptr));
-  Napi::Object minja = Napi::Object::New(info.Env());
-  minja.Set("default", _rn_ctx->validateModelChatTemplate(true, nullptr));
+  Napi::Object jinja = Napi::Object::New(info.Env());
+  jinja.Set("default", _rn_ctx->validateModelChatTemplate(true, nullptr));
   Napi::Object defaultCaps = Napi::Object::New(info.Env());
-  auto default_tmpl = _rn_ctx->templates.get()->template_default.get();
-  auto default_tmpl_caps = default_tmpl->original_caps();
-  defaultCaps.Set(
-      "tools",
-      default_tmpl_caps.supports_tools);
-  defaultCaps.Set(
-      "toolCalls",
-      default_tmpl_caps.supports_tool_calls);
-  defaultCaps.Set("toolResponses", default_tmpl_caps.supports_tool_responses);
-  defaultCaps.Set(
-      "systemRole",
-      default_tmpl_caps.supports_system_role);
-  defaultCaps.Set("parallelToolCalls", default_tmpl_caps.supports_parallel_tool_calls);
-  defaultCaps.Set("toolCallId", default_tmpl_caps.supports_tool_call_id);
-  minja.Set("defaultCaps", defaultCaps);
-  minja.Set("toolUse", _rn_ctx->validateModelChatTemplate(true, "tool_use"));
-  if (_rn_ctx->validateModelChatTemplate(true, "tool_use")) {
+  auto default_caps = common_chat_templates_get_caps(_rn_ctx->templates.get(), "");
+  defaultCaps.Set("tools", default_caps.supports_tools);
+  defaultCaps.Set("toolCalls", default_caps.supports_tool_calls);
+  defaultCaps.Set("systemRole", default_caps.supports_system_role);
+  defaultCaps.Set("parallelToolCalls", default_caps.supports_parallel_tool_calls);
+  jinja.Set("defaultCaps", defaultCaps);
+  bool hasToolUse = common_chat_templates_has_variant(_rn_ctx->templates.get(), "tool_use");
+  jinja.Set("toolUse", hasToolUse);
+  if (hasToolUse) {
     Napi::Object toolUseCaps = Napi::Object::New(info.Env());
-    auto tool_use_tmpl = _rn_ctx->templates.get()->template_tool_use.get();
-    auto tool_use_tmpl_caps = tool_use_tmpl->original_caps();
-    toolUseCaps.Set(
-        "tools",
-        tool_use_tmpl_caps.supports_tools);
-    toolUseCaps.Set("toolCalls", tool_use_tmpl_caps.supports_tool_calls);
-    toolUseCaps.Set("toolResponses", tool_use_tmpl_caps.supports_tool_responses);
-    toolUseCaps.Set("systemRole", tool_use_tmpl_caps.supports_system_role);
-    toolUseCaps.Set("parallelToolCalls", tool_use_tmpl_caps.supports_parallel_tool_calls);
-    toolUseCaps.Set("toolCallId", tool_use_tmpl_caps.supports_tool_call_id);
-    minja.Set("toolUseCaps", toolUseCaps);
+    auto tool_use_caps = common_chat_templates_get_caps(_rn_ctx->templates.get(), "tool_use");
+    toolUseCaps.Set("tools", tool_use_caps.supports_tools);
+    toolUseCaps.Set("toolCalls", tool_use_caps.supports_tool_calls);
+    toolUseCaps.Set("systemRole", tool_use_caps.supports_system_role);
+    toolUseCaps.Set("parallelToolCalls", tool_use_caps.supports_parallel_tool_calls);
+    jinja.Set("toolUseCaps", toolUseCaps);
   }
-  chatTemplates.Set("minja", minja);
+  chatTemplates.Set("jinja", jinja);
   details.Set("chatTemplates", chatTemplates);
 
   details.Set("metadata", metadata);
