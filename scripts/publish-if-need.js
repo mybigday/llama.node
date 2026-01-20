@@ -29,7 +29,10 @@ try {
 
 if (remoteVersion !== localVersion) {
   console.log(`${packageJson.name}@${localVersion} is not published, publishing...`);
-  execSync(`npm publish`, {
+  // Detect prerelease versions (e.g., 1.5.0-rc.0, 1.0.0-beta.1)
+  const prereleaseMatch = localVersion.match(/-([a-zA-Z]+)/);
+  const tag = prereleaseMatch ? prereleaseMatch[1] : 'latest';
+  execSync(`npm publish --tag ${tag}`, {
     cwd: packageDir,
     stdio: 'inherit',
     shell,
