@@ -1,6 +1,6 @@
 {
   "name": "@fugood/node-llama-darwin-arm64",
-  "version": "1.4.15",
+  "version": "1.5.0-rc.0",
   "description": "Native module for An another Node binding of llama.cpp (darwin-arm64)",
   "main": "index.node",
   "os": [
