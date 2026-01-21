@@ -1,7 +1,7 @@
 {
   "name": "@fugood/llama.node",
   "access": "public",
-  "version": "1.5.0-rc.0",
+  "version": "1.6.0-rc.0",
   "description": "An another Node binding of llama.cpp",
   "main": "lib/index.js",
   "scripts": {
@@ -72,20 +72,20 @@
     "CMakeLists.txt"
   ],
   "optionalDependencies": {
-    "@fugood/node-llama-darwin-arm64": "1.5.0-rc.0",
-    "@fugood/node-llama-darwin-x64": "1.5.0-rc.0",
-    "@fugood/node-llama-linux-arm64": "1.5.0-rc.0",
-    "@fugood/node-llama-linux-arm64-cuda": "1.5.0-rc.0",
-    "@fugood/node-llama-linux-arm64-snapdragon": "1.5.0-rc.0",
-    "@fugood/node-llama-linux-arm64-vulkan": "1.5.0-rc.0",
-    "@fugood/node-llama-linux-x64": "1.5.0-rc.0",
-    "@fugood/node-llama-linux-x64-cuda": "1.5.0-rc.0",
-    "@fugood/node-llama-linux-x64-vulkan": "1.5.0-rc.0",
-    "@fugood/node-llama-win32-arm64": "1.5.0-rc.0",
-    "@fugood/node-llama-win32-arm64-vulkan": "1.5.0-rc.0",
-    "@fugood/node-llama-win32-x64": "1.5.0-rc.0",
-    "@fugood/node-llama-win32-x64-cuda": "1.5.0-rc.0",
-    "@fugood/node-llama-win32-x64-vulkan": "1.5.0-rc.0"
+    "@fugood/node-llama-darwin-arm64": "1.6.0-rc.0",
+    "@fugood/node-llama-darwin-x64": "1.6.0-rc.0",
+    "@fugood/node-llama-linux-arm64": "1.6.0-rc.0",
+    "@fugood/node-llama-linux-arm64-cuda": "1.6.0-rc.0",
+    "@fugood/node-llama-linux-arm64-snapdragon": "1.6.0-rc.0",
+    "@fugood/node-llama-linux-arm64-vulkan": "1.6.0-rc.0",
+    "@fugood/node-llama-linux-x64": "1.6.0-rc.0",
+    "@fugood/node-llama-linux-x64-cuda": "1.6.0-rc.0",
+    "@fugood/node-llama-linux-x64-vulkan": "1.6.0-rc.0",
+    "@fugood/node-llama-win32-arm64": "1.6.0-rc.0",
+    "@fugood/node-llama-win32-arm64-vulkan": "1.6.0-rc.0",
+    "@fugood/node-llama-win32-x64": "1.6.0-rc.0",
+    "@fugood/node-llama-win32-x64-cuda": "1.6.0-rc.0",
+    "@fugood/node-llama-win32-x64-vulkan": "1.6.0-rc.0"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.24.4",
