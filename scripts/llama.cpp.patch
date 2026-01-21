@@ -83,10 +83,10 @@ index b29544dac..5fa2c6c17 100644
  
      jinja::global_from_json(ctx, inp, inputs.mark_input);
 diff --git a/src/llama.cpp/common/chat.h b/src/llama.cpp/common/chat.h
-index 148801738..0317f1ab1 100644
+index ac19348ec..f6f9f612f 100644
 --- a/src/llama.cpp/common/chat.h
 +++ b/src/llama.cpp/common/chat.h
-@@ -222,6 +222,20 @@ common_chat_tool_choice common_chat_tool_choice_parse_oaicompat(const std::strin
+@@ -231,6 +231,20 @@ common_chat_tool_choice common_chat_tool_choice_parse_oaicompat(const std::strin
  
  bool common_chat_templates_support_enable_thinking(const common_chat_templates * chat_templates);
  
@@ -120,10 +120,10 @@ index 26250abb6..72ceddcc7 100644
      mparams.main_gpu        = params.main_gpu;
      mparams.split_mode      = params.split_mode;
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index b9566df62..c9425ad2f 100644
+index 96c990c05..c0b0b3093 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
-@@ -314,6 +314,7 @@ struct lr_opt {
+@@ -317,6 +317,7 @@ struct lr_opt {
  struct ggml_opt_optimizer_params common_opt_lr_pars(void * userdata);
  
  struct common_params {
