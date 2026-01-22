@@ -1,6 +1,6 @@
 {
   "name": "@fugood/node-llama-linux-arm64-cuda",
-  "version": "1.6.0-rc.0",
+  "version": "1.6.0-rc.1",
   "description": "Native module for An another Node binding of llama.cpp (linux-arm64-cuda)",
   "main": "index.node",
   "os": [
