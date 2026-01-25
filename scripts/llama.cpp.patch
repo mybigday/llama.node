@@ -83,7 +83,7 @@ index 1bcba9cd8..b7cd68734 100644
  static std::string_view trim_trailing_space(std::string_view sv, int max = -1) {
      int count = 0;
 diff --git a/src/llama.cpp/common/chat.cpp b/src/llama.cpp/common/chat.cpp
-index b29544dac..52bfa0e20 100644
+index b29544dac..745cad307 100644
 --- a/src/llama.cpp/common/chat.cpp
 +++ b/src/llama.cpp/common/chat.cpp
 @@ -615,6 +615,37 @@ std::string common_chat_templates_source(const struct common_chat_templates * tm
@@ -144,7 +144,56 @@ index b29544dac..52bfa0e20 100644
      }
  
      jinja::global_from_json(ctx, inp, inputs.mark_input);
-@@ -2761,6 +2794,43 @@ static common_chat_params common_chat_params_init_seed_oss(
+@@ -2691,6 +2724,48 @@ static common_chat_params common_chat_params_init_exaone_moe(const common_chat_t
+     return data;
+ }
+ 
++static common_chat_params common_chat_params_init_translate_gemma(const common_chat_template & tmpl, const struct templates_params & inputs) {
++    common_chat_params data;
++
++    // This template does not support tools or reasoning
++    // we just need to transform the messages into the correct schema
++
++    // default to chat_template_kwargs, or en-GB if not specified
++    std::string default_src_lang = inputs.extra_context.value("source_lang_code", "en-GB");
++    std::string default_tgt_lang = inputs.extra_context.value("target_lang_code", "en-GB");
++
++    templates_params inputs_new = inputs;
++    json & messages = inputs_new.messages;
++
++    GGML_ASSERT(messages.is_array());
++    for (auto & message : messages) {
++        if (message.contains("role") && message["role"].get<std::string>() != "user") {
++            continue;
++        }
++        if (!message.contains("content")) {
++            message["content"] = json::array();
++        }
++        if (message.contains("content") && !message["content"].is_array()) {
++            auto content_str = message["content"].get<std::string>();
++            auto src_lang = message.contains("source_lang_code") ? message["source_lang_code"].get<std::string>() : default_src_lang;
++            auto tgt_lang = message.contains("target_lang_code") ? message["target_lang_code"].get<std::string>() : default_tgt_lang;
++            message["content"] = json::array({
++                json{
++                    {"type", "text"},
++                    {"text", content_str},
++                    {"source_lang_code", src_lang},
++                    {"target_lang_code", tgt_lang},
++                }
++            });
++        }
++    }
++
++    data.prompt = apply(tmpl, inputs_new, std::nullopt, std::nullopt);
++    data.format = COMMON_CHAT_FORMAT_GENERIC;
++
++    return data;
++}
++
+ static common_chat_params common_chat_params_init_without_tools(const common_chat_template & tmpl, const struct templates_params & inputs) {
+     common_chat_params data;
+     data.prompt = apply(tmpl, inputs);
+@@ -2761,6 +2836,43 @@ static common_chat_params common_chat_params_init_seed_oss(
      return data;
  }
  
@@ -188,7 +237,7 @@ index b29544dac..52bfa0e20 100644
  // various workarounds for known issues with certain templates or model behaviors
  // TODO @ngxson : improve this (how?)
  namespace workaround {
-@@ -3035,6 +3105,11 @@ static common_chat_params common_chat_templates_apply_jinja(
+@@ -3035,6 +3147,11 @@ static common_chat_params common_chat_templates_apply_jinja(
          return common_chat_params_init_apriel_1_5(tmpl, params);
      }
  
@@ -200,6 +249,19 @@ index b29544dac..52bfa0e20 100644
      // Use generic handler when mixing tools + JSON schema.
      // TODO: support that mix in handlers below.
      if ((params.tools.is_array() && params.json_schema.is_object())) {
+@@ -3082,6 +3199,12 @@ static common_chat_params common_chat_templates_apply_jinja(
+         return common_chat_params_init_solar_open(tmpl, params);
+     }
+ 
++    // TranslateGemma
++    if (src.find("[source_lang_code]") != std::string::npos &&
++        src.find("[target_lang_code]") != std::string::npos) {
++        return common_chat_params_init_translate_gemma(tmpl, params);
++    }
++
+     // Plain handler (no tools)
+     if (params.tools.is_null() || inputs.tool_choice == COMMON_CHAT_TOOL_CHOICE_NONE) {
+         return common_chat_params_init_without_tools(tmpl, params);
 diff --git a/src/llama.cpp/common/chat.h b/src/llama.cpp/common/chat.h
 index ac19348ec..bd6030de8 100644
 --- a/src/llama.cpp/common/chat.h
