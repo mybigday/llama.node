@@ -1,6 +1,6 @@
 {
   "name": "@fugood/node-llama-win32-arm64",
-  "version": "1.6.0-rc.1",
+  "version": "1.6.0-rc.2",
   "description": "Native module for An another Node binding of llama.cpp (win32-arm64)",
   "main": "index.node",
   "os": [
