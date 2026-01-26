@@ -16,7 +16,7 @@ index ae02c0bd7..f74d8bb26 100644
 +
 +target_link_libraries(${TARGET} PRIVATE ${LLAMA_COMMON_EXTRA_LIBS} ${LLAMA_COMMON_WIN_LIBS} PUBLIC llama Threads::Threads)
 diff --git a/src/llama.cpp/common/chat-parser.cpp b/src/llama.cpp/common/chat-parser.cpp
-index c2d1e30f3..e520bf26c 100644
+index 29819e48d..2b6402489 100644
 --- a/src/llama.cpp/common/chat-parser.cpp
 +++ b/src/llama.cpp/common/chat-parser.cpp
 @@ -1515,6 +1515,39 @@ static void common_chat_parse_exaone_moe(common_chat_msg_parser & builder) {
@@ -83,10 +83,10 @@ index 1bcba9cd8..b7cd68734 100644
  static std::string_view trim_trailing_space(std::string_view sv, int max = -1) {
      int count = 0;
 diff --git a/src/llama.cpp/common/chat.cpp b/src/llama.cpp/common/chat.cpp
-index b29544dac..745cad307 100644
+index eeb38ad06..363119f83 100644
 --- a/src/llama.cpp/common/chat.cpp
 +++ b/src/llama.cpp/common/chat.cpp
-@@ -615,6 +615,37 @@ std::string common_chat_templates_source(const struct common_chat_templates * tm
+@@ -574,6 +574,37 @@ std::string common_chat_templates_source(const struct common_chat_templates * tm
      return tmpls->template_default->source();
  }
  
@@ -124,7 +124,7 @@ index b29544dac..745cad307 100644
  common_chat_templates_ptr common_chat_templates_init(
      const struct llama_model * model,
      const std::string & chat_template_override,
-@@ -740,6 +771,7 @@ const char * common_chat_format_name(common_chat_format format) {
+@@ -699,6 +730,7 @@ const char * common_chat_format_name(common_chat_format format) {
          case COMMON_CHAT_FORMAT_XIAOMI_MIMO: return "Xiaomi MiMo";
          case COMMON_CHAT_FORMAT_SOLAR_OPEN: return "Solar Open";
          case COMMON_CHAT_FORMAT_EXAONE_MOE: return "EXAONE MoE";
@@ -132,7 +132,7 @@ index b29544dac..745cad307 100644
          case COMMON_CHAT_FORMAT_PEG_SIMPLE: return "peg-simple";
          case COMMON_CHAT_FORMAT_PEG_NATIVE: return "peg-native";
          case COMMON_CHAT_FORMAT_PEG_CONSTRUCTED: return "peg-constructed";
-@@ -831,8 +863,9 @@ static std::string apply(
+@@ -790,8 +822,9 @@ static std::string apply(
      if (inputs.add_generation_prompt) {
          inp["add_generation_prompt"] = true;
      }
@@ -144,56 +144,7 @@ index b29544dac..745cad307 100644
      }
  
      jinja::global_from_json(ctx, inp, inputs.mark_input);
-@@ -2691,6 +2724,48 @@ static common_chat_params common_chat_params_init_exaone_moe(const common_chat_t
-     return data;
- }
- 
-+static common_chat_params common_chat_params_init_translate_gemma(const common_chat_template & tmpl, const struct templates_params & inputs) {
-+    common_chat_params data;
-+
-+    // This template does not support tools or reasoning
-+    // we just need to transform the messages into the correct schema
-+
-+    // default to chat_template_kwargs, or en-GB if not specified
-+    std::string default_src_lang = inputs.extra_context.value("source_lang_code", "en-GB");
-+    std::string default_tgt_lang = inputs.extra_context.value("target_lang_code", "en-GB");
-+
-+    templates_params inputs_new = inputs;
-+    json & messages = inputs_new.messages;
-+
-+    GGML_ASSERT(messages.is_array());
-+    for (auto & message : messages) {
-+        if (message.contains("role") && message["role"].get<std::string>() != "user") {
-+            continue;
-+        }
-+        if (!message.contains("content")) {
-+            message["content"] = json::array();
-+        }
-+        if (message.contains("content") && !message["content"].is_array()) {
-+            auto content_str = message["content"].get<std::string>();
-+            auto src_lang = message.contains("source_lang_code") ? message["source_lang_code"].get<std::string>() : default_src_lang;
-+            auto tgt_lang = message.contains("target_lang_code") ? message["target_lang_code"].get<std::string>() : default_tgt_lang;
-+            message["content"] = json::array({
-+                json{
-+                    {"type", "text"},
-+                    {"text", content_str},
-+                    {"source_lang_code", src_lang},
-+                    {"target_lang_code", tgt_lang},
-+                }
-+            });
-+        }
-+    }
-+
-+    data.prompt = apply(tmpl, inputs_new, std::nullopt, std::nullopt);
-+    data.format = COMMON_CHAT_FORMAT_GENERIC;
-+
-+    return data;
-+}
-+
- static common_chat_params common_chat_params_init_without_tools(const common_chat_template & tmpl, const struct templates_params & inputs) {
-     common_chat_params data;
-     data.prompt = apply(tmpl, inputs);
-@@ -2761,6 +2836,43 @@ static common_chat_params common_chat_params_init_seed_oss(
+@@ -2695,6 +2728,43 @@ static common_chat_params common_chat_params_init_translate_gemma(const common_c
      return data;
  }
  
@@ -234,10 +185,10 @@ index b29544dac..745cad307 100644
 +    return data;
 +}
 +
- // various workarounds for known issues with certain templates or model behaviors
- // TODO @ngxson : improve this (how?)
- namespace workaround {
-@@ -3035,6 +3147,11 @@ static common_chat_params common_chat_templates_apply_jinja(
+ static common_chat_params common_chat_params_init_without_tools(const common_chat_template & tmpl, const struct templates_params & inputs) {
+     common_chat_params data;
+     data.prompt = apply(tmpl, inputs);
+@@ -3043,6 +3113,11 @@ static common_chat_params common_chat_templates_apply_jinja(
          return common_chat_params_init_apriel_1_5(tmpl, params);
      }
  
@@ -249,24 +200,11 @@ index b29544dac..745cad307 100644
      // Use generic handler when mixing tools + JSON schema.
      // TODO: support that mix in handlers below.
      if ((params.tools.is_array() && params.json_schema.is_object())) {
-@@ -3082,6 +3199,12 @@ static common_chat_params common_chat_templates_apply_jinja(
-         return common_chat_params_init_solar_open(tmpl, params);
-     }
- 
-+    // TranslateGemma
-+    if (src.find("[source_lang_code]") != std::string::npos &&
-+        src.find("[target_lang_code]") != std::string::npos) {
-+        return common_chat_params_init_translate_gemma(tmpl, params);
-+    }
-+
-     // Plain handler (no tools)
-     if (params.tools.is_null() || inputs.tool_choice == COMMON_CHAT_TOOL_CHOICE_NONE) {
-         return common_chat_params_init_without_tools(tmpl, params);
 diff --git a/src/llama.cpp/common/chat.h b/src/llama.cpp/common/chat.h
-index ac19348ec..bd6030de8 100644
+index 24aa4aab5..e02e22ae0 100644
 --- a/src/llama.cpp/common/chat.h
 +++ b/src/llama.cpp/common/chat.h
-@@ -126,6 +126,7 @@ enum common_chat_format {
+@@ -133,6 +133,7 @@ enum common_chat_format {
      COMMON_CHAT_FORMAT_XIAOMI_MIMO,
      COMMON_CHAT_FORMAT_SOLAR_OPEN,
      COMMON_CHAT_FORMAT_EXAONE_MOE,
@@ -274,7 +212,7 @@ index ac19348ec..bd6030de8 100644
  
      // These are intended to be parsed by the PEG parser
      COMMON_CHAT_FORMAT_PEG_SIMPLE,
-@@ -231,6 +232,20 @@ common_chat_tool_choice common_chat_tool_choice_parse_oaicompat(const std::strin
+@@ -238,6 +239,20 @@ common_chat_tool_choice common_chat_tool_choice_parse_oaicompat(const std::strin
  
  bool common_chat_templates_support_enable_thinking(const common_chat_templates * chat_templates);
  
@@ -293,8 +231,8 @@ index ac19348ec..bd6030de8 100644
 +bool common_chat_templates_has_variant(const struct common_chat_templates * tmpls, const std::string & variant);
 +
  // Parses a JSON array of messages in OpenAI's chat completion API format.
- // T can be std::string containing JSON or nlohmann::ordered_json
- template <class T> std::vector<common_chat_msg> common_chat_msgs_parse_oaicompat(const T & messages);
+ std::vector<common_chat_msg> common_chat_msgs_parse_oaicompat(const nlohmann::ordered_json & messages);
+ nlohmann::ordered_json common_chat_msgs_to_json_oaicompat(const std::vector<common_chat_msg> & msgs, bool concat_typed_text = false);
 diff --git a/src/llama.cpp/common/common.cpp b/src/llama.cpp/common/common.cpp
 index 26250abb6..72ceddcc7 100644
 --- a/src/llama.cpp/common/common.cpp
