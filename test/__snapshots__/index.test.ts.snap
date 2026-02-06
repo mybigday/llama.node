@@ -108,42 +108,6 @@ exports[`completion with response_format: json_schema 1`] = `
 }
 `;
 
-exports[`completion with t5-like model 1`] = `
-{
-  "chat_format": 0,
-  "content": "<removed>",
-  "context_full": false,
-  "interrupted": false,
-  "stopped_eos": true,
-  "stopped_limited": false,
-  "stopped_words": false,
-  "stopping_word": "",
-  "text": " How old sind er?",
-  "timings": "Timings: (8) keys",
-  "tokens_evaluated": 17,
-  "tokens_predicted": 6,
-  "truncated": false,
-}
-`;
-
-exports[`completion with t5-like model 2`] = `
-{
-  "chat_format": 0,
-  "content": "<removed>",
-  "context_full": false,
-  "interrupted": false,
-  "stopped_eos": true,
-  "stopped_limited": false,
-  "stopped_words": false,
-  "stopping_word": "",
-  "text": " Dieses bildet ein Test.",
-  "timings": "Timings: (8) keys",
-  "tokens_evaluated": 18,
-  "tokens_predicted": 7,
-  "truncated": false,
-}
-`;
-
 exports[`completion with tools 1`] = `
 {
   "additional_stops": [],
