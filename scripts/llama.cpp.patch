@@ -1,8 +1,8 @@
 diff --git a/src/llama.cpp/common/CMakeLists.txt b/src/llama.cpp/common/CMakeLists.txt
-index ae02c0bd7..f74d8bb26 100644
+index 295ae9ea2..088134b07 100644
 --- a/src/llama.cpp/common/CMakeLists.txt
 +++ b/src/llama.cpp/common/CMakeLists.txt
-@@ -158,4 +158,11 @@ if (LLAMA_LLGUIDANCE)
+@@ -162,4 +162,11 @@ if (LLAMA_LLGUIDANCE)
      set(LLAMA_COMMON_EXTRA_LIBS ${LLAMA_COMMON_EXTRA_LIBS} llguidance ${LLGUIDANCE_PLATFORM_LIBS})
  endif ()
  
@@ -83,14 +83,14 @@ index 1bcba9cd8..b7cd68734 100644
  static std::string_view trim_trailing_space(std::string_view sv, int max = -1) {
      int count = 0;
 diff --git a/src/llama.cpp/common/chat.cpp b/src/llama.cpp/common/chat.cpp
-index eeb38ad06..363119f83 100644
+index 2bf463266..894cce5b1 100644
 --- a/src/llama.cpp/common/chat.cpp
 +++ b/src/llama.cpp/common/chat.cpp
 @@ -574,6 +574,37 @@ std::string common_chat_templates_source(const struct common_chat_templates * tm
      return tmpls->template_default->source();
  }
  
-+common_chat_template_caps common_chat_templates_get_caps(const struct common_chat_templates * tmpls, const std::string & variant) {
++common_chat_template_caps common_chat_templates_get_caps_for_variant(const struct common_chat_templates * tmpls, const std::string & variant) {
 +    common_chat_template_caps result;
 +    const common_chat_template * tmpl = nullptr;
 +
@@ -132,19 +132,7 @@ index eeb38ad06..363119f83 100644
          case COMMON_CHAT_FORMAT_PEG_SIMPLE: return "peg-simple";
          case COMMON_CHAT_FORMAT_PEG_NATIVE: return "peg-native";
          case COMMON_CHAT_FORMAT_PEG_CONSTRUCTED: return "peg-constructed";
-@@ -790,8 +822,9 @@ static std::string apply(
-     if (inputs.add_generation_prompt) {
-         inp["add_generation_prompt"] = true;
-     }
--    if (inp["tools"].is_null()) {
--        inp["tools"] = json::array();
-+    // Remove tools key when null, so templates can check "{% if tools is defined %}"
-+    if (inp["tools"].is_null() || (inp["tools"].is_array() && inp["tools"].empty())) {
-+        inp.erase("tools");
-     }
- 
-     jinja::global_from_json(ctx, inp, inputs.mark_input);
-@@ -2695,6 +2728,43 @@ static common_chat_params common_chat_params_init_translate_gemma(const common_c
+@@ -2838,6 +2870,43 @@ static common_chat_params common_chat_params_init_translate_gemma(const common_c
      return data;
  }
  
@@ -188,8 +176,8 @@ index eeb38ad06..363119f83 100644
  static common_chat_params common_chat_params_init_without_tools(const common_chat_template & tmpl, const struct templates_params & inputs) {
      common_chat_params data;
      data.prompt = apply(tmpl, inputs);
-@@ -3043,6 +3113,11 @@ static common_chat_params common_chat_templates_apply_jinja(
-         return common_chat_params_init_apriel_1_5(tmpl, params);
+@@ -3193,6 +3262,11 @@ static common_chat_params common_chat_templates_apply_jinja(
+         return common_chat_params_init_solar_open(tmpl, params);
      }
  
 +    // FunctionGemma format detection
@@ -201,7 +189,7 @@ index eeb38ad06..363119f83 100644
      // TODO: support that mix in handlers below.
      if ((params.tools.is_array() && params.json_schema.is_object())) {
 diff --git a/src/llama.cpp/common/chat.h b/src/llama.cpp/common/chat.h
-index 24aa4aab5..e02e22ae0 100644
+index 24aa4aab5..38125e793 100644
 --- a/src/llama.cpp/common/chat.h
 +++ b/src/llama.cpp/common/chat.h
 @@ -133,6 +133,7 @@ enum common_chat_format {
@@ -225,7 +213,7 @@ index 24aa4aab5..e02e22ae0 100644
 +};
 +
 +// Get template capabilities for a specific variant ("" for default, "tool_use" for tool_use template)
-+common_chat_template_caps common_chat_templates_get_caps(const struct common_chat_templates * tmpls, const std::string & variant = "");
++common_chat_template_caps common_chat_templates_get_caps_for_variant(const struct common_chat_templates * tmpls, const std::string & variant = "");
 +
 +// Check if a template variant exists
 +bool common_chat_templates_has_variant(const struct common_chat_templates * tmpls, const std::string & variant);
@@ -234,10 +222,10 @@ index 24aa4aab5..e02e22ae0 100644
  std::vector<common_chat_msg> common_chat_msgs_parse_oaicompat(const nlohmann::ordered_json & messages);
  nlohmann::ordered_json common_chat_msgs_to_json_oaicompat(const std::vector<common_chat_msg> & msgs, bool concat_typed_text = false);
 diff --git a/src/llama.cpp/common/common.cpp b/src/llama.cpp/common/common.cpp
-index 26250abb6..72ceddcc7 100644
+index 3aa396127..b492d28b6 100644
 --- a/src/llama.cpp/common/common.cpp
 +++ b/src/llama.cpp/common/common.cpp
-@@ -1360,6 +1360,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
+@@ -1359,6 +1359,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
          mparams.devices = params.devices.data();
      }
  
@@ -246,10 +234,10 @@ index 26250abb6..72ceddcc7 100644
      mparams.main_gpu        = params.main_gpu;
      mparams.split_mode      = params.split_mode;
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index 96c990c05..c0b0b3093 100644
+index 398ebb096..2c979f69f 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
-@@ -317,6 +317,7 @@ struct lr_opt {
+@@ -358,6 +358,7 @@ struct lr_opt {
  struct ggml_opt_optimizer_params common_opt_lr_pars(void * userdata);
  
  struct common_params {
@@ -271,10 +259,10 @@ index 7622d0bf4..d2edcfddb 100644
              check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
              if (NOT "${GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E}" STREQUAL "")
 diff --git a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-index 5b835c11c..681c00504 100644
+index 4f0a1620f..f065fee59 100644
 --- a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
 +++ b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-@@ -2819,9 +2819,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
+@@ -2805,9 +2805,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
      GGML_UNUSED(dev);
  }
  
@@ -301,14 +289,16 @@ index 5b835c11c..681c00504 100644
      *total = *free;
  
      GGML_UNUSED(dev);
-@@ -3056,10 +3071,17 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+@@ -3042,12 +3057,17 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
          }
      }
  
+-#if defined(__ANDROID__)
 -    if (opt_arch < 75) {
 -        opt_ndev = 1;
 -        GGML_LOG_WARN("ggml-hex: forcing ndev to 1 for SoCs archs lower than v75.\n");
 -    }
+-#endif
 +    #if defined(__ANDROID__)
 +        if(opt_arch < 75) {
 +            opt_ndev = 1;
@@ -323,7 +313,7 @@ index 5b835c11c..681c00504 100644
  
      GGML_LOG_INFO("ggml-hex: Hexagon Arch version v%d\n", opt_arch);
  
-@@ -3072,6 +3094,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+@@ -3060,6 +3080,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
          } catch (const std::exception & exc) {
              GGML_LOG_ERROR("ggml-hex: failed to create device/session %zu\n", i);
              devices[i].context = nullptr;

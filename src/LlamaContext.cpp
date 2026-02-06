@@ -604,7 +604,7 @@ Napi::Value LlamaContext::GetModelInfo(const Napi::CallbackInfo &info) {
   Napi::Object jinja = Napi::Object::New(info.Env());
   jinja.Set("default", _rn_ctx->validateModelChatTemplate(true, nullptr));
   Napi::Object defaultCaps = Napi::Object::New(info.Env());
-  auto default_caps = common_chat_templates_get_caps(_rn_ctx->templates.get(), "");
+  auto default_caps = common_chat_templates_get_caps_for_variant(_rn_ctx->templates.get(), "");
   defaultCaps.Set("tools", default_caps.supports_tools);
   defaultCaps.Set("toolCalls", default_caps.supports_tool_calls);
   defaultCaps.Set("systemRole", default_caps.supports_system_role);
@@ -614,7 +614,7 @@ Napi::Value LlamaContext::GetModelInfo(const Napi::CallbackInfo &info) {
   jinja.Set("toolUse", hasToolUse);
   if (hasToolUse) {
     Napi::Object toolUseCaps = Napi::Object::New(info.Env());
-    auto tool_use_caps = common_chat_templates_get_caps(_rn_ctx->templates.get(), "tool_use");
+    auto tool_use_caps = common_chat_templates_get_caps_for_variant(_rn_ctx->templates.get(), "tool_use");
     toolUseCaps.Set("tools", tool_use_caps.supports_tools);
     toolUseCaps.Set("toolCalls", tool_use_caps.supports_tool_calls);
     toolUseCaps.Set("systemRole", tool_use_caps.supports_system_role);
