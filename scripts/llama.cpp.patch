@@ -83,10 +83,10 @@ index 1bcba9cd8..b7cd68734 100644
  static std::string_view trim_trailing_space(std::string_view sv, int max = -1) {
      int count = 0;
 diff --git a/src/llama.cpp/common/chat.cpp b/src/llama.cpp/common/chat.cpp
-index 2bf463266..894cce5b1 100644
+index 47a34d582..66b83f939 100644
 --- a/src/llama.cpp/common/chat.cpp
 +++ b/src/llama.cpp/common/chat.cpp
-@@ -574,6 +574,37 @@ std::string common_chat_templates_source(const struct common_chat_templates * tm
+@@ -605,6 +605,37 @@ std::string common_chat_templates_source(const struct common_chat_templates * tm
      return tmpls->template_default->source();
  }
  
@@ -124,7 +124,7 @@ index 2bf463266..894cce5b1 100644
  common_chat_templates_ptr common_chat_templates_init(
      const struct llama_model * model,
      const std::string & chat_template_override,
-@@ -699,6 +730,7 @@ const char * common_chat_format_name(common_chat_format format) {
+@@ -730,6 +761,7 @@ const char * common_chat_format_name(common_chat_format format) {
          case COMMON_CHAT_FORMAT_XIAOMI_MIMO: return "Xiaomi MiMo";
          case COMMON_CHAT_FORMAT_SOLAR_OPEN: return "Solar Open";
          case COMMON_CHAT_FORMAT_EXAONE_MOE: return "EXAONE MoE";
@@ -132,7 +132,7 @@ index 2bf463266..894cce5b1 100644
          case COMMON_CHAT_FORMAT_PEG_SIMPLE: return "peg-simple";
          case COMMON_CHAT_FORMAT_PEG_NATIVE: return "peg-native";
          case COMMON_CHAT_FORMAT_PEG_CONSTRUCTED: return "peg-constructed";
-@@ -2838,6 +2870,43 @@ static common_chat_params common_chat_params_init_translate_gemma(const common_c
+@@ -2869,6 +2901,43 @@ static common_chat_params common_chat_params_init_translate_gemma(const common_c
      return data;
  }
  
@@ -176,7 +176,7 @@ index 2bf463266..894cce5b1 100644
  static common_chat_params common_chat_params_init_without_tools(const common_chat_template & tmpl, const struct templates_params & inputs) {
      common_chat_params data;
      data.prompt = apply(tmpl, inputs);
-@@ -3193,6 +3262,11 @@ static common_chat_params common_chat_templates_apply_jinja(
+@@ -3224,6 +3293,11 @@ static common_chat_params common_chat_templates_apply_jinja(
          return common_chat_params_init_solar_open(tmpl, params);
      }
  
@@ -189,7 +189,7 @@ index 2bf463266..894cce5b1 100644
      // TODO: support that mix in handlers below.
      if ((params.tools.is_array() && params.json_schema.is_object())) {
 diff --git a/src/llama.cpp/common/chat.h b/src/llama.cpp/common/chat.h
-index 24aa4aab5..38125e793 100644
+index 1bf43f726..6bb68eadd 100644
 --- a/src/llama.cpp/common/chat.h
 +++ b/src/llama.cpp/common/chat.h
 @@ -133,6 +133,7 @@ enum common_chat_format {
@@ -220,7 +220,7 @@ index 24aa4aab5..38125e793 100644
 +
  // Parses a JSON array of messages in OpenAI's chat completion API format.
  std::vector<common_chat_msg> common_chat_msgs_parse_oaicompat(const nlohmann::ordered_json & messages);
- nlohmann::ordered_json common_chat_msgs_to_json_oaicompat(const std::vector<common_chat_msg> & msgs, bool concat_typed_text = false);
+ 
 diff --git a/src/llama.cpp/common/common.cpp b/src/llama.cpp/common/common.cpp
 index 3aa396127..b492d28b6 100644
 --- a/src/llama.cpp/common/common.cpp
@@ -234,10 +234,10 @@ index 3aa396127..b492d28b6 100644
      mparams.main_gpu        = params.main_gpu;
      mparams.split_mode      = params.split_mode;
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index 398ebb096..2c979f69f 100644
+index b28424453..686ea4e6b 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
-@@ -358,6 +358,7 @@ struct lr_opt {
+@@ -357,6 +357,7 @@ struct lr_opt {
  struct ggml_opt_optimizer_params common_opt_lr_pars(void * userdata);
  
  struct common_params {
