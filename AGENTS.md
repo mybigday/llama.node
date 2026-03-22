@@ -1,7 +1,3 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 ## Project Overview
 
 llama.node is a Node.js binding for llama.cpp, designed to maintain API compatibility with llama.rn (the React Native binding). This project enables local LLM inference in Node.js with support for:
