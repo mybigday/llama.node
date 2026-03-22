@@ -10,7 +10,7 @@ exports[`basic completion 1`] = `
   "stopped_limited": true,
   "stopped_words": false,
   "stopping_word": "",
-  "text": "wallwallwallwallwallwallwallwallwallwall",
+  "text": " اسم اسم اسم اسم اسم اسم اسم اسم<|reserved_special_token_28|><|reserved_special_token_28|>",
   "timings": "Timings: (8) keys",
   "tokens_evaluated": 18,
   "tokens_predicted": 9,
@@ -33,14 +33,14 @@ exports[`basic completion: model info 1`] = `
     },
     "llamaChat": false,
   },
-  "desc": "llama ?B Q4_0",
+  "desc": "llama ?B Q3_K - Medium",
   "isChatTemplateSupported": false,
   "is_hybrid": false,
   "is_recurrent": false,
   "metadata": {
     "general.architecture": "llama",
     "general.basename": "Llama-3.2",
-    "general.file_type": "2",
+    "general.file_type": "12",
     "general.finetune": "1b",
     "general.name": "Llama 3.2 1B",
     "general.organization": "Meta Llama",
@@ -66,7 +66,7 @@ exports[`basic completion: model info 1`] = `
   },
   "nEmbd": 512,
   "nParams": 73271840,
-  "size": 58154112,
+  "size": 57526400,
 }
 `;
 
@@ -80,11 +80,10 @@ exports[`completion with response_format: json_object 1`] = `
   "stopped_limited": false,
   "stopped_words": false,
   "stopping_word": "",
-  "text": "{}
-		              			",
+  "text": "{}",
   "timings": "Timings: (8) keys",
-  "tokens_evaluated": 12,
-  "tokens_predicted": 3,
+  "tokens_evaluated": 10,
+  "tokens_predicted": 1,
   "truncated": false,
 }
 `;
@@ -100,7 +99,7 @@ exports[`completion with response_format: json_schema 1`] = `
   "stopped_words": false,
   "stopping_word": "",
   "text": "{
- 				 				 				 				",
+ 		 		 		 		",
   "timings": "Timings: (8) keys",
   "tokens_evaluated": 13,
   "tokens_predicted": 4,
@@ -200,7 +199,7 @@ exports[`loadModelInfo 1`] = `
   "data_offset": 7819680,
   "general.architecture": "llama",
   "general.basename": "Llama-3.2",
-  "general.file_type": "2",
+  "general.file_type": "12",
   "general.finetune": "1b",
   "general.name": "Llama 3.2 1B",
   "general.organization": "Meta Llama",
@@ -317,7 +316,7 @@ exports[`works fine with vocab_only: model info 1`] = `
   "metadata": {
     "general.architecture": "llama",
     "general.basename": "Llama-3.2",
-    "general.file_type": "2",
+    "general.file_type": "12",
     "general.finetune": "1b",
     "general.name": "Llama 3.2 1B",
     "general.organization": "Meta Llama",
@@ -343,7 +342,7 @@ exports[`works fine with vocab_only: model info 1`] = `
   },
   "nEmbd": 0,
   "nParams": 73271840,
-  "size": 58154112,
+  "size": 57526400,
 }
 `;
 

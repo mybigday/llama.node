@@ -65,6 +65,25 @@ const downloadFile = (url, outputPath) => {
   })
 }
 
+const downloadWithFallbacks = async (urls, outputPath) => {
+  let lastError
+
+  for (const url of urls) {
+    try {
+      await downloadFile(url, outputPath)
+      return
+    } catch (error) {
+      lastError = error
+      console.warn(
+        `Failed download source for ${path.basename(outputPath)}: ${url}`,
+      )
+      console.warn(`  ${error.message}`)
+    }
+  }
+
+  throw lastError
+}
+
 // Main function
 async function main() {
   const testDir = path.join(__dirname, '../test')
@@ -73,27 +92,39 @@ async function main() {
   const files = [
     {
       path: path.join(testDir, 'bge-small-en.gguf'),
-      url: 'https://huggingface.co/ggml-org/bge-small-en-v1.5-Q8_0-GGUF/resolve/main/bge-small-en-v1.5-q8_0.gguf?download=true',
+      urls: [
+        'https://huggingface.co/ggml-org/bge-small-en-v1.5-Q8_0-GGUF/resolve/main/bge-small-en-v1.5-q8_0.gguf?download=true',
+      ],
     },
     {
       path: path.join(testDir, 'tiny-random-llama.gguf'),
-      url: 'https://huggingface.co/tensorblock/tiny-random-llama-GGUF/resolve/main/tiny-random-llama-Q4_0.gguf?download=true',
+      urls: [
+        'https://huggingface.co/tensorblock/tiny-random-llama-GGUF/resolve/main/tiny-random-llama-Q3_K_M.gguf?download=true',
+      ],
     },
     {
       path: path.join(testDir, 'Qwen3-0.6B-Q6_K.gguf'),
-      url: 'https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q6_K.gguf?download=true',
+      urls: [
+        'https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q6_K.gguf?download=true',
+      ],
     },
     {
       path: path.join(testDir, 'flan-t5-small.Q4_0.gguf'),
-      url: 'https://huggingface.co/Felladrin/gguf-flan-t5-small/resolve/main/flan-t5-small.Q4_0.gguf?download=true',
+      urls: [
+        'https://huggingface.co/Felladrin/gguf-flan-t5-small/resolve/main/flan-t5-small.Q4_0.gguf?download=true',
+      ],
     },
     {
       path: path.join(testDir, 'SmolVLM-256M-Instruct-Q8_0.gguf'),
-      url: 'https://huggingface.co/ggml-org/SmolVLM-256M-Instruct-GGUF/resolve/main/SmolVLM-256M-Instruct-Q8_0.gguf?download=true',
+      urls: [
+        'https://huggingface.co/ggml-org/SmolVLM-256M-Instruct-GGUF/resolve/main/SmolVLM-256M-Instruct-Q8_0.gguf?download=true',
+      ],
     },
     {
       path: path.join(testDir, 'mmproj-SmolVLM-256M-Instruct-Q8_0.gguf'),
-      url: 'https://huggingface.co/ggml-org/SmolVLM-256M-Instruct-GGUF/resolve/main/mmproj-SmolVLM-256M-Instruct-Q8_0.gguf?download=true',
+      urls: [
+        'https://huggingface.co/ggml-org/SmolVLM-256M-Instruct-GGUF/resolve/main/mmproj-SmolVLM-256M-Instruct-Q8_0.gguf?download=true',
+      ],
     },
     // Uncomment to test with audio
     // {
@@ -124,7 +155,7 @@ async function main() {
     if (!fs.existsSync(file.path)) {
       console.log(`Downloading ${path.basename(file.path)}...`)
       try {
-        await downloadFile(file.url, file.path)
+        await downloadWithFallbacks(file.urls, file.path)
       } catch (error) {
         console.error(
           `Error downloading ${path.basename(file.path)}:`,
