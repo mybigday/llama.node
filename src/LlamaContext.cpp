@@ -311,6 +311,7 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
 
   params.use_mlock = get_option<bool>(options, "use_mlock", false);
   params.use_mmap = get_option<bool>(options, "use_mmap", true);
+  params.no_extra_bufts = get_option<bool>(options, "no_extra_bufts", false);
   params.numa =
       static_cast<ggml_numa_strategy>(get_option<uint32_t>(options, "numa", 0));
 

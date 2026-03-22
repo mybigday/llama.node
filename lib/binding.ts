@@ -87,6 +87,12 @@ export type LlamaModelOptions = {
   use_mlock?: boolean
   use_mmap?: boolean
   vocab_only?: boolean
+  /**
+   * Disable extra buffer types for weight repacking.
+   * Reduces memory usage at the cost of slower prompt processing.
+   * Default: false
+   */
+  no_extra_bufts?: boolean
   lora?: string
   lora_scaled?: number
   lora_list?: { path: string; scaled: number }[]
