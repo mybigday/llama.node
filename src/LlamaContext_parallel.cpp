@@ -141,6 +141,8 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
       get_option<std::string>(options, "generation_prompt", "");
   std::string reasoning_format = get_option<std::string>(options, "reasoning_format", "none");
   std::string chat_parser = get_option<std::string>(options, "chat_parser", "");
+  common_chat_params jinja_chat_params;
+  bool has_jinja_chat_params = false;
 
   // Parse parameters
   common_params params = _rn_ctx->params;
@@ -283,6 +285,8 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
       }
 
       prompt = chatParams.prompt;
+      jinja_chat_params = chatParams;
+      has_jinja_chat_params = true;
 
       chat_format = chatParams.format;
       generation_prompt = chatParams.generation_prompt;
@@ -332,6 +336,9 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
         json_schema_to_grammar(json::parse(json_schema_str))};
   }
   params.sampling.generation_prompt = generation_prompt;
+  apply_reasoning_budget(
+      options, _rn_ctx->ctx, params.sampling,
+      has_jinja_chat_params ? &jinja_chat_params : nullptr);
 
   std::string prefill_text = get_option<std::string>(options, "prefill_text", "");
 

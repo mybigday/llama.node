@@ -162,6 +162,24 @@ test('completion with tools', async () => {
   ).toMatchSnapshot()
 })
 
+test('completion accepts thinking budget params', async () => {
+  const model = await loadModel({
+    model: path.resolve(__dirname, './tiny-random-llama.gguf'),
+    n_gpu_layers: 0,
+  })
+  const result = await model.completion({
+    prompt: 'Hello',
+    n_predict: 1,
+    seed: 0,
+    temperature: 0,
+    thinking_budget_tokens: 0,
+    thinking_start_tag: '<think>',
+    thinking_end_tag: '</think>',
+  })
+  expect(result.text).toEqual(expect.any(String))
+  await model.release()
+})
+
 test('works fine with vocab_only', async () => {
   const model = await loadModel({
     model: path.resolve(__dirname, './tiny-random-llama.gguf'),

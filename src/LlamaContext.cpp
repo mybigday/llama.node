@@ -749,6 +749,13 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
     }
     result.Set("grammar_triggers", grammar_triggers);
     result.Set("generation_prompt", chatParams.generation_prompt);
+    result.Set("thinking_forced_open", is_thinking_forced_open(chatParams));
+    if (!chatParams.thinking_start_tag.empty()) {
+      result.Set("thinking_start_tag", chatParams.thinking_start_tag);
+    }
+    if (!chatParams.thinking_end_tag.empty()) {
+      result.Set("thinking_end_tag", chatParams.thinking_end_tag);
+    }
     // preserved_tokens: string[]
     Napi::Array preserved_tokens = Napi::Array::New(env);
     for (size_t i = 0; i < chatParams.preserved_tokens.size(); i++) {
@@ -828,6 +835,8 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
       get_option<std::string>(options, "generation_prompt", "");
   std::string reasoning_format = get_option<std::string>(options, "reasoning_format", "none");
   std::string chat_parser = get_option<std::string>(options, "chat_parser", "");
+  common_chat_params jinja_chat_params;
+  bool has_jinja_chat_params = false;
 
   common_params params = _rn_ctx->params;
   params.sampling.grammar = {};
@@ -967,6 +976,8 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
       }
 
       params.prompt = chatParams.prompt;
+      jinja_chat_params = chatParams;
+      has_jinja_chat_params = true;
 
       chat_format = chatParams.format;
       generation_prompt = chatParams.generation_prompt;
@@ -1016,6 +1027,9 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
         json_schema_to_grammar(json::parse(json_schema_str))};
   }
   params.sampling.generation_prompt = generation_prompt;
+  apply_reasoning_budget(
+      options, _rn_ctx->ctx, params.sampling,
+      has_jinja_chat_params ? &jinja_chat_params : nullptr);
 
   std::string prefill_text = get_option<std::string>(options, "prefill_text", "");
 

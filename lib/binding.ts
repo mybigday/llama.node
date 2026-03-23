@@ -127,6 +127,25 @@ export type LlamaCompletionOptions = {
   enable_thinking?: boolean
   thinking_forced_open?: boolean
   /**
+   * Maximum number of tokens allowed inside a thinking block before forcing it to close.
+   * Only applies when thinking tags are available.
+   */
+  thinking_budget_tokens?: number
+  /**
+   * Message injected before the thinking end tag when the thinking budget is exhausted.
+   */
+  thinking_budget_message?: string
+  /**
+   * Thinking start tag returned by getFormattedChat.
+   * Only needed when you manually pass a preformatted prompt to completion().
+   */
+  thinking_start_tag?: string
+  /**
+   * Thinking end tag returned by getFormattedChat.
+   * Only needed when you manually pass a preformatted prompt to completion().
+   */
+  thinking_end_tag?: string
+  /**
    * Assistant generation prompt returned by jinja chat formatting.
    * Used for PEG chat parsing and grammar prefill.
    */
@@ -432,6 +451,8 @@ export type JinjaFormattedChatResult = {
   }>
   generation_prompt?: string
   thinking_forced_open?: boolean
+  thinking_start_tag?: string
+  thinking_end_tag?: string
   preserved_tokens: string[]
   additional_stops: string[]
   /** Serialized PEG parser for chat output parsing (required for PEG format types) */

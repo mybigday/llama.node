@@ -120,6 +120,27 @@ describe('Parallel Decoding', () => {
       expect(req2.requestId).toBeGreaterThan(0)
     }, 5000)
 
+    test('should accept thinking budget params', async () => {
+      const request = await context.parallel.completion({
+        prompt: 'Hello',
+        n_predict: 1,
+        seed: 0,
+        temperature: 0,
+        thinking_budget_tokens: 0,
+        thinking_start_tag: '<think>',
+        thinking_end_tag: '</think>',
+      })
+
+      expect(request.requestId).toBeGreaterThan(0)
+
+      await Promise.race([
+        request.promise,
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Timeout')), 3000),
+        ),
+      ]).catch(() => null)
+    }, 5000)
+
     test('should handle completion with token callback', async () => {
       const tokens: string[] = []
 
