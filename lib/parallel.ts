@@ -47,6 +47,7 @@ export class LlamaParallelAPI {
   disable(): void {
     this.context.disableParallelMode()
     this.enabled = false
+    this.pendingRequests.clear()
   }
 
   /**

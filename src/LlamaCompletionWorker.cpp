@@ -35,7 +35,7 @@ LlamaCompletionWorker::LlamaCompletionWorker(
     common_params params,
     std::vector<std::string> stop_words,
     int32_t chat_format,
-    bool thinking_forced_open,
+    const std::string &generation_prompt,
     std::string reasoning_format,
     const std::string &chat_parser,
     const std::vector<std::string> &media_paths,
@@ -45,7 +45,7 @@ LlamaCompletionWorker::LlamaCompletionWorker(
     const std::string &prefill_text)
     : AsyncWorker(info.Env()), Deferred(info.Env()), _rn_ctx(rn_ctx),
       _params(params), _stop_words(stop_words), _chat_format(chat_format),
-      _thinking_forced_open(thinking_forced_open),
+      _generation_prompt(generation_prompt),
       _reasoning_format(reasoning_format),
       _chat_parser(chat_parser),
       _media_paths(media_paths), _guide_tokens(guide_tokens),
@@ -123,7 +123,11 @@ void LlamaCompletionWorker::Execute() {
     }
 
     // Begin completion with chat format and reasoning settings
-    completion->beginCompletion(_chat_format, common_reasoning_format_from_name(_reasoning_format), _thinking_forced_open, _chat_parser);
+    completion->beginCompletion(
+        _chat_format,
+        common_reasoning_format_from_name(_reasoning_format),
+        _generation_prompt,
+        _chat_parser);
 
     // Main completion loop
     int token_count = 0;
@@ -163,7 +167,13 @@ void LlamaCompletionWorker::Execute() {
           llama_context* ctx;
         };
 
-        auto partial_output = completion->parseChatOutput(true);
+        rnllama::completion_chat_output partial_output;
+        try {
+          partial_output = completion->parseChatOutput(true);
+        } catch (const std::exception &) {
+          partial_output.accumulated_text =
+              completion->prefill_text + completion->generated_text;
+        }
 
         // Extract completion probabilities if n_probs > 0, similar to iOS implementation
         std::vector<rnllama::completion_token_output> probs_output;

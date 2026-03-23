@@ -748,7 +748,7 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
       grammar_triggers.Set(i, triggerObj);
     }
     result.Set("grammar_triggers", grammar_triggers);
-    result.Set("thinking_forced_open", chatParams.thinking_forced_open);
+    result.Set("generation_prompt", chatParams.generation_prompt);
     // preserved_tokens: string[]
     Napi::Array preserved_tokens = Napi::Array::New(env);
     for (size_t i = 0; i < chatParams.preserved_tokens.size(); i++) {
@@ -824,15 +824,20 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   }
 
   int32_t chat_format = get_option<int32_t>(options, "chat_format", 0);
-  bool thinking_forced_open = get_option<bool>(options, "thinking_forced_open", false);
+  std::string generation_prompt =
+      get_option<std::string>(options, "generation_prompt", "");
   std::string reasoning_format = get_option<std::string>(options, "reasoning_format", "none");
   std::string chat_parser = get_option<std::string>(options, "chat_parser", "");
 
   common_params params = _rn_ctx->params;
+  params.sampling.grammar = {};
+  params.sampling.generation_prompt.clear();
+  params.sampling.grammar_triggers.clear();
+  params.sampling.preserved_tokens.clear();
   auto grammar_from_params = get_option<std::string>(options, "grammar", "");
   auto has_grammar_set = !grammar_from_params.empty();
   if (has_grammar_set) {
-    params.sampling.grammar = grammar_from_params;
+    params.sampling.grammar = {COMMON_GRAMMAR_TYPE_USER, grammar_from_params};
   }
 
   std::string json_schema_str = "";
@@ -964,7 +969,7 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
       params.prompt = chatParams.prompt;
 
       chat_format = chatParams.format;
-      thinking_forced_open = chatParams.thinking_forced_open;
+      generation_prompt = chatParams.generation_prompt;
       chat_parser = chatParams.parser;
 
       for (const auto &token : chatParams.preserved_tokens) {
@@ -978,7 +983,10 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
 
       if (!has_grammar_set) {
         // grammar param always wins jinja template & json_schema
-        params.sampling.grammar = chatParams.grammar;
+        auto grammar_type = !tools_str.empty()
+                                ? COMMON_GRAMMAR_TYPE_TOOL_CALLS
+                                : COMMON_GRAMMAR_TYPE_OUTPUT_FORMAT;
+        params.sampling.grammar = {grammar_type, chatParams.grammar};
         params.sampling.grammar_lazy = chatParams.grammar_lazy;
         for (const auto &trigger : chatParams.grammar_triggers) {
           params.sampling.grammar_triggers.push_back(trigger);
@@ -1003,9 +1011,11 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   }
 
   if (!has_grammar_set && !json_schema_str.empty()) {
-    params.sampling.grammar =
-        json_schema_to_grammar(json::parse(json_schema_str));
+    params.sampling.grammar = {
+        COMMON_GRAMMAR_TYPE_OUTPUT_FORMAT,
+        json_schema_to_grammar(json::parse(json_schema_str))};
   }
+  params.sampling.generation_prompt = generation_prompt;
 
   std::string prefill_text = get_option<std::string>(options, "prefill_text", "");
 
@@ -1081,7 +1091,7 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
 
   auto *worker =
       new LlamaCompletionWorker(info, _rn_ctx, callback, params, stop_words,
-                                chat_format, thinking_forced_open, reasoning_format, chat_parser, media_paths, guide_tokens,
+                                chat_format, generation_prompt, reasoning_format, chat_parser, media_paths, guide_tokens,
                                 _rn_ctx->has_vocoder, _rn_ctx->tts_wrapper ? _rn_ctx->tts_wrapper->type : rnllama::UNKNOWN, prefill_text);
   worker->Queue();
   _wip = worker;

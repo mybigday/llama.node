@@ -21,7 +21,7 @@ public:
                         Napi::Function callback, common_params params,
                         std::vector<std::string> stop_words,
                         int32_t chat_format,
-                        bool thinking_forced_open,
+                        const std::string &generation_prompt,
                         std::string reasoning_format,
                         const std::string &chat_parser = "",
                         const std::vector<std::string> &media_paths = {},
@@ -49,7 +49,7 @@ private:
   common_params _params;
   std::vector<std::string> _stop_words;
   int32_t _chat_format;
-  bool _thinking_forced_open;
+  std::string _generation_prompt;
   std::string _reasoning_format;
   std::string _chat_parser;
   std::vector<std::string> _media_paths;

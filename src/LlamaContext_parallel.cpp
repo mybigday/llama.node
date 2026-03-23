@@ -8,10 +8,51 @@
 #include "rn-llama/rn-slot-manager.h"
 #include "common.h"
 #include "json-schema-to-grammar.h"
+#include <atomic>
+#include <memory>
 #include <nlohmann/json.hpp>
 #include <napi.h>
 
 using json = nlohmann::ordered_json;
+
+namespace {
+
+struct ManagedThreadSafeFunction {
+  explicit ManagedThreadSafeFunction(Napi::ThreadSafeFunction function)
+      : tsfn(std::move(function)) {}
+
+  ~ManagedThreadSafeFunction() {
+    abort();
+  }
+
+  void release() {
+    close(false);
+  }
+
+  void abort() {
+    close(true);
+  }
+
+  Napi::ThreadSafeFunction tsfn;
+
+ private:
+  void close(bool abort_handle) {
+    bool expected = false;
+    if (!closed.compare_exchange_strong(expected, true)) {
+      return;
+    }
+
+    if (abort_handle) {
+      tsfn.Abort();
+    } else {
+      tsfn.Release();
+    }
+  }
+
+  std::atomic<bool> closed{false};
+};
+
+}  // namespace
 
 // EnableParallelMode(params: { n_parallel: number, n_batch?: number }): boolean
 Napi::Value LlamaContext::EnableParallelMode(const Napi::CallbackInfo &info) {
@@ -96,16 +137,21 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
   }
 
   int32_t chat_format = get_option<int32_t>(options, "chat_format", 0);
-  bool thinking_forced_open = get_option<bool>(options, "thinking_forced_open", false);
+  std::string generation_prompt =
+      get_option<std::string>(options, "generation_prompt", "");
   std::string reasoning_format = get_option<std::string>(options, "reasoning_format", "none");
   std::string chat_parser = get_option<std::string>(options, "chat_parser", "");
 
   // Parse parameters
   common_params params = _rn_ctx->params;
+  params.sampling.grammar = {};
+  params.sampling.generation_prompt.clear();
+  params.sampling.grammar_triggers.clear();
+  params.sampling.preserved_tokens.clear();
   auto grammar_from_params = get_option<std::string>(options, "grammar", "");
   auto has_grammar_set = !grammar_from_params.empty();
   if (has_grammar_set) {
-    params.sampling.grammar = grammar_from_params;
+    params.sampling.grammar = {COMMON_GRAMMAR_TYPE_USER, grammar_from_params};
   }
 
   std::string json_schema_str = "";
@@ -239,7 +285,7 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
       prompt = chatParams.prompt;
 
       chat_format = chatParams.format;
-      thinking_forced_open = chatParams.thinking_forced_open;
+      generation_prompt = chatParams.generation_prompt;
       chat_parser = chatParams.parser;
 
       for (const auto &token : chatParams.preserved_tokens) {
@@ -253,7 +299,10 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
 
       if (!has_grammar_set) {
         // grammar param always wins jinja template & json_schema
-        params.sampling.grammar = chatParams.grammar;
+        auto grammar_type = !tools_str.empty()
+                                ? COMMON_GRAMMAR_TYPE_TOOL_CALLS
+                                : COMMON_GRAMMAR_TYPE_OUTPUT_FORMAT;
+        params.sampling.grammar = {grammar_type, chatParams.grammar};
         params.sampling.grammar_lazy = chatParams.grammar_lazy;
         for (const auto &trigger : chatParams.grammar_triggers) {
           params.sampling.grammar_triggers.push_back(trigger);
@@ -278,9 +327,11 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
   }
 
   if (!has_grammar_set && !json_schema_str.empty()) {
-    params.sampling.grammar =
-        json_schema_to_grammar(json::parse(json_schema_str));
+    params.sampling.grammar = {
+        COMMON_GRAMMAR_TYPE_OUTPUT_FORMAT,
+        json_schema_to_grammar(json::parse(json_schema_str))};
   }
+  params.sampling.generation_prompt = generation_prompt;
 
   std::string prefill_text = get_option<std::string>(options, "prefill_text", "");
 
@@ -363,17 +414,16 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
   auto tokenize_result = _rn_ctx->tokenize(prompt, media_paths);
 
   // Create callback wrapper
-  Napi::ThreadSafeFunction tsfn;
+  std::shared_ptr<ManagedThreadSafeFunction> tsfn_holder;
   bool hasCallback = info.Length() > 1 && info[1].IsFunction();
 
   if (hasCallback) {
-    tsfn = Napi::ThreadSafeFunction::New(
-      env,
-      info[1].As<Napi::Function>(),
-      "QueueCompletionCallback",
-      0,
-      1
-    );
+    tsfn_holder = std::make_shared<ManagedThreadSafeFunction>(
+        Napi::ThreadSafeFunction::New(env,
+                                      info[1].As<Napi::Function>(),
+                                      "QueueCompletionCallback",
+                                      0,
+                                      1));
   }
 
   // Capture validity flag and slot_manager to prevent use-after-free
@@ -388,7 +438,7 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
     prompt,
     chat_format,
     reasoning_format_enum,
-    thinking_forced_open,
+    generation_prompt,
     chat_parser,
     prefill_text,
     load_state_path,
@@ -396,13 +446,12 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
     save_prompt_state_path,
     load_state_size,
     save_state_size,
-    [tsfn, hasCallback, chat_format, thinking_forced_open, context_valid, slot_manager](const completion_token_output& token) {
+    [tsfn_holder, hasCallback, chat_format, context_valid, slot_manager](const completion_token_output& token) {
       if (!hasCallback) return;
 
       struct TokenData {
         completion_token_output token;
         int32_t chat_format;
-        bool thinking_forced_open;
         std::string accumulated_text;
         std::string content;
         std::string reasoning_content;
@@ -463,7 +512,6 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
       auto* data = new TokenData;
       data->token = token;
       data->chat_format = chat_format;
-      data->thinking_forced_open = thinking_forced_open;
 
       // For chat format, try to parse partial output
       // Check context validity to prevent use-after-free
@@ -485,12 +533,12 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
         }
       }
 
-      auto status = tsfn.BlockingCall(data, callback);
+      auto status = tsfn_holder->tsfn.BlockingCall(data, callback);
       if (status != napi_ok) {
         delete data;
       }
     },
-    [tsfn, hasCallback](llama_rn_slot* slot) {
+    [tsfn_holder, hasCallback](llama_rn_slot* slot) {
       if (!hasCallback) return;
 
       struct CompletionResult {
@@ -504,7 +552,6 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
         bool stopped_word;
         bool context_full;
         int32_t chat_format;
-        bool thinking_forced_open;
         size_t tokens_evaluated;
         size_t tokens_predicted;
         rnllama::slot_timings timings;
@@ -542,7 +589,6 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
         slot->stopped_word,
         slot->context_full,
         slot->current_chat_format,
-        slot->current_thinking_forced_open,
         static_cast<size_t>(slot->n_decoded),
         slot->num_tokens_predicted,
         slot_timings
@@ -605,14 +651,12 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
         delete data;
       };
 
-      auto status = tsfn.BlockingCall(result_data, callback);
+      auto status = tsfn_holder->tsfn.BlockingCall(result_data, callback);
       if (status != napi_ok) {
         delete result_data;
       }
 
-      if (hasCallback) {
-        tsfn.Release();
-      }
+      tsfn_holder->release();
     }
   );
 
@@ -657,24 +701,23 @@ Napi::Value LlamaContext::QueueEmbedding(const Napi::CallbackInfo &info) {
   );
 
   // Create callback wrapper
-  Napi::ThreadSafeFunction tsfn;
+  std::shared_ptr<ManagedThreadSafeFunction> tsfn_holder;
   bool hasCallback = info.Length() > 2 && info[2].IsFunction();
 
   if (hasCallback) {
-    tsfn = Napi::ThreadSafeFunction::New(
-      env,
-      info[2].As<Napi::Function>(),
-      "QueueEmbeddingCallback",
-      0,
-      1
-    );
+    tsfn_holder = std::make_shared<ManagedThreadSafeFunction>(
+        Napi::ThreadSafeFunction::New(env,
+                                      info[2].As<Napi::Function>(),
+                                      "QueueEmbeddingCallback",
+                                      0,
+                                      1));
   }
 
   // Queue embedding request
   int32_t requestId = _rn_ctx->slot_manager->queue_embedding_request(
     tokens,
     embd_normalize,
-    [tsfn, hasCallback](int32_t requestId, const std::vector<float>& embedding) {
+    [tsfn_holder, hasCallback](int32_t requestId, const std::vector<float>& embedding) {
       if (!hasCallback) return;
 
       struct EmbeddingData {
@@ -697,11 +740,11 @@ Napi::Value LlamaContext::QueueEmbedding(const Napi::CallbackInfo &info) {
       };
 
       auto* data = new EmbeddingData{requestId, embedding};
-      auto status = tsfn.BlockingCall(data, callback);
+      auto status = tsfn_holder->tsfn.BlockingCall(data, callback);
       if (status != napi_ok) {
         delete data;
       }
-      tsfn.Release();
+      tsfn_holder->release();
     }
   );
 
@@ -741,17 +784,16 @@ Napi::Value LlamaContext::QueueRerank(const Napi::CallbackInfo &info) {
   int normalize = get_option<int32_t>(params, "normalize", 0);
 
   // Create callback wrapper
-  Napi::ThreadSafeFunction tsfn;
+  std::shared_ptr<ManagedThreadSafeFunction> tsfn_holder;
   bool hasCallback = info.Length() > 3 && info[3].IsFunction();
 
   if (hasCallback) {
-    tsfn = Napi::ThreadSafeFunction::New(
-      env,
-      info[3].As<Napi::Function>(),
-      "QueueRerankCallback",
-      0,
-      1
-    );
+    tsfn_holder = std::make_shared<ManagedThreadSafeFunction>(
+        Napi::ThreadSafeFunction::New(env,
+                                      info[3].As<Napi::Function>(),
+                                      "QueueRerankCallback",
+                                      0,
+                                      1));
   }
 
   // Queue rerank request
@@ -759,7 +801,7 @@ Napi::Value LlamaContext::QueueRerank(const Napi::CallbackInfo &info) {
     query,
     documents,
     normalize,
-    [tsfn, hasCallback, documents](int32_t requestId, const std::vector<float>& scores) {
+    [tsfn_holder, hasCallback, documents](int32_t requestId, const std::vector<float>& scores) {
       if (!hasCallback) return;
 
       struct RerankData {
@@ -787,11 +829,11 @@ Napi::Value LlamaContext::QueueRerank(const Napi::CallbackInfo &info) {
       };
 
       auto* data = new RerankData{requestId, scores, documents};
-      auto status = tsfn.BlockingCall(data, callback);
+      auto status = tsfn_holder->tsfn.BlockingCall(data, callback);
       if (status != napi_ok) {
         delete data;
       }
-      tsfn.Release();
+      tsfn_holder->release();
     }
   );
 

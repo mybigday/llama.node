@@ -71,12 +71,18 @@ const getJsonSchema = (responseFormat?: CompletionResponseFormat) => {
   return null
 }
 
-export type FormattedChatResult = {
-  type: 'jinja' | 'llama-chat'
-  prompt: string
-  has_media: boolean
-  media_paths?: Array<string>
-}
+export type FormattedChatResult =
+  | {
+      type: 'llama-chat'
+      prompt: string
+      has_media: boolean
+      media_paths?: Array<string>
+    }
+  | ({
+      type: 'jinja'
+      has_media: boolean
+      media_paths?: Array<string>
+    } & JinjaFormattedChatResult)
 
 class LlamaContextWrapper {
   ctx: LlamaContext

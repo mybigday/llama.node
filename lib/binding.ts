@@ -126,6 +126,11 @@ export type LlamaCompletionOptions = {
   tool_choice?: string
   enable_thinking?: boolean
   thinking_forced_open?: boolean
+  /**
+   * Assistant generation prompt returned by jinja chat formatting.
+   * Used for PEG chat parsing and grammar prefill.
+   */
+  generation_prompt?: string
   /** Serialized PEG parser for chat output parsing (required for PEG format types) */
   chat_parser?: string
   prompt?: string
@@ -425,7 +430,8 @@ export type JinjaFormattedChatResult = {
     value: string
     token: number
   }>
-  thinking_forced_open: boolean
+  generation_prompt?: string
+  thinking_forced_open?: boolean
   preserved_tokens: string[]
   additional_stops: string[]
   /** Serialized PEG parser for chat output parsing (required for PEG format types) */

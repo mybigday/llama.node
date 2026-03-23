@@ -110,42 +110,33 @@ exports[`completion with response_format: json_schema 1`] = `
 exports[`completion with tools 1`] = `
 {
   "additional_stops": [],
-  "chat_format": 11,
-  "chat_parser": "",
-  "grammar": "any-tool-call ::= ( calc-call ) space
-calc-args ::= "{" space  (calc-args-expression-kv )? "}" space
-calc-args-expression-kv ::= "\\"expression\\"" space ":" space string
-calc-call ::= "{" space calc-call-name-kv "," space calc-call-arguments-kv "}" space
-calc-call-arguments ::= "{" space  (calc-call-arguments-expression-kv )? "}" space
-calc-call-arguments-expression-kv ::= "\\"expression\\"" space ":" space string
-calc-call-arguments-kv ::= "\\"arguments\\"" space ":" space calc-call-arguments
-calc-call-name ::= "\\"calc\\"" space
-calc-call-name-kv ::= "\\"name\\"" space ":" space calc-call-name
-calc-function-tag ::= "<function" ( "=calc" | " name=\\"calc\\"" ) ">" space calc-args "</function>" space
-char ::= [^"\\\\\\x7F\\x00-\\x1F] | [\\\\] (["\\\\bfnrt] | "u" [0-9a-fA-F]{4})
+  "chat_format": 2,
+  "chat_parser": "{"parsers":[{"type":"epsilon"},{"type":"epsilon"},{"type":"epsilon"},{"type":"epsilon"},{"children":[],"type":"choice"},{"literal":"\\"name\\"","type":"literal"},{"literal":"\\"arguments\\"","type":"literal"},{"type":"space"},{"children":[5,7],"type":"sequence"},{"literal":":","type":"literal"},{"children":[5,7,9],"type":"sequence"},{"type":"space"},{"children":[5,7,9,11],"type":"sequence"},{"literal":"\\"","type":"literal"},{"children":[5,7,9,11,13],"type":"sequence"},{"literal":"calc","type":"literal"},{"child":15,"tag":"tool-name","type":"tag"},{"child":16,"type":"atomic"},{"children":[5,7,9,11,13,17],"type":"sequence"},{"literal":"\\"","type":"literal"},{"children":[5,7,9,11,13,17,19],"type":"sequence"},{"type":"space"},{"children":[6,21],"type":"sequence"},{"literal":":","type":"literal"},{"children":[6,21,23],"type":"sequence"},{"type":"space"},{"children":[6,21,23,25],"type":"sequence"},{"type":"any"},{"child":27,"name":"json-value","trigger":false,"type":"rule"},{"type":"any"},{"child":29,"name":"json-object","trigger":false,"type":"rule"},{"type":"space"},{"type":"any"},{"child":32,"name":"json-string","trigger":false,"type":"rule"},{"literal":"\\"","type":"literal"},{"delimiter":"\\"","type":"string"},{"literal":"\\"","type":"literal"},{"type":"space"},{"children":[34,35,36,37],"type":"sequence"},{"child":38,"name":"json-string","trigger":false,"type":"rule"},{"name":"json-string","type":"ref"},{"literal":":","type":"literal"},{"name":"json-value","type":"ref"},{"children":[39,31,41,31,117],"type":"sequence"},{"literal":",","type":"literal"},{"children":[31,44,31,39,31,41,31,117],"type":"sequence"},{"child":45,"max_count":-1,"min_count":0,"type":"repetition"},{"children":[39,31,41,31,117,46],"type":"sequence"},{"literal":"{","type":"literal"},{"literal":"}","type":"literal"},{"literal":"}","type":"literal"},{"children":[39,31,41,31,117,46,31,50],"type":"sequence"},{"children":[49,51],"type":"choice"},{"children":[48,31,52,31],"type":"sequence"},{"child":53,"name":"json-object","trigger":false,"type":"rule"},{"name":"json-object","type":"ref"},{"type":"any"},{"child":56,"name":"json-array","trigger":false,"type":"rule"},{"type":"space"},{"name":"json-value","type":"ref"},{"literal":",","type":"literal"},{"name":"json-value","type":"ref"},{"children":[60,58,117],"type":"sequence"},{"child":62,"max_count":-1,"min_count":0,"type":"repetition"},{"children":[117,63],"type":"sequence"},{"literal":"[","type":"literal"},{"literal":"]","type":"literal"},{"literal":"]","type":"literal"},{"children":[117,63,58,67],"type":"sequence"},{"children":[66,68],"type":"choice"},{"children":[65,58,69,58],"type":"sequence"},{"child":70,"name":"json-array","trigger":false,"type":"rule"},{"name":"json-array","type":"ref"},{"name":"json-string","type":"ref"},{"type":"any"},{"child":74,"name":"json-number","trigger":false,"type":"rule"},{"max_count":1,"min_count":1,"negated":false,"pattern":"[1-9]","ranges":[{"end":57,"start":49}],"type":"chars"},{"max_count":-1,"min_count":1,"negated":false,"pattern":"[0-9]","ranges":[{"end":57,"start":48}],"type":"chars"},{"literal":"0","type":"literal"},{"max_count":-1,"min_count":0,"negated":false,"pattern":"[0-9]","ranges":[{"end":57,"start":48}],"type":"chars"},{"children":[76,79],"type":"sequence"},{"children":[78,80],"type":"choice"},{"literal":".","type":"literal"},{"children":[82,77],"type":"sequence"},{"literal":"e","type":"literal"},{"literal":"E","type":"literal"},{"children":[84,85],"type":"choice"},{"max_count":1,"min_count":1,"negated":false,"pattern":"[+-]","ranges":[{"end":43,"start":43},{"end":45,"start":45}],"type":"chars"},{"child":87,"max_count":1,"min_count":0,"type":"repetition"},{"children":[86,88,77],"type":"sequence"},{"max_count":1,"min_count":1,"negated":false,"pattern":"[0-9.eE+-]","ranges":[{"end":57,"start":48},{"end":46,"start":46},{"end":101,"start":101},{"end":69,"start":69},{"end":43,"start":43},{"end":45,"start":45}],"type":"chars"},{"child":90,"type":"not"},{"literal":"-","type":"literal"},{"child":92,"max_count":1,"min_count":0,"type":"repetition"},{"child":83,"max_count":1,"min_count":0,"type":"repetition"},{"child":89,"max_count":1,"min_count":0,"type":"repetition"},{"type":"space"},{"children":[93,81,94,95,91,96],"type":"sequence"},{"child":97,"name":"json-number","trigger":false,"type":"rule"},{"name":"json-number","type":"ref"},{"type":"any"},{"child":100,"name":"json-bool","trigger":false,"type":"rule"},{"literal":"true","type":"literal"},{"literal":"false","type":"literal"},{"children":[102,103],"type":"choice"},{"type":"space"},{"children":[104,105],"type":"sequence"},{"child":106,"name":"json-bool","trigger":false,"type":"rule"},{"name":"json-bool","type":"ref"},{"type":"any"},{"child":109,"name":"json-null","trigger":false,"type":"rule"},{"literal":"null","type":"literal"},{"type":"space"},{"children":[111,112],"type":"sequence"},{"child":113,"name":"json-null","trigger":false,"type":"rule"},{"name":"json-null","type":"ref"},{"children":[54,71,39,98,107,114],"type":"choice"},{"child":116,"name":"json-value","trigger":false,"type":"rule"},{"name":"json-value","type":"ref"},{"child":117,"name":"tool-calc-schema","raw":false,"schema":{"properties":{"expression":{"description":"The math expression to evaluate.","type":"string"}},"type":"object"},"type":"schema"},{"child":119,"tag":"tool-args","type":"tag"},{"children":[6,21,23,25,120],"type":"sequence"},{"type":"epsilon"},{"type":"epsilon"},{"literal":"{","type":"literal"},{"child":124,"tag":"tool-open","type":"tag"},{"child":125,"type":"atomic"},{"type":"space"},{"children":[126,127],"type":"sequence"},{"children":[126,127,5,7,9,11,13,17,19],"type":"sequence"},{"type":"space"},{"children":[126,127,5,7,9,11,13,17,19,130],"type":"sequence"},{"literal":",","type":"literal"},{"children":[126,127,5,7,9,11,13,17,19,130,132],"type":"sequence"},{"type":"space"},{"children":[126,127,5,7,9,11,13,17,19,130,132,134],"type":"sequence"},{"children":[126,127,5,7,9,11,13,17,19,130,132,134,6,21,23,25,120],"type":"sequence"},{"type":"space"},{"children":[126,127,5,7,9,11,13,17,19,130,132,134,6,21,23,25,120,137],"type":"sequence"},{"literal":"}","type":"literal"},{"child":139,"tag":"tool-close","type":"tag"},{"child":140,"type":"atomic"},{"children":[126,127,5,7,9,11,13,17,19,130,132,134,6,21,23,25,120,137,141],"type":"sequence"},{"child":142,"tag":"tool","type":"tag"},{"child":143,"name":"tool-calc","trigger":false,"type":"rule"},{"name":"tool-calc","type":"ref"},{"children":[144],"type":"choice"},{"literal":"<tool_call>\\n","type":"literal"},{"type":"space"},{"children":[147,148],"type":"sequence"},{"children":[147,148,146],"type":"sequence"},{"type":"space"},{"children":[147,148,146,151],"type":"sequence"},{"literal":"</tool_call>","type":"literal"},{"children":[147,148,146,151,153],"type":"sequence"},{"child":154,"name":"tool-call","trigger":true,"type":"rule"},{"name":"tool-call","type":"ref"},{"child":155,"max_count":1,"min_count":0,"type":"repetition"},{"delimiters":["<tool_call>\\n"],"type":"until"},{"child":158,"tag":"content","type":"tag"},{"child":159,"max_count":1,"min_count":0,"type":"repetition"},{"children":[1,160],"type":"sequence"},{"children":[1,160,157],"type":"sequence"},{"type":"end"},{"children":[1,160,157,163],"type":"sequence"},{"literal":"<|im_start|>assistant\\n","type":"literal"},{"children":[165,1,160,157,163],"type":"sequence"}],"root":166,"rules":{"json-array":71,"json-bool":107,"json-null":114,"json-number":98,"json-object":54,"json-string":39,"json-value":117,"tool-calc":144,"tool-call":155}}",
+  "generation_prompt": "<|im_start|>assistant
+",
+  "grammar": "char ::= [^"\\\\\\x7F\\x00-\\x1F] | [\\\\] (["\\\\bfnrt] | "u" [0-9a-fA-F]{4})
+json-array ::= "[" space ("]" | json-value ("," space json-value)* space "]") space
+json-bool ::= ("true" | "false") space
+json-null ::= "null" space
+json-number ::= "-"? ("0" | [1-9] [0-9]*) ("." [0-9]+)? (("e" | "E") [+-]? [0-9]+)?  space
+json-object ::= "{" space ("}" | json-string space ":" space json-value (space "," space json-string space ":" space json-value)* space "}") space
+json-string ::= "\\"" ( [^"\\\\] | "\\\\" ( ["\\\\/ bfnrt] | "u" [0-9a-fA-F]{4} ) )* "\\"" space
+json-value ::= json-object | json-array | json-string | json-number | json-bool | json-null
 root ::= tool-call
 space ::= | " " | "\\n"{1,2} [ \\t]{0,20}
 string ::= "\\"" char* "\\"" space
-tool-call ::= calc-function-tag | wrappable-tool-call | ( "\`\`\`\\n" | "\`\`\`json\\n" | "\`\`\`xml\\n" ) space wrappable-tool-call space "\`\`\`" space 
-wrappable-tool-call ::= ( any-tool-call | "<tool_call>" space any-tool-call "</tool_call>" | "<function_call>" space any-tool-call "</function_call>" | "<response>"  space any-tool-call "</response>" | "<tools>"     space any-tool-call "</tools>" | "<json>"      space any-tool-call "</json>" | "<xml>"      space any-tool-call "</xml>" | "<JSON>"      space any-tool-call "</JSON>" ) space
+tool-calc ::= "{" space "\\"name\\"" space ":" space "\\"" "calc" "\\"" space "," space "\\"arguments\\"" space ":" space tool-calc-schema space "}"
+tool-calc-schema ::= "{" space  (tool-calc-schema-expression-kv )? "}" space
+tool-calc-schema-expression-kv ::= "\\"expression\\"" space ":" space string
+tool-call ::= "<tool_call>\\n" space (tool-calc) space "</tool_call>"
 ",
   "grammar_lazy": true,
   "grammar_triggers": [
     {
       "token": -1,
       "type": 1,
-      "value": "<function=calc>",
-    },
-    {
-      "token": -1,
-      "type": 2,
-      "value": "<function\\s+name\\s*=\\s*"calc"",
-    },
-    {
-      "token": -1,
-      "type": 2,
-      "value": "\\s*((?:<tool_call>|<function|(?:\`\`\`(?:json|xml)?
-\\s*)?(?:<function_call>|<tools>|<xml><json>|<response>)?\\s*\\{\\s*"name"\\s*:\\s*"(?:calc)"))",
+      "value": "<tool_call>
+",
     },
   ],
   "has_media": false,
@@ -155,20 +146,6 @@ wrappable-tool-call ::= ( any-tool-call | "<tool_call>" space any-tool-call "</t
     "</think>",
     "<tool_call>",
     "</tool_call>",
-    "<function",
-    "<tools>",
-    "</tools>",
-    "<response>",
-    "</response>",
-    "<function_call>",
-    "</function_call>",
-    "<json>",
-    "</json>",
-    "<JSON>",
-    "</JSON>",
-    "\`\`\`",
-    "\`\`\`json",
-    "\`\`\`xml",
   ],
   "prompt": "<|im_start|>system
 # Tools
@@ -188,7 +165,6 @@ For each function call, return a json object with function name and arguments wi
 What is the sum of 1 and 2?<|im_end|>
 <|im_start|>assistant
 ",
-  "thinking_forced_open": false,
   "type": "jinja",
 }
 `;
