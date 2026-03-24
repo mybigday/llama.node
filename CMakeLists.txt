@@ -6,10 +6,43 @@ project (index)
 
 set(CMAKE_CXX_STANDARD 17)
 
-execute_process(COMMAND
-  git apply ${CMAKE_CURRENT_SOURCE_DIR}/scripts/llama.cpp.patch
+set(LLAMA_CPP_PATCH_FILE ${CMAKE_CURRENT_SOURCE_DIR}/scripts/llama.cpp.patch)
+
+execute_process(
+  COMMAND git apply --check ${LLAMA_CPP_PATCH_FILE}
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  RESULT_VARIABLE LLAMA_CPP_PATCH_CHECK_RESULT
+  OUTPUT_QUIET
+  ERROR_QUIET
 )
+
+if (LLAMA_CPP_PATCH_CHECK_RESULT EQUAL 0)
+  execute_process(
+    COMMAND git apply ${LLAMA_CPP_PATCH_FILE}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    RESULT_VARIABLE LLAMA_CPP_PATCH_APPLY_RESULT
+  )
+
+  if (NOT LLAMA_CPP_PATCH_APPLY_RESULT EQUAL 0)
+    message(FATAL_ERROR "Failed to apply scripts/llama.cpp.patch")
+  endif()
+
+  message(STATUS "Applied scripts/llama.cpp.patch")
+else()
+  execute_process(
+    COMMAND git apply --reverse --check ${LLAMA_CPP_PATCH_FILE}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    RESULT_VARIABLE LLAMA_CPP_PATCH_REVERSE_CHECK_RESULT
+    OUTPUT_QUIET
+    ERROR_QUIET
+  )
+
+  if (LLAMA_CPP_PATCH_REVERSE_CHECK_RESULT EQUAL 0)
+    message(STATUS "scripts/llama.cpp.patch already applied")
+  else()
+    message(FATAL_ERROR "scripts/llama.cpp.patch does not match the current src/llama.cpp checkout")
+  endif()
+endif()
 
 if(NOT DEFINED napi_build_version)
   set(napi_build_version 6)
