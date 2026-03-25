@@ -11,7 +11,7 @@ export type MessagePart = {
     data?: string
     url?: string
   }
-}
+} & Record<string, any>
 
 export type ChatMessage = {
   role: string
@@ -120,6 +120,13 @@ export type LlamaCompletionOptions = {
   jinja?: boolean
   reasoning_format?: 'none' | 'auto' | 'deepseek'
   chat_template?: string
+  /**
+   * When enabled, forces the chat parser to treat the entire model output as
+   * plain content, skipping separate parsing of reasoning tokens and tool calls.
+   * Also bypasses jinja template validation so templates that only accept typed
+   * content (e.g. TranslateGemma) are not rejected during capability detection.
+   */
+  force_pure_content?: boolean
   response_format?: CompletionResponseFormat
   tools?: Tool[]
   parallel_tool_calls?: boolean
@@ -517,6 +524,7 @@ export interface LlamaContext {
       add_generation_prompt?: boolean
       now?: string | number
       chat_template_kwargs?: Record<string, string>
+      force_pure_content?: boolean
     },
   ): JinjaFormattedChatResult | string
   completion(
