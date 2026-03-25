@@ -128,11 +128,18 @@ class LlamaContextWrapper {
       add_generation_prompt?: boolean
       now?: string | number
       chat_template_kwargs?: Record<string, string>
+      force_pure_content?: boolean
     },
   ): FormattedChatResult {
     const { messages: chat, has_media, media_paths } = formatMediaChat(messages)
 
-    const useJinja = this.isJinjaSupported() && (params?.jinja ?? true)
+    const forcePureContent = params?.force_pure_content ?? false
+    // When force_pure_content is set, accept any model that has a chat_template
+    // string in its metadata without requiring template validation to pass.
+    const hasChatTemplate = !!(this.ctx.getModelInfo().metadata?.['tokenizer.chat_template'])
+    const useJinja =
+      (forcePureContent ? hasChatTemplate : this.isJinjaSupported()) &&
+      (params?.jinja ?? true)
     let tmpl
     if (template) tmpl = template // Force replace if provided
 
@@ -146,6 +153,7 @@ class LlamaContextWrapper {
       reasoning_format: params?.reasoning_format ?? 'none',
       add_generation_prompt: params?.add_generation_prompt,
       now: params?.now,
+      force_pure_content: forcePureContent,
       chat_template_kwargs: params?.chat_template_kwargs
         ? Object.entries(params.chat_template_kwargs).reduce(
             (acc, [key, value]) => {
