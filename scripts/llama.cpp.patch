@@ -1,8 +1,8 @@
 diff --git a/src/llama.cpp/common/CMakeLists.txt b/src/llama.cpp/common/CMakeLists.txt
-index 75c6366c7..2eeea3a57 100644
+index b313a7320..be9c4c35c 100644
 --- a/src/llama.cpp/common/CMakeLists.txt
 +++ b/src/llama.cpp/common/CMakeLists.txt
-@@ -148,4 +148,10 @@ if (LLAMA_LLGUIDANCE)
+@@ -150,4 +150,10 @@ if (LLAMA_LLGUIDANCE)
      endif()
  endif()
  
@@ -293,7 +293,7 @@ index 012e21266..f42ca0bba 100644
  
      if (params.has_logit_bias()) {
 diff --git a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
-index 1a1bbc9f2..72102e078 100644
+index beebc4760..3f97fd1c9 100644
 --- a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
 +++ b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
 @@ -111,7 +111,7 @@ function(ggml_add_cpu_backend_variant_impl tag_name)
