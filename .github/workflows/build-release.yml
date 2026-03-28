@@ -189,10 +189,12 @@ jobs:
           stripdown: true
       - name: Select Xcode 26.2 (macOS arm64)
         if: steps.run.outputs.should-run == 'true' && runner.os == 'macOS' && matrix.arch == 'arm64'
-        shell: bash
-        run: |
-          sudo xcode-select -switch /Applications/Xcode_26.2.app
-          xcodebuild -version
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '26.2'
+      - name: Xcode version
+        if: steps.run.outputs.should-run == 'true' && runner.os == 'macOS' && matrix.arch == 'arm64'
+        run: xcodebuild -version
       - name: Prepare & build (Linux)
         if: steps.run.outputs.should-run == 'true' && runner.os == 'Linux'
         run: |
