@@ -83,7 +83,7 @@ jobs:
             target: default
             package: node-llama-darwin-x64
           # macOS arm64
-          - os: macos-15
+          - os: macos-26
             arch: arm64
             target: default
             package: node-llama-darwin-arm64
@@ -187,6 +187,14 @@ jobs:
           optional_components: com.lunarg.vulkan.arm64
           cache: true
           stripdown: true
+      - name: Select Xcode 26.2 (macOS arm64)
+        if: steps.run.outputs.should-run == 'true' && runner.os == 'macOS' && matrix.arch == 'arm64'
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '26.2'
+      - name: Xcode version
+        if: steps.run.outputs.should-run == 'true' && runner.os == 'macOS' && matrix.arch == 'arm64'
+        run: xcodebuild -version
       - name: Prepare & build (Linux)
         if: steps.run.outputs.should-run == 'true' && runner.os == 'Linux'
         run: |

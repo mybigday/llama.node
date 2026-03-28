@@ -153,6 +153,23 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT DEFINED GGML_OPENMP OR GGML_O
   endif()
 endif()
 
+# Ensure the ggml Metal shader compilation uses the same minimum macOS version
+# as the rest of the build.
+#
+# ggml's Metal build uses a separate xcrun/metal invocation, which won't
+# automatically inherit CMAKE_OSX_DEPLOYMENT_TARGET.
+if (APPLE)
+  if (NOT DEFINED GGML_METAL_MACOSX_VERSION_MIN OR GGML_METAL_MACOSX_VERSION_MIN STREQUAL "")
+    if (DEFINED CMAKE_OSX_DEPLOYMENT_TARGET AND NOT CMAKE_OSX_DEPLOYMENT_TARGET STREQUAL "")
+      set(GGML_METAL_MACOSX_VERSION_MIN "${CMAKE_OSX_DEPLOYMENT_TARGET}" CACHE STRING
+          "ggml: metal minimum macOS version" FORCE)
+    elseif (DEFINED ENV{MACOSX_DEPLOYMENT_TARGET} AND NOT "$ENV{MACOSX_DEPLOYMENT_TARGET}" STREQUAL "")
+      set(GGML_METAL_MACOSX_VERSION_MIN "$ENV{MACOSX_DEPLOYMENT_TARGET}" CACHE STRING
+          "ggml: metal minimum macOS version" FORCE)
+    endif()
+  endif()
+endif()
+
 set(LLAMA_BUILD_COMMON ON CACHE BOOL "Build common")
 set(LLAMA_BUILD_TOOLS OFF CACHE BOOL "Build tools")
 set(LLAMA_BUILD_TESTS OFF CACHE BOOL "Build tests")
