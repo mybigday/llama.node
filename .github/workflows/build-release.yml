@@ -193,12 +193,6 @@ jobs:
         run: |
           sudo xcode-select -switch /Applications/Xcode_26.2.app
           xcodebuild -version
-      - name: Pin macOS deployment target (15.0)
-        if: steps.run.outputs.should-run == 'true' && runner.os == 'macOS'
-        shell: bash
-        run: |
-          echo "MACOSX_DEPLOYMENT_TARGET=15.0" >> "$GITHUB_ENV"
-          echo "CMAKE_OSX_DEPLOYMENT_TARGET=15.0" >> "$GITHUB_ENV"
       - name: Prepare & build (Linux)
         if: steps.run.outputs.should-run == 'true' && runner.os == 'Linux'
         run: |
