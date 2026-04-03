@@ -23,7 +23,33 @@ runs:
         $version = $env:VERSION.Split('.')[0..1] -join '.'
         $version_slug = $version.Replace('.', '_')
         $cuda_path = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${version}"
-        choco install cuda --version=${{ inputs.version }} -y
+        $max_attempts = 3
+        $installed = $false
+
+        for ($attempt = 1; $attempt -le $max_attempts; $attempt++) {
+          Write-Host "Installing CUDA $($env:VERSION) via Chocolatey (attempt $attempt/$max_attempts)"
+          choco install cuda --version=$env:VERSION -y --no-progress
+
+          if ($LASTEXITCODE -eq 0) {
+            $installed = $true
+            break
+          }
+
+          if ($attempt -lt $max_attempts) {
+            $delay = 15 * $attempt
+            Write-Warning "CUDA install failed with exit code $LASTEXITCODE. Retrying in $delay seconds."
+            Start-Sleep -Seconds $delay
+          }
+        }
+
+        if (-not $installed) {
+          throw "Failed to install CUDA $($env:VERSION) via Chocolatey after $max_attempts attempts."
+        }
+
+        if (-not (Test-Path $cuda_path)) {
+          throw "CUDA install completed, but expected path was not found: $cuda_path"
+        }
+
         Add-Content -Path $env:GITHUB_ENV -Value "CUDA_PATH=${cuda_path}"
         Add-Content -Path $env:GITHUB_ENV -Value "CUDA_PATH_V${version_slug}=${cuda_path}"
         Add-Content -Path $env:GITHUB_PATH -Value "${cuda_path}\bin"
