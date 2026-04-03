@@ -6,6 +6,16 @@ inputs:
     required: true
     default: "12.9.1.576"
     type: string
+  installer-url:
+    description: "Direct Windows installer URL"
+    required: false
+    default: ""
+    type: string
+  installer-checksum:
+    description: "SHA256 for the direct Windows installer"
+    required: false
+    default: ""
+    type: string
 
 outputs:
   cuda-path:
@@ -19,31 +29,60 @@ runs:
       shell: pwsh
       env:
         VERSION: ${{ inputs.version }}
+        INSTALLER_URL: ${{ inputs.installer-url }}
+        INSTALLER_CHECKSUM: ${{ inputs.installer-checksum }}
       run: |
         $version = $env:VERSION.Split('.')[0..1] -join '.'
         $version_slug = $version.Replace('.', '_')
         $cuda_path = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${version}"
-        $max_attempts = 3
         $installed = $false
 
-        for ($attempt = 1; $attempt -le $max_attempts; $attempt++) {
-          Write-Host "Installing CUDA $($env:VERSION) via Chocolatey (attempt $attempt/$max_attempts)"
-          choco install cuda --version=$env:VERSION -y --no-progress
+        if ($env:INSTALLER_URL) {
+          $installer_path = Join-Path $env:RUNNER_TEMP "cuda-$($env:VERSION)-windows.exe"
+          $expected_checksum = $env:INSTALLER_CHECKSUM.ToLowerInvariant()
 
-          if ($LASTEXITCODE -eq 0) {
-            $installed = $true
-            break
+          Write-Host "Downloading CUDA $($env:VERSION) directly from NVIDIA"
+          $ProgressPreference = 'SilentlyContinue'
+          Invoke-WebRequest -Uri $env:INSTALLER_URL -OutFile $installer_path
+
+          $actual_checksum = (Get-FileHash -Path $installer_path -Algorithm SHA256).Hash.ToLowerInvariant()
+          if (-not $expected_checksum) {
+            throw "Direct installer checksum is required when installer-url is provided."
           }
 
-          if ($attempt -lt $max_attempts) {
-            $delay = 15 * $attempt
-            Write-Warning "CUDA install failed with exit code $LASTEXITCODE. Retrying in $delay seconds."
-            Start-Sleep -Seconds $delay
+          if ($actual_checksum -ne $expected_checksum) {
+            throw "Direct installer checksum mismatch. Expected $expected_checksum but got $actual_checksum."
+          }
+
+          Write-Host "Installing CUDA $($env:VERSION) from direct download"
+          $process = Start-Process -FilePath $installer_path -ArgumentList '/s' -Wait -PassThru
+          if ($process.ExitCode -notin @(0, 3010, 1641)) {
+            throw "Direct CUDA installer exited with code $($process.ExitCode)."
+          }
+
+          $installed = $true
+        } else {
+          $max_attempts = 3
+
+          for ($attempt = 1; $attempt -le $max_attempts; $attempt++) {
+            Write-Host "Installing CUDA $($env:VERSION) via Chocolatey (attempt $attempt/$max_attempts)"
+            choco install cuda --version=$env:VERSION -y --no-progress
+
+            if ($LASTEXITCODE -eq 0) {
+              $installed = $true
+              break
+            }
+
+            if ($attempt -lt $max_attempts) {
+              $delay = 15 * $attempt
+              Write-Warning "CUDA install failed with exit code $LASTEXITCODE. Retrying in $delay seconds."
+              Start-Sleep -Seconds $delay
+            }
           }
         }
 
         if (-not $installed) {
-          throw "Failed to install CUDA $($env:VERSION) via Chocolatey after $max_attempts attempts."
+          throw "Failed to install CUDA $($env:VERSION)."
         }
 
         if (-not (Test-Path $cuda_path)) {
