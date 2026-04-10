@@ -432,7 +432,7 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   if (_rn_ctx->llama_init->model()) {
     const auto &model_devices = _rn_ctx->llama_init->model()->devices;
     for (auto dev : model_devices) {
-      const char *dev_name = ggml_backend_dev_name(dev);
+      const char *dev_name = ggml_backend_dev_name(dev.dev);
       if (dev_name != nullptr) {
         _used_devices.push_back(std::string(dev_name));
       }

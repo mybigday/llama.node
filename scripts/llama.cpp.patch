@@ -15,7 +15,7 @@ index b313a7320..be9c4c35c 100644
 +
 +target_link_libraries(${TARGET} PRIVATE ${LLAMA_COMMON_WIN_LIBS} PUBLIC llama Threads::Threads)
 diff --git a/src/llama.cpp/common/chat.cpp b/src/llama.cpp/common/chat.cpp
-index 5b93c5887..3d7d04937 100644
+index f79fe703d..9f3a44185 100644
 --- a/src/llama.cpp/common/chat.cpp
 +++ b/src/llama.cpp/common/chat.cpp
 @@ -107,10 +107,16 @@ json common_chat_msg::to_json_oaicompat(bool concat_typed_text) const {
@@ -315,10 +315,10 @@ index beebc4760..3f97fd1c9 100644
              check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
              if (NOT "${GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E}" STREQUAL "")
 diff --git a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-index f91bc4655..f552cc389 100644
+index ac5baa2ac..6332592c3 100644
 --- a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
 +++ b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-@@ -3051,9 +3051,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
+@@ -3055,9 +3055,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
      GGML_UNUSED(dev);
  }
  
@@ -345,7 +345,7 @@ index f91bc4655..f552cc389 100644
      *total = *free;
  
      GGML_UNUSED(dev);
-@@ -3365,7 +3380,12 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+@@ -3369,7 +3384,12 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
  #if defined(__ANDROID__)
      if (opt_arch < 75) {
          opt_ndev = 1;
@@ -359,7 +359,7 @@ index f91bc4655..f552cc389 100644
      }
  #endif
  
-@@ -3380,6 +3400,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+@@ -3384,6 +3404,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
          } catch (const std::exception & exc) {
              GGML_LOG_ERROR("ggml-hex: failed to create device/session %zu\n", i);
              devices[i].context = nullptr;
