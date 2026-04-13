@@ -15,7 +15,7 @@ index b313a7320..be9c4c35c 100644
 +
 +target_link_libraries(${TARGET} PRIVATE ${LLAMA_COMMON_WIN_LIBS} PUBLIC llama Threads::Threads)
 diff --git a/src/llama.cpp/common/chat.cpp b/src/llama.cpp/common/chat.cpp
-index f79fe703d..9f3a44185 100644
+index 3f3b06330..34a37a194 100644
 --- a/src/llama.cpp/common/chat.cpp
 +++ b/src/llama.cpp/common/chat.cpp
 @@ -107,10 +107,16 @@ json common_chat_msg::to_json_oaicompat(bool concat_typed_text) const {
@@ -91,7 +91,7 @@ index f79fe703d..9f3a44185 100644
  common_chat_templates_ptr common_chat_templates_init(const struct llama_model * model,
                                                       const std::string &        chat_template_override,
                                                       const std::string &        bos_token_override,
-@@ -1295,6 +1341,72 @@ static common_chat_params common_chat_params_init_functionary_v3_2(const common_
+@@ -1310,6 +1356,72 @@ static common_chat_params common_chat_params_init_functionary_v3_2(const common_
      return data;
  }
  
@@ -164,7 +164,7 @@ index f79fe703d..9f3a44185 100644
  // Kimi K2 Thinking - uses unique tool call ID format: functions.<name>:<index>
  // The ID contains both the function name and an incrementing counter
  static common_chat_params common_chat_params_init_kimi_k2(const common_chat_template &    tmpl,
-@@ -1881,6 +1993,12 @@ std::optional<common_chat_params> common_chat_try_specialized_template(
+@@ -1896,6 +2008,12 @@ std::optional<common_chat_params> common_chat_try_specialized_template(
          return common_chat_params_init_functionary_v3_2(tmpl, params);
      }
  
@@ -177,7 +177,7 @@ index f79fe703d..9f3a44185 100644
      // Kimi K2 Thinking - uses unique tool call ID format: functions.<name>:<index>
      // Detection: template has "<|tool_calls_section_begin|>" and "functions." prefix in tool call IDs
      if (src.find("<|tool_calls_section_begin|>") != std::string::npos &&
-@@ -2187,4 +2305,3 @@ std::map<std::string, bool> common_chat_templates_get_caps(const common_chat_tem
+@@ -2207,4 +2325,3 @@ std::map<std::string, bool> common_chat_templates_get_caps(const common_chat_tem
      GGML_ASSERT(chat_templates->template_default != nullptr);
      return chat_templates->template_default->caps.to_map();
  }
@@ -315,10 +315,10 @@ index beebc4760..3f97fd1c9 100644
              check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
              if (NOT "${GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E}" STREQUAL "")
 diff --git a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-index ac5baa2ac..6332592c3 100644
+index 3d68b8004..f6cf670a5 100644
 --- a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
 +++ b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-@@ -3055,9 +3055,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
+@@ -2916,8 +2916,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
      GGML_UNUSED(dev);
  }
  
@@ -328,8 +328,7 @@ index ac5baa2ac..6332592c3 100644
 +#define GGML_HEXAGON_SESSION_MEMORY_MAX (3ULL * 1024 * 1024 * 1024 + 512ULL * 1024 * 1024)
 +
  static void ggml_backend_hexagon_device_get_memory(ggml_backend_dev_t dev, size_t * free, size_t * total) {
--    // ~2GB per session for now
--    *free  = 2ULL * 1024 * 1024 * 1024;
+-    *free  = 0;
 +    const char * str_mem = getenv("GGML_HEXAGON_SESSION_MEMORY");
 +    if (str_mem) {
 +        *free = std::stoull(str_mem);
@@ -345,7 +344,7 @@ index ac5baa2ac..6332592c3 100644
      *total = *free;
  
      GGML_UNUSED(dev);
-@@ -3369,7 +3384,12 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+@@ -3236,7 +3252,12 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
  #if defined(__ANDROID__)
      if (opt_arch < 75) {
          opt_ndev = 1;
@@ -359,7 +358,7 @@ index ac5baa2ac..6332592c3 100644
      }
  #endif
  
-@@ -3384,6 +3404,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+@@ -3251,6 +3272,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
          } catch (const std::exception & exc) {
              GGML_LOG_ERROR("ggml-hex: failed to create device/session %zu\n", i);
              devices[i].context = nullptr;
