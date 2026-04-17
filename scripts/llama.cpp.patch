@@ -389,3 +389,29 @@ index 715a263a6..bd6c5a01f 100644
          list(APPEND VULKAN_SHADER_GEN_CMAKE_ARGS -DCMAKE_TOOLCHAIN_FILE=${HOST_CMAKE_TOOLCHAIN_FILE})
          message(STATUS "vulkan-shaders-gen toolchain file: ${HOST_CMAKE_TOOLCHAIN_FILE}")
      endif()
+diff --git a/src/llama.cpp/ggml/src/ggml-vulkan/ggml-vulkan.cpp b/src/llama.cpp/ggml/src/ggml-vulkan/ggml-vulkan.cpp
+index 702a249d7..a47278998 100644
+--- a/src/llama.cpp/ggml/src/ggml-vulkan/ggml-vulkan.cpp
++++ b/src/llama.cpp/ggml/src/ggml-vulkan/ggml-vulkan.cpp
+@@ -20,9 +20,18 @@ DispatchLoaderDynamic & ggml_vk_default_dispatcher();
+ #define VULKAN_HPP_DEFAULT_DISPATCHER ggml_vk_default_dispatcher()
+ 
+ #include <vulkan/vulkan.hpp>
+-// SPIRV-Headers: LunarG Windows SDK uses Include/spirv-headers/spirv.hpp (not spirv/unified1/). MinGW/MSYS2 and
+-// Linux packages use Khronos layout spirv/unified1/spirv.hpp. See docs/build.md#vulkan.
+-#if defined(_WIN32) && !defined(__MINGW32__)
++// SPIRV-Headers can come from LunarG's Windows SDK (spirv-headers/spirv.hpp)
++// or distro packages that use Khronos' layout (spirv/unified1/spirv.hpp).
++// Probe the installed SDK/package layout instead of keying off the compiler.
++#if defined(__has_include)
++#if __has_include(<spirv-headers/spirv.hpp>)
++#include <spirv-headers/spirv.hpp>
++#elif __has_include(<spirv/unified1/spirv.hpp>)
++#include <spirv/unified1/spirv.hpp>
++#else
++#error "SPIRV-Headers not found. Install a Vulkan SDK/package that provides spirv.hpp."
++#endif
++#elif defined(_WIN32) && !defined(__MINGW32__)
+ #include <spirv-headers/spirv.hpp>
+ #else
+ #include <spirv/unified1/spirv.hpp>
