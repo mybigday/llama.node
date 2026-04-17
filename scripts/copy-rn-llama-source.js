@@ -77,6 +77,10 @@ try {
             let content = fs.readFileSync(srcPath, 'utf8');
             content = content.replace(/lm_ggml/g, 'ggml');
             content = content.replace(/LM_GGML/g, 'GGML');
+            content = content.replace(
+                /mtmd_decode_use_non_causal\(mtmd_ctx\)/g,
+                'mtmd_decode_use_non_causal(mtmd_ctx, nullptr)'
+            );
             
             // Write the processed content to destination
             fs.writeFileSync(destPath, content);
