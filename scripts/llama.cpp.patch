@@ -1,8 +1,8 @@
 diff --git a/src/llama.cpp/common/CMakeLists.txt b/src/llama.cpp/common/CMakeLists.txt
-index b313a7320..be9c4c35c 100644
+index 1a56c2585..263b30ed4 100644
 --- a/src/llama.cpp/common/CMakeLists.txt
 +++ b/src/llama.cpp/common/CMakeLists.txt
-@@ -150,4 +150,10 @@ if (LLAMA_LLGUIDANCE)
+@@ -169,4 +169,10 @@ if (LLAMA_LLGUIDANCE)
      endif()
  endif()
  
@@ -15,7 +15,7 @@ index b313a7320..be9c4c35c 100644
 +
 +target_link_libraries(${TARGET} PRIVATE ${LLAMA_COMMON_WIN_LIBS} PUBLIC llama Threads::Threads)
 diff --git a/src/llama.cpp/common/chat.cpp b/src/llama.cpp/common/chat.cpp
-index e27b6c341..cefbd4823 100644
+index 70b9f5dc2..b232c71a4 100644
 --- a/src/llama.cpp/common/chat.cpp
 +++ b/src/llama.cpp/common/chat.cpp
 @@ -107,10 +107,16 @@ json common_chat_msg::to_json_oaicompat(bool concat_typed_text) const {
@@ -49,10 +49,97 @@ index e27b6c341..cefbd4823 100644
                          msg.content_parts.push_back(msg_part);
                      }
                  } else if (!content.is_null()) {
-@@ -588,6 +599,41 @@ std::string common_chat_templates_source(const struct common_chat_templates * tm
-     return tmpls->template_default->source();
+@@ -1312,6 +1323,72 @@ static common_chat_params common_chat_params_init_functionary_v3_2(const common_
+     return data;
  }
  
++static common_chat_params common_chat_params_init_function_gemma(
++    const common_chat_template &          tmpl,
++    const autoparser::generation_params & inputs) {
++    common_chat_params data;
++
++    data.prompt = common_chat_template_direct_apply_impl(tmpl, inputs);
++
++    auto has_tools       = inputs.tools.is_array() && !inputs.tools.empty();
++    auto include_grammar = has_tools && inputs.tool_choice != COMMON_CHAT_TOOL_CHOICE_NONE;
++
++    if (!has_tools || inputs.tool_choice == COMMON_CHAT_TOOL_CHOICE_NONE) {
++        data.format = COMMON_CHAT_FORMAT_CONTENT_ONLY;
++        return data;
++    }
++
++    data.format           = COMMON_CHAT_FORMAT_PEG_NATIVE;
++    data.preserved_tokens = {
++        "<start_function_call>",
++        "<end_function_call>",
++    };
++
++    auto parser = build_chat_peg_parser([&](common_chat_peg_builder & p) {
++        auto generation_prompt = p.prefix(inputs.generation_prompt, "<start_function_call>");
++        auto tool_choice = p.choice();
++
++        foreach_function(inputs.tools, [&](const json & tool) {
++            const auto & function = tool.at("function");
++            std::string  name     = function.at("name");
++            const auto & schema   = function.at("parameters");
++
++            auto tool_parser = p.tool(
++                p.tool_open(
++                    p.literal("<start_function_call>call:") +
++                    p.tool_name(p.literal(name))) +
++                p.tool_args(p.schema(p.json(), "tool-" + name + "-schema", schema)) +
++                p.tool_close(p.literal("<end_function_call>"))
++            );
++
++            tool_choice |= p.rule("tool-" + name, tool_parser);
++        });
++
++        auto tool_calls = p.trigger_rule("tool-call",
++            inputs.parallel_tool_calls ? p.one_or_more(tool_choice) : tool_choice);
++        return generation_prompt + tool_calls + p.end();
++    });
++
++    data.parser = parser.save();
++
++    if (include_grammar) {
++        data.grammar_lazy = inputs.tool_choice == COMMON_CHAT_TOOL_CHOICE_AUTO;
++        data.grammar      = build_grammar([&](const common_grammar_builder & builder) {
++            foreach_function(inputs.tools, [&](const json & tool) {
++                auto schema = tool.at("function").at("parameters");
++                builder.resolve_refs(schema);
++            });
++            parser.build_grammar(builder, data.grammar_lazy);
++        });
++
++        data.grammar_triggers = {
++            { COMMON_GRAMMAR_TRIGGER_TYPE_WORD, "<start_function_call>" }
++        };
++    }
++
++    return data;
++}
++
+ // Kimi K2 Thinking - uses unique tool call ID format: functions.<name>:<index>
+ // The ID contains both the function name and an incrementing counter
+ static common_chat_params common_chat_params_init_kimi_k2(const common_chat_template &    tmpl,
+@@ -2065,6 +2142,12 @@ std::optional<common_chat_params> common_chat_try_specialized_template(
+         return common_chat_params_init_functionary_v3_2(tmpl, params);
+     }
+ 
++    // FunctionGemma - uses <start_function_call>call:name{...}<end_function_call>
++    if (src.find("<start_function_call>") != std::string::npos) {
++        LOG_DBG("Using specialized template: FunctionGemma\n");
++        return common_chat_params_init_function_gemma(tmpl, params);
++    }
++
+     // Kimi K2 Thinking - uses unique tool call ID format: functions.<name>:<index>
+     // Detection: template has "<|tool_calls_section_begin|>" and "functions." prefix in tool call IDs
+     if (src.find("<|tool_calls_section_begin|>") != std::string::npos &&
+@@ -2391,3 +2474,38 @@ std::map<std::string, bool> common_chat_templates_get_caps(const common_chat_tem
+     GGML_ASSERT(chat_templates->template_default != nullptr);
+     return chat_templates->template_default->caps.to_map();
+ }
++
 +common_chat_template_caps common_chat_templates_get_caps_for_variant(
 +    const struct common_chat_templates * tmpls,
 +    const std::string & variant) {
@@ -87,103 +174,8 @@ index e27b6c341..cefbd4823 100644
 +    }
 +    return false;
 +}
-+
- common_chat_templates_ptr common_chat_templates_init(const struct llama_model * model,
-                                                      const std::string &        chat_template_override,
-                                                      const std::string &        bos_token_override,
-@@ -1323,6 +1369,72 @@ static common_chat_params common_chat_params_init_functionary_v3_2(const common_
-     return data;
- }
- 
-+static common_chat_params common_chat_params_init_function_gemma(
-+    const common_chat_template &          tmpl,
-+    const autoparser::generation_params & inputs) {
-+    common_chat_params data;
-+
-+    data.prompt = common_chat_template_direct_apply(tmpl, inputs);
-+
-+    auto has_tools       = inputs.tools.is_array() && !inputs.tools.empty();
-+    auto include_grammar = has_tools && inputs.tool_choice != COMMON_CHAT_TOOL_CHOICE_NONE;
-+
-+    if (!has_tools || inputs.tool_choice == COMMON_CHAT_TOOL_CHOICE_NONE) {
-+        data.format = COMMON_CHAT_FORMAT_CONTENT_ONLY;
-+        return data;
-+    }
-+
-+    data.format           = COMMON_CHAT_FORMAT_PEG_NATIVE;
-+    data.preserved_tokens = {
-+        "<start_function_call>",
-+        "<end_function_call>",
-+    };
-+
-+    auto parser = build_chat_peg_parser([&](common_chat_peg_builder & p) {
-+        auto generation_prompt = p.prefix(inputs.generation_prompt);
-+        auto tool_choice = p.choice();
-+
-+        foreach_function(inputs.tools, [&](const json & tool) {
-+            const auto & function = tool.at("function");
-+            std::string  name     = function.at("name");
-+            const auto & schema   = function.at("parameters");
-+
-+            auto tool_parser = p.tool(
-+                p.tool_open(
-+                    p.literal("<start_function_call>call:") +
-+                    p.tool_name(p.literal(name))) +
-+                p.tool_args(p.schema(p.json(), "tool-" + name + "-schema", schema)) +
-+                p.tool_close(p.literal("<end_function_call>"))
-+            );
-+
-+            tool_choice |= p.rule("tool-" + name, tool_parser);
-+        });
-+
-+        auto ret = p.trigger_rule("tool-call",
-+            inputs.parallel_tool_calls ? p.one_or_more(tool_choice) : tool_choice);
-+        return generation_prompt + ret + p.end();
-+    });
-+
-+    data.parser = parser.save();
-+
-+    if (include_grammar) {
-+        data.grammar_lazy = inputs.tool_choice == COMMON_CHAT_TOOL_CHOICE_AUTO;
-+        data.grammar      = build_grammar([&](const common_grammar_builder & builder) {
-+            foreach_function(inputs.tools, [&](const json & tool) {
-+                auto schema = tool.at("function").at("parameters");
-+                builder.resolve_refs(schema);
-+            });
-+            parser.build_grammar(builder, data.grammar_lazy);
-+        });
-+
-+        data.grammar_triggers = {
-+            { COMMON_GRAMMAR_TRIGGER_TYPE_WORD, "<start_function_call>" }
-+        };
-+    }
-+
-+    return data;
-+}
-+
- // Kimi K2 Thinking - uses unique tool call ID format: functions.<name>:<index>
- // The ID contains both the function name and an incrementing counter
- static common_chat_params common_chat_params_init_kimi_k2(const common_chat_template &    tmpl,
-@@ -2076,6 +2188,12 @@ std::optional<common_chat_params> common_chat_try_specialized_template(
-         return common_chat_params_init_functionary_v3_2(tmpl, params);
-     }
- 
-+    // FunctionGemma - uses <start_function_call>call:name{...}<end_function_call>
-+    if (src.find("<start_function_call>") != std::string::npos) {
-+        LOG_DBG("Using specialized template: FunctionGemma\n");
-+        return common_chat_params_init_function_gemma(tmpl, params);
-+    }
-+
-     // Kimi K2 Thinking - uses unique tool call ID format: functions.<name>:<index>
-     // Detection: template has "<|tool_calls_section_begin|>" and "functions." prefix in tool call IDs
-     if (src.find("<|tool_calls_section_begin|>") != std::string::npos &&
-@@ -2396,4 +2514,3 @@ std::map<std::string, bool> common_chat_templates_get_caps(const common_chat_tem
-     GGML_ASSERT(chat_templates->template_default != nullptr);
-     return chat_templates->template_default->caps.to_map();
- }
--
 diff --git a/src/llama.cpp/common/chat.h b/src/llama.cpp/common/chat.h
-index b06ca37fd..5e16e611c 100644
+index 054f5ffe7..c240c6105 100644
 --- a/src/llama.cpp/common/chat.h
 +++ b/src/llama.cpp/common/chat.h
 @@ -8,7 +8,7 @@
@@ -195,15 +187,17 @@ index b06ca37fd..5e16e611c 100644
  
  #include <chrono>
  #include <functional>
-@@ -38,6 +38,7 @@ struct common_chat_tool_call {
+@@ -38,6 +38,9 @@ struct common_chat_tool_call {
  struct common_chat_msg_content_part {
      std::string type;
      std::string text;
++    // Preserves non-standard fields from the original JSON (e.g. source_lang_code,
++    // target_lang_code for TranslateGemma) so they survive the parse/serialize round-trip.
 +    nlohmann::ordered_json extra_fields;
  
      // TODO @ngxson : no known chat templates support reasoning_content in content parts yet
      //                this can be useful for models with interleaved thinking (like Kimi-K2)
-@@ -45,7 +46,7 @@ struct common_chat_msg_content_part {
+@@ -45,7 +48,7 @@ struct common_chat_msg_content_part {
      // std::string reasoning_content;
  
      bool operator==(const common_chat_msg_content_part & other) const {
@@ -212,7 +206,7 @@ index b06ca37fd..5e16e611c 100644
      }
  };
  
-@@ -253,6 +254,21 @@ common_chat_tool_choice common_chat_tool_choice_parse_oaicompat(const std::strin
+@@ -262,6 +265,21 @@ common_chat_tool_choice common_chat_tool_choice_parse_oaicompat(const std::strin
  
  bool common_chat_templates_support_enable_thinking(const common_chat_templates * chat_templates);
  
@@ -235,10 +229,10 @@ index b06ca37fd..5e16e611c 100644
  std::vector<common_chat_msg> common_chat_msgs_parse_oaicompat(const nlohmann::ordered_json & messages);
  
 diff --git a/src/llama.cpp/common/common.cpp b/src/llama.cpp/common/common.cpp
-index 16f78debd..f8ae7672d 100644
+index 793b8fee7..e9348bf5a 100644
 --- a/src/llama.cpp/common/common.cpp
 +++ b/src/llama.cpp/common/common.cpp
-@@ -1415,6 +1415,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
+@@ -1453,6 +1453,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
          mparams.devices = params.devices.data();
      }
  
@@ -247,10 +241,10 @@ index 16f78debd..f8ae7672d 100644
      mparams.main_gpu        = params.main_gpu;
      mparams.split_mode      = params.split_mode;
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index 020b6a721..6ede8ea26 100644
+index a564b3b8c..f27dfd5bd 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
-@@ -284,6 +284,7 @@ struct common_params_sampling {
+@@ -271,6 +271,7 @@ struct common_params_sampling {
      // reasoning budget sampler parameters
      // these are populated by the server/CLI based on chat template params
      int32_t                  reasoning_budget_tokens   = -1;   // -1 = disabled, >= 0 = token budget
@@ -258,7 +252,7 @@ index 020b6a721..6ede8ea26 100644
      std::vector<llama_token> reasoning_budget_start;           // start tag token sequence
      std::vector<llama_token> reasoning_budget_end;             // end tag token sequence
      std::vector<llama_token> reasoning_budget_forced;          // forced sequence (message + end tag)
-@@ -411,6 +412,7 @@ struct lr_opt {
+@@ -419,6 +420,7 @@ struct lr_opt {
  struct ggml_opt_optimizer_params common_opt_lr_pars(void * userdata);
  
  struct common_params {
@@ -267,10 +261,10 @@ index 020b6a721..6ede8ea26 100644
      int32_t n_ctx                 =     0; // context size, 0 == context the model was trained with
      int32_t n_batch               =  2048; // logical batch size for prompt processing (must be >=32 to use BLAS)
 diff --git a/src/llama.cpp/common/sampling.cpp b/src/llama.cpp/common/sampling.cpp
-index 526f036ff..eef1cffd3 100644
+index d4a2fdcda..c4cce6b55 100644
 --- a/src/llama.cpp/common/sampling.cpp
 +++ b/src/llama.cpp/common/sampling.cpp
-@@ -289,13 +289,23 @@ struct common_sampler * common_sampler_init(const struct llama_model * model, st
+@@ -294,16 +294,26 @@ struct common_sampler * common_sampler_init(const struct llama_model * model, st
  
      // reasoning budget sampler (skip when budget is unlimited unless a lazy grammar is active, which needs rbudget for thinking-block suppression)
      if (!params.reasoning_budget_start.empty() && !params.reasoning_budget_end.empty() && (params.grammar_lazy || params.reasoning_budget_tokens >= 0)) {
@@ -279,8 +273,11 @@ index 526f036ff..eef1cffd3 100644
 -            params.reasoning_budget_start,
 -            params.reasoning_budget_end,
 -            params.reasoning_budget_forced,
--            params.reasoning_budget_tokens < 0 ? INT_MAX : params.reasoning_budget_tokens,
--            prefill_tokens);
+-            params.reasoning_budget_tokens < 0 ? INT_MAX : params.reasoning_budget_tokens);
+-
+-        for (const auto & token : prefill_tokens) {
+-            llama_sampler_accept(rbudget, token);
+-            LOG_DBG("%s: reasoning-budget accepted prefill token (%d)\n", __func__, token);
 +        if (params.reasoning_budget_activate_immediately) {
 +            rbudget = common_reasoning_budget_init(
 +                vocab,
@@ -295,14 +292,17 @@ index 526f036ff..eef1cffd3 100644
 +                params.reasoning_budget_start,
 +                params.reasoning_budget_end,
 +                params.reasoning_budget_forced,
-+                params.reasoning_budget_tokens < 0 ? INT_MAX : params.reasoning_budget_tokens,
-+                prefill_tokens);
-+        }
++                params.reasoning_budget_tokens < 0 ? INT_MAX : params.reasoning_budget_tokens);
++
++            for (const auto & token : prefill_tokens) {
++                llama_sampler_accept(rbudget, token);
++                LOG_DBG("%s: reasoning-budget accepted prefill token (%d)\n", __func__, token);
++            }
+         }
      }
  
-     if (params.has_logit_bias()) {
 diff --git a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
-index beebc4760..3f97fd1c9 100644
+index 869c7b238..e8a1668e1 100644
 --- a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
 +++ b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
 @@ -111,7 +111,7 @@ function(ggml_add_cpu_backend_variant_impl tag_name)
@@ -315,10 +315,10 @@ index beebc4760..3f97fd1c9 100644
              check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
              if (NOT "${GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E}" STREQUAL "")
 diff --git a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-index 3d68b8004..f6cf670a5 100644
+index d3c125dbc..f71be3a4c 100644
 --- a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
 +++ b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-@@ -2916,8 +2916,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
+@@ -3140,8 +3140,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
      GGML_UNUSED(dev);
  }
  
@@ -344,7 +344,16 @@ index 3d68b8004..f6cf670a5 100644
      *total = *free;
  
      GGML_UNUSED(dev);
-@@ -3236,7 +3252,12 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+@@ -3491,6 +3507,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+         } catch (const std::exception & exc) {
+             GGML_LOG_ERROR("ggml-hex: failed to create device/session %zu\n", i);
+             devices[i].context = nullptr;
++            opt_ndev = i;
++            break;
+         }
+     }
+ }
+@@ -3623,7 +3641,12 @@ static void ggml_hexagon_init(ggml_backend_reg * reg) {
  #if defined(__ANDROID__)
      if (opt_arch < 75) {
          opt_ndev = 1;
@@ -358,15 +367,6 @@ index 3d68b8004..f6cf670a5 100644
      }
  #endif
  
-@@ -3251,6 +3272,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
-         } catch (const std::exception & exc) {
-             GGML_LOG_ERROR("ggml-hex: failed to create device/session %zu\n", i);
-             devices[i].context = nullptr;
-+            opt_ndev = i;
-+            break;
-         }
-     }
- }
 diff --git a/src/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt b/src/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
 index 715a263a6..bd6c5a01f 100644
 --- a/src/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
@@ -389,29 +389,3 @@ index 715a263a6..bd6c5a01f 100644
          list(APPEND VULKAN_SHADER_GEN_CMAKE_ARGS -DCMAKE_TOOLCHAIN_FILE=${HOST_CMAKE_TOOLCHAIN_FILE})
          message(STATUS "vulkan-shaders-gen toolchain file: ${HOST_CMAKE_TOOLCHAIN_FILE}")
      endif()
-diff --git a/src/llama.cpp/ggml/src/ggml-vulkan/ggml-vulkan.cpp b/src/llama.cpp/ggml/src/ggml-vulkan/ggml-vulkan.cpp
-index 702a249d7..a47278998 100644
---- a/src/llama.cpp/ggml/src/ggml-vulkan/ggml-vulkan.cpp
-+++ b/src/llama.cpp/ggml/src/ggml-vulkan/ggml-vulkan.cpp
-@@ -20,9 +20,18 @@ DispatchLoaderDynamic & ggml_vk_default_dispatcher();
- #define VULKAN_HPP_DEFAULT_DISPATCHER ggml_vk_default_dispatcher()
- 
- #include <vulkan/vulkan.hpp>
--// SPIRV-Headers: LunarG Windows SDK uses Include/spirv-headers/spirv.hpp (not spirv/unified1/). MinGW/MSYS2 and
--// Linux packages use Khronos layout spirv/unified1/spirv.hpp. See docs/build.md#vulkan.
--#if defined(_WIN32) && !defined(__MINGW32__)
-+// SPIRV-Headers can come from LunarG's Windows SDK (spirv-headers/spirv.hpp)
-+// or distro packages that use Khronos' layout (spirv/unified1/spirv.hpp).
-+// Probe the installed SDK/package layout instead of keying off the compiler.
-+#if defined(__has_include)
-+#if __has_include(<spirv-headers/spirv.hpp>)
-+#include <spirv-headers/spirv.hpp>
-+#elif __has_include(<spirv/unified1/spirv.hpp>)
-+#include <spirv/unified1/spirv.hpp>
-+#else
-+#error "SPIRV-Headers not found. Install a Vulkan SDK/package that provides spirv.hpp."
-+#endif
-+#elif defined(_WIN32) && !defined(__MINGW32__)
- #include <spirv-headers/spirv.hpp>
- #else
- #include <spirv/unified1/spirv.hpp>

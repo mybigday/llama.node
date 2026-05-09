@@ -288,7 +288,7 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
       get_option<std::string>(options, "pooling_type", "").c_str());
 
   params.cpuparams.n_threads =
-      get_option<int32_t>(options, "n_threads", cpu_get_num_math() / 2);
+      get_option<int32_t>(options, "n_threads", common_cpu_get_num_math() / 2);
   params.n_gpu_layers = get_option<int32_t>(options, "n_gpu_layers", -1);
 
   auto flash_attn_type = get_option<std::string>(options, "flash_attn_type", "auto");

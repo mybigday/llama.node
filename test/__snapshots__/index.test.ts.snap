@@ -168,8 +168,7 @@ What is the sum of 1 and 2?<|im_end|>
 ",
   "thinking_end_tag": "</think>",
   "thinking_forced_open": false,
-  "thinking_start_tag": "<think>
-",
+  "thinking_start_tag": "<think>",
   "type": "jinja",
 }
 `;

@@ -189,6 +189,7 @@ add_subdirectory("src/llama.cpp/tools/mtmd")
 include_directories(
   ${CMAKE_JS_INC}
   "src/llama.cpp"
+  "src/llama.cpp/common"
   "src/llama.cpp/src"
   "src/llama.cpp/ggml/include"
   "src/llama.cpp/ggml/src"
@@ -248,7 +249,7 @@ endif()
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES} ${CMAKE_JS_SRC})
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
-target_link_libraries(${PROJECT_NAME} ${CMAKE_JS_LIB} llama ggml common mtmd ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(${PROJECT_NAME} ${CMAKE_JS_LIB} llama ggml llama-common mtmd ${CMAKE_THREAD_LIBS_INIT})
 
 add_custom_target(copy_assets ALL DEPENDS ${PROJECT_NAME})
 
