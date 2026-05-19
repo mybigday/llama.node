@@ -104,6 +104,16 @@ export type LlamaModelOptions = {
    * RoPE frequency scaling factor, use 0 to use model default (recommended)
    */
   rope_freq_scale?: number
+  /**
+   * Enable speculative decoding support at context creation time.
+   * MTP on recurrent/hybrid models must be enabled here so llama.cpp can
+   * allocate recurrent-state rollback slots.
+   */
+  speculative?: LlamaSpeculativeOptions | SpeculativeType | boolean
+  spec_type?: SpeculativeType | SpeculativeType[]
+  spec_draft_n_max?: number
+  spec_draft_n_min?: number
+  spec_draft_p_min?: number
 }
 
 export type CompletionResponseFormat = {
@@ -113,6 +123,30 @@ export type CompletionResponseFormat = {
     schema: Record<string, any>
   }
   schema?: Record<string, any> // for json_object type
+}
+
+export type SpeculativeType =
+  | 'none'
+  | 'draft-mtp'
+  /**
+   * Alias for draft-mtp.
+   */
+  | 'mtp'
+
+export type LlamaSpeculativeOptions = {
+  enabled?: boolean
+  type?: SpeculativeType
+  types?: SpeculativeType[]
+  n_max?: number
+  n_min?: number
+  p_min?: number
+  p_split?: number
+  draft?: {
+    n_max?: number
+    n_min?: number
+    p_min?: number
+    p_split?: number
+  }
 }
 
 export type LlamaCompletionOptions = {
@@ -131,6 +165,8 @@ export type LlamaCompletionOptions = {
   tools?: Tool[]
   parallel_tool_calls?: boolean
   tool_choice?: string
+  now?: string | number
+  chat_template_kwargs?: Record<string, string | boolean | number>
   enable_thinking?: boolean
   thinking_forced_open?: boolean
   /**
@@ -214,6 +250,15 @@ export type LlamaCompletionOptions = {
    * When > 0, completion_probabilities will be included in streaming callbacks and final result.
    */
   n_probs?: number
+  /**
+   * Per-completion speculative decoding override. For MTP on recurrent/hybrid
+   * models, load the model with matching MTP options first.
+   */
+  speculative?: LlamaSpeculativeOptions | SpeculativeType | boolean
+  spec_type?: SpeculativeType | SpeculativeType[]
+  spec_draft_n_max?: number
+  spec_draft_n_min?: number
+  spec_draft_p_min?: number
 }
 
 /**
@@ -278,6 +323,8 @@ export type LlamaCompletionResult = {
   chat_format: number
   tokens_predicted: number
   tokens_evaluated: number
+  draft_tokens?: number
+  draft_tokens_accepted?: number
   truncated: boolean
   context_full: boolean
   interrupted: boolean

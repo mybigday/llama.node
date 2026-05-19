@@ -92,6 +92,7 @@ void LlamaCompletionWorker::Execute() {
     // Set up parameters
     _rn_ctx->params.prompt = _params.prompt;
     _rn_ctx->params.sampling = _params.sampling;
+    _rn_ctx->params.speculative = _params.speculative;
     _rn_ctx->params.antiprompt = _stop_words;
     _rn_ctx->params.n_predict = _params.n_predict;
     _rn_ctx->params.n_ctx = _params.n_ctx;
@@ -105,6 +106,12 @@ void LlamaCompletionWorker::Execute() {
     if (_has_vocoder && _rn_ctx->tts_wrapper != nullptr) {
       _rn_ctx->tts_wrapper->guide_tokens = _guide_tokens;
       _rn_ctx->tts_wrapper->next_token_uses_guide_token = true;
+    }
+
+    if (!_media_paths.empty() &&
+        speculative_has_type(_params.speculative, COMMON_SPECULATIVE_TYPE_DRAFT_MTP)) {
+      SetError("MTP speculative decoding currently supports text-only completion in llama.node");
+      return;
     }
 
     // Initialize sampling
@@ -251,6 +258,8 @@ void LlamaCompletionWorker::Execute() {
     // tokens_evaluated should include both prompt tokens and generated tokens that were processed
     _result.tokens_evaluated = completion->num_prompt_tokens + completion->num_tokens_predicted;
     _result.tokens_predicted = completion->num_tokens_predicted;
+    _result.draft_tokens = completion->num_draft_tokens;
+    _result.draft_tokens_accepted = completion->num_draft_tokens_accepted;
     _result.truncated = completion->truncated;
     _result.context_full = completion->context_full;
     _result.stopped_eos = completion->stopped_eos;
@@ -284,6 +293,12 @@ void LlamaCompletionWorker::OnOK() {
              Napi::Number::New(env, _result.tokens_evaluated));
   result.Set("tokens_predicted", Napi::Number::New(Napi::AsyncWorker::Env(),
                                                    _result.tokens_predicted));
+  if (_result.draft_tokens > 0 || _result.draft_tokens_accepted > 0) {
+    result.Set("draft_tokens",
+               Napi::Number::New(env, _result.draft_tokens));
+    result.Set("draft_tokens_accepted",
+               Napi::Number::New(env, _result.draft_tokens_accepted));
+  }
   result.Set("truncated", Napi::Boolean::New(env, _result.truncated));
   result.Set("context_full", Napi::Boolean::New(env, _result.context_full));
   result.Set("interrupted", Napi::Boolean::New(env, _interrupted));
