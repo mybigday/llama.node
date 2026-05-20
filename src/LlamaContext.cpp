@@ -335,6 +335,13 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
 
   params.cpuparams.strict_cpu = get_option<bool>(options, "cpu_strict", false);
 
+  try {
+    apply_speculative_options(options, params);
+  } catch (const std::exception &e) {
+    Napi::TypeError::New(env, e.what()).ThrowAsJavaScriptException();
+    return;
+  }
+
   llama_backend_init();
   llama_numa_init(params.numa);
 
@@ -840,6 +847,13 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   bool has_jinja_chat_params = false;
 
   common_params params = _rn_ctx->params;
+  try {
+    apply_speculative_options(options, params);
+  } catch (const std::exception &e) {
+    Napi::TypeError::New(env, e.what()).ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
   params.sampling.grammar = {};
   params.sampling.generation_prompt.clear();
   params.sampling.grammar_triggers.clear();

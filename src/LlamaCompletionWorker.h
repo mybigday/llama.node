@@ -66,6 +66,8 @@ private:
   struct {
     size_t tokens_evaluated = 0;
     size_t tokens_predicted = 0;
+    size_t draft_tokens = 0;
+    size_t draft_tokens_accepted = 0;
     bool truncated = false;
     bool context_full = false;
     std::string text;

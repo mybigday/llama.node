@@ -3,10 +3,13 @@
 #include "chat.h"
 #include "common/common.h"
 #include "common/sampling.h"
+#include "common/speculative.h"
 #include "llama.h"
 #include <memory>
 #include <napi.h>
+#include <stdexcept>
 #include <string>
+#include <vector>
 
 typedef std::unique_ptr<common_sampler, decltype(&common_sampler_free)>
     LlamaCppSampling;
@@ -80,6 +83,133 @@ static bool is_thinking_forced_open(
   const size_t last_end =
       chat_params.generation_prompt.rfind(chat_params.thinking_end_tag);
   return last_end == std::string::npos || last_end < last_start;
+}
+
+static std::string normalize_speculative_type_name(std::string name) {
+  if (name == "mtp") {
+    return "draft-mtp";
+  }
+  return name;
+}
+
+static bool speculative_has_type(const common_params_speculative &speculative,
+                                 common_speculative_type type) {
+  return std::find(speculative.types.begin(), speculative.types.end(), type) !=
+         speculative.types.end();
+}
+
+static void apply_speculative_type_names(
+    common_params_speculative &speculative,
+    std::vector<std::string> type_names) {
+  if (type_names.empty()) {
+    return;
+  }
+
+  for (auto &name : type_names) {
+    name = normalize_speculative_type_name(name);
+  }
+
+  speculative.types = common_speculative_types_from_names(type_names);
+}
+
+static void apply_speculative_options(const Napi::Object &options,
+                                      common_params &params) {
+  std::vector<std::string> type_names;
+
+  if (options.Has("spec_type") && !is_nil(options.Get("spec_type"))) {
+    const auto value = options.Get("spec_type");
+    if (value.IsArray()) {
+      const auto array = value.As<Napi::Array>();
+      for (uint32_t i = 0; i < array.Length(); i++) {
+        type_names.push_back(array.Get(i).ToString().Utf8Value());
+      }
+    } else {
+      type_names.push_back(value.ToString().Utf8Value());
+    }
+  }
+
+  if (options.Has("speculative") && !is_nil(options.Get("speculative"))) {
+    const auto value = options.Get("speculative");
+    if (value.IsBoolean()) {
+      type_names.push_back(value.ToBoolean().Value() ? "draft-mtp" : "none");
+    } else if (value.IsString()) {
+      type_names.push_back(value.ToString().Utf8Value());
+    } else if (value.IsObject()) {
+      const auto speculative = value.As<Napi::Object>();
+
+      if (speculative.Has("enabled") &&
+          !speculative.Get("enabled").ToBoolean().Value()) {
+        type_names.push_back("none");
+      }
+
+      if (speculative.Has("type") && !is_nil(speculative.Get("type"))) {
+        type_names.push_back(speculative.Get("type").ToString().Utf8Value());
+      }
+
+      if (speculative.Has("types") && speculative.Get("types").IsArray()) {
+        const auto types = speculative.Get("types").As<Napi::Array>();
+        for (uint32_t i = 0; i < types.Length(); i++) {
+          type_names.push_back(types.Get(i).ToString().Utf8Value());
+        }
+      }
+
+      params.speculative.draft.n_max =
+          get_option<int32_t>(speculative, "n_max",
+                              params.speculative.draft.n_max);
+      params.speculative.draft.n_min =
+          get_option<int32_t>(speculative, "n_min",
+                              params.speculative.draft.n_min);
+      params.speculative.draft.p_min =
+          get_option<float>(speculative, "p_min",
+                            params.speculative.draft.p_min);
+      params.speculative.draft.p_split =
+          get_option<float>(speculative, "p_split",
+                            params.speculative.draft.p_split);
+
+      if (speculative.Has("draft") && speculative.Get("draft").IsObject()) {
+        const auto draft = speculative.Get("draft").As<Napi::Object>();
+        params.speculative.draft.n_max =
+            get_option<int32_t>(draft, "n_max",
+                                params.speculative.draft.n_max);
+        params.speculative.draft.n_min =
+            get_option<int32_t>(draft, "n_min",
+                                params.speculative.draft.n_min);
+        params.speculative.draft.p_min =
+            get_option<float>(draft, "p_min",
+                              params.speculative.draft.p_min);
+        params.speculative.draft.p_split =
+            get_option<float>(draft, "p_split",
+                              params.speculative.draft.p_split);
+      }
+    }
+  }
+
+  params.speculative.draft.n_max =
+      get_option<int32_t>(options, "spec_draft_n_max",
+                          params.speculative.draft.n_max);
+  params.speculative.draft.n_max =
+      get_option<int32_t>(options, "speculative.n_max",
+                          params.speculative.draft.n_max);
+  params.speculative.draft.n_min =
+      get_option<int32_t>(options, "spec_draft_n_min",
+                          params.speculative.draft.n_min);
+  params.speculative.draft.n_min =
+      get_option<int32_t>(options, "speculative.n_min",
+                          params.speculative.draft.n_min);
+  params.speculative.draft.p_min =
+      get_option<float>(options, "spec_draft_p_min",
+                        params.speculative.draft.p_min);
+  params.speculative.draft.p_min =
+      get_option<float>(options, "speculative.p_min",
+                        params.speculative.draft.p_min);
+
+  apply_speculative_type_names(params.speculative, type_names);
+
+  if (speculative_has_type(params.speculative,
+                           COMMON_SPECULATIVE_TYPE_DRAFT_MTP) &&
+      params.speculative.draft.n_max <= 0) {
+    throw std::invalid_argument("MTP requires spec_draft_n_max > 0");
+  }
 }
 
 static void reset_reasoning_budget(common_params_sampling &sampling) {
