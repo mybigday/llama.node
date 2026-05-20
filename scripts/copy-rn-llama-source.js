@@ -2,7 +2,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { execSync, spawnSync } = require("child_process");
+const { execSync } = require("child_process");
 
 // Colors for output
 const colors = {
@@ -19,13 +19,8 @@ function log(message, color = "reset") {
 log("Starting copy of llama.rn source files...", "green");
 
 // Define source and destination directories
-const LLAMA_RN_DIR = "src/llama.rn";
 const SRC_DIR = "src/llama.rn/cpp";
 const DEST_DIR = "src/rn-llama";
-const LLAMA_RN_PATCH_FILE = path.relative(
-  LLAMA_RN_DIR,
-  "scripts/llama.rn-mtp-queue-completion.patch",
-);
 
 // Files to copy from llama.rn/cpp
 const FILES_TO_COPY = [
@@ -45,37 +40,6 @@ const FILES_TO_COPY = [
   "rn-slot-manager.h",
   "rn-slot-manager.cpp",
 ];
-
-function gitApply(args, cwd) {
-  return spawnSync("git", ["apply", ...args], {
-    cwd,
-    stdio: "ignore",
-  });
-}
-
-function applyPatchIfNeeded(patchFile, cwd, label) {
-  if (gitApply(["--check", patchFile], cwd).status === 0) {
-    log(`Applying ${label}...`, "yellow");
-    const result = spawnSync("git", ["apply", patchFile], {
-      cwd,
-      stdio: "inherit",
-    });
-
-    if (result.status !== 0) {
-      throw new Error(`Failed to apply ${label}`);
-    }
-
-    log(`✓ ${label} applied`, "green");
-    return;
-  }
-
-  if (gitApply(["--reverse", "--check", patchFile], cwd).status === 0) {
-    log(`${label} already applied`, "yellow");
-    return;
-  }
-
-  throw new Error(`${label} does not match the current llama.rn checkout`);
-}
 
 try {
   // Create destination directory
@@ -100,12 +64,6 @@ try {
     execSync("git submodule init src/llama.rn", { stdio: "inherit" });
     execSync("git submodule update --recursive src/llama.rn", { stdio: "inherit" });
   }
-
-  applyPatchIfNeeded(
-    LLAMA_RN_PATCH_FILE,
-    LLAMA_RN_DIR,
-    "scripts/llama.rn-mtp-queue-completion.patch",
-  );
 
   // Copy files and remove lm_ and LM_ prefixes
   FILES_TO_COPY.forEach((file) => {
