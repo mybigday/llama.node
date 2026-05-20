@@ -230,10 +230,10 @@ index 8ace3e6ba..d6ed67667 100644
  std::vector<common_chat_msg> common_chat_msgs_parse_oaicompat(const nlohmann::ordered_json & messages);
  
 diff --git a/src/llama.cpp/common/common.cpp b/src/llama.cpp/common/common.cpp
-index 9cf11ea9f..6c1213435 100644
+index d77ddeda1..940a6585f 100644
 --- a/src/llama.cpp/common/common.cpp
 +++ b/src/llama.cpp/common/common.cpp
-@@ -1519,6 +1519,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
+@@ -1504,6 +1504,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
          mparams.devices = params.devices.data();
      }
  
@@ -242,7 +242,7 @@ index 9cf11ea9f..6c1213435 100644
      mparams.main_gpu        = params.main_gpu;
      mparams.split_mode      = params.split_mode;
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index 1d3d788b2..2718c0017 100644
+index 53c689bc1..180060b0f 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
 @@ -273,6 +273,7 @@ struct common_params_sampling {
@@ -316,10 +316,10 @@ index f3eccff7d..bf90a3bef 100644
              check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
              if (NOT "${GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E}" STREQUAL "")
 diff --git a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-index 3d1c9da83..ae6a21bcf 100644
+index 080fb7f47..dff9a3baf 100644
 --- a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
 +++ b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-@@ -3141,8 +3141,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
+@@ -3172,8 +3172,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
      GGML_UNUSED(dev);
  }
  
@@ -345,7 +345,7 @@ index 3d1c9da83..ae6a21bcf 100644
      *total = *free;
  
      GGML_UNUSED(dev);
-@@ -3493,6 +3509,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+@@ -3530,6 +3546,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
          } catch (const std::exception & exc) {
              GGML_LOG_ERROR("ggml-hex: failed to create device/session %zu\n", i);
              devices[i].context = nullptr;
@@ -354,7 +354,7 @@ index 3d1c9da83..ae6a21bcf 100644
          }
      }
  }
-@@ -3625,7 +3643,12 @@ static void ggml_hexagon_init(ggml_backend_reg * reg) {
+@@ -3662,7 +3680,12 @@ static void ggml_hexagon_init(ggml_backend_reg * reg) {
  #if defined(__ANDROID__)
      if (opt_arch < 75) {
          opt_ndev = 1;
