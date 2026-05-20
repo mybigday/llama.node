@@ -102,27 +102,32 @@ try {
   const requests = await Promise.all(
     prompts.map(async (prompt, index) => {
       const requestStarted = performance.now()
-      const { requestId, promise } = await context.parallel.completion({
-        messages: [
-          {
-            role: 'user',
-            content: prompt,
+      const { requestId, promise } = await context.parallel.completion(
+        {
+          messages: [
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+          chat_template_kwargs: {
+            preserve_thinking: true,
           },
-        ],
-        chat_template_kwargs: {
-          preserve_thinking: true,
+          n_predict: nPredict,
+          temperature: 0.6,
+          top_k: 20,
+          top_p: 0.95,
+          speculative: speculativeEnabled
+            ? {
+                type: 'draft-mtp',
+                n_max: draftTokens,
+              }
+            : false,
         },
-        n_predict: nPredict,
-        temperature: 0.6,
-        top_k: 20,
-        top_p: 0.95,
-        speculative: speculativeEnabled
-          ? {
-              type: 'draft-mtp',
-              n_max: draftTokens,
-            }
-          : false,
-      })
+        (_requestId, tokenEvent) => {
+          console.log(`[${index + 1}] ${JSON.stringify(tokenEvent)}`)
+        },
+      )
 
       const result = await promise
       const wallMs = performance.now() - requestStarted
