@@ -146,6 +146,20 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
 
   // Parse parameters
   common_params params = _rn_ctx->params;
+  try {
+    apply_speculative_options(options, params);
+  } catch (const std::exception &e) {
+    Napi::TypeError::New(env, e.what()).ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  if (!media_paths.empty() &&
+      speculative_has_type(params.speculative, COMMON_SPECULATIVE_TYPE_DRAFT_MTP)) {
+    Napi::Error::New(env, "MTP speculative decoding currently supports text-only queued completions")
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
   params.sampling.grammar = {};
   params.sampling.generation_prompt.clear();
   params.sampling.grammar_triggers.clear();
@@ -562,6 +576,8 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
         int32_t chat_format;
         size_t tokens_evaluated;
         size_t tokens_predicted;
+        size_t draft_tokens;
+        size_t draft_tokens_accepted;
         rnllama::slot_timings timings;
       };
 
@@ -599,6 +615,8 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
         slot->current_chat_format,
         static_cast<size_t>(slot->n_decoded),
         slot->num_tokens_predicted,
+        slot->num_draft_tokens,
+        slot->num_draft_tokens_accepted,
         slot_timings
       };
 
@@ -612,6 +630,10 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
         result.Set("context_full", Napi::Boolean::New(env, data->context_full));
         result.Set("tokens_evaluated", Napi::Number::New(env, data->tokens_evaluated));
         result.Set("tokens_predicted", Napi::Number::New(env, data->tokens_predicted));
+        if (data->draft_tokens > 0 || data->draft_tokens_accepted > 0) {
+          result.Set("draft_tokens", Napi::Number::New(env, data->draft_tokens));
+          result.Set("draft_tokens_accepted", Napi::Number::New(env, data->draft_tokens_accepted));
+        }
         result.Set("chat_format", Napi::Number::New(env, data->chat_format));
 
         // Add parsed content if available
