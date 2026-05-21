@@ -132,6 +132,7 @@ export class LlamaParallelAPI {
             }
           } else if (
             result &&
+            (result as any).token === undefined &&
             (result.text !== undefined || result.content !== undefined)
           ) {
             // Final result for non-streaming

@@ -19,7 +19,6 @@ function log(message, color = "reset") {
 log("Starting copy of llama.rn source files...", "green");
 
 // Define source and destination directories
-const LLAMA_RN_DIR = "src/llama.rn";
 const SRC_DIR = "src/llama.rn/cpp";
 const DEST_DIR = "src/rn-llama";
 

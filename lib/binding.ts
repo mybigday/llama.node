@@ -368,6 +368,8 @@ export type LlamaParallelCompletionResult = {
   context_full: boolean
   tokens_evaluated: number
   tokens_predicted: number
+  draft_tokens?: number
+  draft_tokens_accepted?: number
   timings: {
     cache_n: number
     prompt_n: number
