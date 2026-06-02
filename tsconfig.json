@@ -110,6 +110,7 @@
     "src/llama.cpp/",
     "src/llama.rn/",
     "build/",
+    "build-wasm/",
     "externals/"
   ]
 }
