@@ -304,6 +304,25 @@
         logEl.scrollTop = logEl.scrollHeight
       }
 
+      const createLoadProgressLogger = () => {
+        let lastLabel = ''
+        return (progress, detail = {}) => {
+          const source = detail.source || 'network'
+          const label =
+            source === 'cache'
+              ? 'cache hit'
+              : source === 'memory'
+                ? 'shared download'
+                : source === 'buffer'
+                  ? 'buffer ready'
+                  : 'download'
+          const line = `${label} ${progress}%`
+          if (line === lastLabel) return
+          lastLabel = line
+          log(line)
+        }
+      }
+
       const setStatus = (id, state) => {
         const el = $(`s-${id}`)
         el.textContent = state
@@ -379,7 +398,7 @@
               n_gpu_layers: $('use-gpu').checked ? 99999 : 0,
               use_mmap: false,
             },
-            (progress) => log(`download ${progress}%`),
+            createLoadProgressLogger(),
           )
           const loadMs = performance.now() - loadStarted
           const loadFrameCount = loadFrames.stop()

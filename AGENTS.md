@@ -204,7 +204,7 @@ await context.loadSession('session.bin')
 
 Note: Vulkan backend does not support session save/load.
 
-In the web package, `saveSession()` returns an `ArrayBuffer`. `loadSession()` accepts a URL, `Blob`, `ArrayBuffer`, or typed array. URL downloads for models, sessions, mmproj files, and media are saved in browser Cache Storage by default. Use `wasm: { cacheDownloads: false }` to force network fetches, `wasm.cacheName` to isolate a cache, or `clearWasmDownloadCache()` to clear the default cache.
+In the web package, `saveSession()` returns an `ArrayBuffer`. `loadSession()` accepts a URL, `Blob`, `ArrayBuffer`, or typed array. URL downloads for models, sessions, mmproj files, and media are saved in browser Cache Storage by default. Use `wasm: { cacheDownloads: false }` to force network fetches, `wasm.cacheName` to isolate a cache, or `clearWasmDownloadCache()` to clear the default cache. The `loadModel()` progress callback receives the numeric percentage plus an optional detail object with `source: 'network' | 'cache' | 'memory' | 'buffer'`; use it to avoid labeling cache hits as downloads.
 
 ### WASM Threading and UI Responsiveness
 

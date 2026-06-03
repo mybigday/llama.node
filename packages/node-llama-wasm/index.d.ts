@@ -47,6 +47,18 @@ export type LlamaModelSource =
 
 export type LlamaMediaSource = LlamaModelSource
 
+export type LlamaDownloadProgress = {
+  progress: number
+  source?: 'network' | 'cache' | 'memory' | 'buffer'
+  cached?: boolean
+  url?: string
+  bytesLoaded?: number
+  bytesTotal?: number
+  sourceProgress?: number
+  sourceIndex?: number
+  sourceCount?: number
+}
+
 export type LlamaModelOptions = {
   model: LlamaModelSource | LlamaModelSource[]
   chat_template?: string
@@ -424,7 +436,7 @@ export declare function clearWasmDownloadCache(cacheName?: string): Promise<bool
 export declare function initLlama(options?: Record<string, any>): Promise<any>
 export declare function loadModel(
   options: LlamaModelOptions,
-  onProgress?: (progress: number) => void,
+  onProgress?: (progress: number, detail?: LlamaDownloadProgress) => void,
 ): Promise<LlamaContextWrapper>
 export declare function loadLlamaModelInfo(
   model: LlamaModelSource | LlamaModelSource[],

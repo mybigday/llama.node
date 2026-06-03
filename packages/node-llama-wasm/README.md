@@ -9,7 +9,9 @@ by `@fugood/llama.node`, with browser-specific I/O:
 - URL downloads are saved in browser Cache Storage by default, including model,
   session, mmproj, and media URLs. Use `wasm: { cacheDownloads: false }` to force
   network fetches, `wasm.cacheName` to isolate a cache, or
-  `clearWasmDownloadCache()` to clear the default cache.
+  `clearWasmDownloadCache()` to clear the default cache. The `loadModel()`
+  progress callback receives the percentage plus an optional detail object with
+  `source: 'network' | 'cache' | 'memory' | 'buffer'`.
 - `saveSession()` returns an `ArrayBuffer`.
 - `loadSession()` accepts a URL, `Blob`, `ArrayBuffer`, or typed array.
 - `initMultimodal()` accepts an mmproj URL, `Blob`, `ArrayBuffer`, typed array,

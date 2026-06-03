@@ -34,7 +34,8 @@ const loadModel = async (options, id) => {
       ...options,
       wasm,
     },
-    (progress) => self.postMessage({ id, type: 'progress', progress }),
+    (progress, detail) =>
+      self.postMessage({ id, type: 'progress', progress, detail }),
   )
   return {
     modelInfo: context.getModelInfo(),

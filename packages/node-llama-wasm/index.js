@@ -189,18 +189,39 @@ const resolveDownloadCacheKey = (url, options = {}) => {
 const getDownloadCacheName = (options = {}) =>
   options.cacheName || WASM_DOWNLOAD_CACHE_NAME
 
-const readResponseBytes = async (response, url, onProgress) => {
+const reportProgress = (onProgress, progress, detail = {}) => {
+  onProgress?.(progress, { progress, ...detail })
+}
+
+const readResponseBytes = async (
+  response,
+  url,
+  onProgress,
+  progressDetail = {},
+) => {
   if (!response.ok) {
     throw new Error(`Failed to fetch ${url}: HTTP ${response.status}`)
   }
 
   const total = Number(response.headers.get('content-length') || 0)
   assertSupportedSize(total)
+  let lastProgress = -1
+  const emitProgress = (progress, loaded = 0) => {
+    const rounded = Math.max(0, Math.min(100, Math.round(progress)))
+    if (rounded === lastProgress && rounded !== 100) return
+    lastProgress = rounded
+    reportProgress(onProgress, rounded, {
+      url,
+      bytesLoaded: loaded,
+      bytesTotal: total,
+      ...progressDetail,
+    })
+  }
 
   if (!response.body?.getReader) {
     const bytes = new Uint8Array(await response.arrayBuffer())
     assertSupportedSize(bytes.byteLength)
-    onProgress?.(100)
+    emitProgress(100, bytes.byteLength)
     return bytes
   }
 
@@ -214,7 +235,7 @@ const readResponseBytes = async (response, url, onProgress) => {
     chunks.push(value)
     loaded += value.byteLength
     assertSupportedSize(loaded)
-    if (total > 0) onProgress?.(Math.round((loaded / total) * 100))
+    if (total > 0) emitProgress((loaded / total) * 100, loaded)
   }
 
   const bytes = new Uint8Array(loaded)
@@ -223,7 +244,26 @@ const readResponseBytes = async (response, url, onProgress) => {
     bytes.set(chunk, offset)
     offset += chunk.byteLength
   }
-  onProgress?.(100)
+  emitProgress(100, loaded)
+  return bytes
+}
+
+const readCachedResponseBytes = async (response, url, onProgress) => {
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${url}: HTTP ${response.status}`)
+  }
+
+  const total = Number(response.headers.get('content-length') || 0)
+  assertSupportedSize(total)
+  const bytes = new Uint8Array(await response.arrayBuffer())
+  assertSupportedSize(bytes.byteLength)
+  reportProgress(onProgress, 100, {
+    source: 'cache',
+    cached: true,
+    url,
+    bytesLoaded: bytes.byteLength,
+    bytesTotal: total || bytes.byteLength,
+  })
   return bytes
 }
 
@@ -254,7 +294,10 @@ const fetchBytesFromNetwork = async (
     cacheName && cacheKey
       ? cacheResponse(cacheName, cacheKey, response.clone())
       : undefined
-  const bytes = await readResponseBytes(response, url, onProgress)
+  const bytes = await readResponseBytes(response, url, onProgress, {
+    source: 'network',
+    cached: false,
+  })
   await cacheWrite
   return bytes
 }
@@ -268,7 +311,13 @@ const fetchCachedBytes = async (url, onProgress, options = {}) => {
   const existing = downloadPromises.get(promiseKey)
   if (existing) {
     const bytes = await existing
-    onProgress?.(100)
+    reportProgress(onProgress, 100, {
+      source: 'memory',
+      cached: true,
+      url,
+      bytesLoaded: bytes.byteLength,
+      bytesTotal: bytes.byteLength,
+    })
     return bytes
   }
 
@@ -276,7 +325,7 @@ const fetchCachedBytes = async (url, onProgress, options = {}) => {
     try {
       const cache = await caches.open(cacheName)
       const cached = await cache.match(cacheKey)
-      if (cached) return readResponseBytes(cached, url, onProgress)
+      if (cached) return readCachedResponseBytes(cached, url, onProgress)
     } catch (error) {
       if (error?.message === modelTooLargeMessage) throw error
     }
@@ -297,7 +346,12 @@ const resolveSourceBytes = async (source, onProgress, downloadOptions = {}) => {
   }
   const bytes = await toUint8Array(source)
   assertSupportedSize(bytes.byteLength)
-  onProgress?.(100)
+  reportProgress(onProgress, 100, {
+    source: 'buffer',
+    cached: false,
+    bytesLoaded: bytes.byteLength,
+    bytesTotal: bytes.byteLength,
+  })
   return bytes
 }
 
@@ -315,9 +369,16 @@ const writeModelSources = async (
     const source = sources[i]
     const bytes = await resolveSourceBytes(
       source,
-      (progress) => {
+      (progress, detail = {}) => {
         const base = (i / sources.length) * 100
-        onProgress?.(Math.round(base + progress / sources.length))
+        const aggregateProgress = Math.round(base + progress / sources.length)
+        reportProgress(onProgress, aggregateProgress, {
+          ...detail,
+          progress: aggregateProgress,
+          sourceProgress: progress,
+          sourceIndex: i,
+          sourceCount: sources.length,
+        })
       },
       downloadOptions,
     )
@@ -587,7 +648,7 @@ class LlamaWorkerClient {
       if (!request) return
 
       if (message.type === 'progress') {
-        request.onProgress?.(message.progress)
+        request.onProgress?.(message.progress, message.detail)
         return
       }
       if (message.type === 'token') {
