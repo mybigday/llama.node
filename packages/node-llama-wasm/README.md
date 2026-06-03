@@ -47,6 +47,7 @@ Build from the repository root:
 
 ```sh
 npm run build-wasm
+npm run build-wasm-docker
 npm run build-wasm -- --webgpu
 npm run serve-wasm-test
 ```
@@ -54,4 +55,7 @@ npm run serve-wasm-test
 The build script keeps CPU and WebGPU artifacts in separate build directories,
 uses Ninja on fresh build dirs when available, respects `JOBS`, and enables
 `ccache` automatically when installed. It also stores Emscripten's system-library
-cache in `build-wasm/emcache` unless `EM_CACHE` is already set.
+cache in `build-wasm/emcache` unless `EM_CACHE` is already set. The Docker
+helper selects `emscripten/emsdk:4.0.14-arm64` on arm64 hosts such as Apple
+Silicon Macs, and `emscripten/emsdk:4.0.13` on amd64 hosts. Override with
+`EMSCRIPTEN_IMAGE` or `EMSCRIPTEN_PLATFORM` when a specific image is required.

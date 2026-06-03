@@ -26,6 +26,7 @@ examples/state/
 a.out.wasm
 
 !scripts/build-wasm-package.js
+!scripts/build-wasm-docker.js
 !scripts/serve-wasm-test.js
 !packages/node-llama-wasm/index.js
 !packages/node-llama-wasm/worker.js

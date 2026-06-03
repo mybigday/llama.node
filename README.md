@@ -83,6 +83,7 @@ Build the package with Emscripten:
 
 ```sh
 npm run build-wasm
+npm run build-wasm-docker
 npm run build-wasm -- --webgpu
 npm run serve-wasm-test
 ```
@@ -91,7 +92,10 @@ CPU and WebGPU builds use separate directories under `build-wasm/`, so switching
 variants does not invalidate the other build. Fresh builds use Ninja when it is
 available, `JOBS=8` can cap parallelism, and installing `ccache` enables compiler
 launcher caching automatically. Emscripten's system-library cache is kept in
-`build-wasm/emcache` unless `EM_CACHE` is already set.
+`build-wasm/emcache` unless `EM_CACHE` is already set. The Docker helper selects
+`emscripten/emsdk:4.0.14-arm64` on arm64 hosts such as Apple Silicon Macs, and
+uses `emscripten/emsdk:4.0.13` on amd64 hosts. Override with `EMSCRIPTEN_IMAGE`
+or `EMSCRIPTEN_PLATFORM` if you need a specific container image.
 
 `loadModel()` runs the WASM runtime in a dedicated Web Worker by default so
 model loading, tokenization, completion, state, embeddings, rerank, multimodal

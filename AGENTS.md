@@ -87,6 +87,9 @@ npm run build-js
 # Build WASM CPU artifact
 npm run build-wasm
 
+# Build WASM in Docker (uses native arm64 emsdk image on Apple Silicon)
+npm run build-wasm-docker
+
 # Build WASM WebGPU artifact
 npm run build-wasm -- --webgpu
 
@@ -119,6 +122,7 @@ npx jest --testNamePattern="tokenize"
 # Build packages for distribution
 npm run build-native  # with TO_PACKAGE=1 and VARIANT set
 npm run build-wasm    # run inside an activated Emscripten SDK
+npm run build-wasm-docker  # Docker helper; arm64 hosts use emscripten/emsdk:4.0.14-arm64
 
 # Publish if version changed
 npm run publish-if-need
@@ -243,6 +247,7 @@ On isolated pages with `SharedArrayBuffer`, CPU uses the pthread artifact and `n
 7. **WASM pthread artifact hangs**: Check that `mainScriptUrlOrBlob` points to `llama-node.threads.js` when loading the threaded artifact
 8. **WebGPU unavailable**: Confirm the browser supports `navigator.gpu`, WebAssembly JSPI, and that the WebGPU artifact was built with `npm run build-wasm -- --webgpu`
 9. **Model too large in browser**: Split GGUF files at or above the 2 GB WebAssembly ArrayBuffer limit and load the first split URL
+10. **Slow Docker WASM builds on Apple Silicon**: Use `npm run build-wasm-docker`; it selects `emscripten/emsdk:4.0.14-arm64` instead of running the amd64 image under emulation. Override with `EMSCRIPTEN_IMAGE` or `EMSCRIPTEN_PLATFORM` when needed.
 
 ### Debug Build
 
