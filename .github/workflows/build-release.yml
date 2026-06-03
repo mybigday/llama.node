@@ -34,6 +34,7 @@ on:
 env:
   HEXAGON_SDK_VERSION: '6.4.0.2'
   OPENCL_VERSION: '2025.07.22'
+  EMSCRIPTEN_IMAGE: 'emscripten/emsdk:4.0.13'
 
 jobs:
   build:
@@ -228,3 +229,55 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm run publish-if-need packages/${{ matrix.package }}
+
+  build-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run this job?
+        id: run
+        env:
+          TRIGGER_TARGET: node-llama-${{ github.event.inputs.target || '*' }}
+          TARGET: node-llama-wasm
+        shell: bash
+        run: |
+          if [[ "$TARGET" == $TRIGGER_TARGET ]]; then
+            echo "should-run=true" >> $GITHUB_OUTPUT
+          else
+            echo "should-run=false" >> $GITHUB_OUTPUT
+          fi
+      - uses: actions/checkout@v4
+        if: steps.run.outputs.should-run == 'true'
+        with:
+          submodules: 'true'
+      - uses: actions/setup-node@v4
+        if: steps.run.outputs.should-run == 'true'
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+      - name: Copy rn-llama sources
+        if: steps.run.outputs.should-run == 'true'
+        run: npm run copy-rn-llama-source
+      - name: Build WASM package
+        if: steps.run.outputs.should-run == 'true'
+        run: |
+          docker run --rm \
+            -e HOME=/tmp \
+            -e EMDAWN_TAG \
+            -e HOST_UID="$(id -u)" \
+            -e HOST_GID="$(id -g)" \
+            -v "$PWD:/src" \
+            -w /src \
+            "$EMSCRIPTEN_IMAGE" \
+            bash -lc "source /emsdk/emsdk_env.sh && node scripts/build-wasm-package.js --no-webgpu --no-threads && node scripts/build-wasm-package.js --no-webgpu --threads && node scripts/build-wasm-package.js --webgpu --no-threads && chown -R \$HOST_UID:\$HOST_GID build-wasm packages/node-llama-wasm/wasm"
+      - name: Upload build artifacts
+        if: steps.run.outputs.should-run == 'true' && (github.event.inputs.upload-artifacts == 'YES' || inputs.upload-artifacts == 'YES')
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-node-llama-wasm
+          path: packages/node-llama-wasm
+          retention-days: ${{ inputs.artifacts-retention-days }}
+      - name: Publish to NPM
+        if: steps.run.outputs.should-run == 'true' && (github.event.inputs.publish == 'YES' || inputs.publish == 'YES')
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm run publish-if-need packages/node-llama-wasm

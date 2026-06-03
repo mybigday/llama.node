@@ -28,3 +28,25 @@ jobs:
         key: ${{ runner.os }}-gguf-models-${{ hashFiles('test/*.gguf') }}
     - run: npm run copy-rn-llama-source && npm install --omit=optional --build-from-source
     - run: npm run test
+
+  wasm:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'true'
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
+    - run: npm run copy-rn-llama-source
+    - name: Build WASM package (CPU smoke)
+      run: |
+        docker run --rm \
+          -e HOME=/tmp \
+          -e HOST_UID="$(id -u)" \
+          -e HOST_GID="$(id -g)" \
+          -v "$PWD:/src" \
+          -w /src \
+          emscripten/emsdk:4.0.13 \
+          bash -lc "source /emsdk/emsdk_env.sh && node scripts/build-wasm-package.js --no-webgpu --no-threads && node scripts/build-wasm-package.js --no-webgpu --threads && chown -R \$HOST_UID:\$HOST_GID build-wasm packages/node-llama-wasm/wasm"

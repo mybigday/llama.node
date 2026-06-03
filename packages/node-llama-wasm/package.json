@@ -1,0 +1,44 @@
+{
+  "name": "@fugood/node-llama-wasm",
+  "version": "1.7.4",
+  "description": "WebAssembly package for llama.node browser inference",
+  "type": "module",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mybigday/llama.node.git"
+  },
+  "keywords": [
+    "llama",
+    "llm",
+    "ai",
+    "genai",
+    "Local LLM",
+    "llama.cpp",
+    "wasm",
+    "webgpu"
+  ],
+  "author": "Hans <hans.chen@bricks.tools>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mybigday/llama.node/issues"
+  },
+  "homepage": "https://github.com/mybigday/llama.node#readme",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "worker.js",
+    "README.md",
+    "wasm/llama-node.js",
+    "wasm/llama-node.wasm",
+    "wasm/llama-node.threads.js",
+    "wasm/llama-node.threads.wasm",
+    "wasm/llama-node.webgpu.js",
+    "wasm/llama-node.webgpu.wasm"
+  ]
+}

@@ -3,6 +3,7 @@
 *.log
 node_modules/
 build/
+build-wasm/
 *.bin
 *.gguf
 coverage/
@@ -22,3 +23,16 @@ local-plan-done/
 # State files for examples
 examples/state/
 .cache
+a.out.wasm
+
+!scripts/build-wasm-package.js
+!scripts/build-wasm-docker.js
+!scripts/serve-wasm-test.js
+!packages/node-llama-wasm/index.js
+!packages/node-llama-wasm/worker.js
+packages/node-llama-wasm/wasm/llama-node.js
+packages/node-llama-wasm/wasm/llama-node.wasm
+packages/node-llama-wasm/wasm/llama-node.threads.js
+packages/node-llama-wasm/wasm/llama-node.threads.wasm
+packages/node-llama-wasm/wasm/llama-node.webgpu.js
+packages/node-llama-wasm/wasm/llama-node.webgpu.wasm
