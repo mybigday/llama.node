@@ -63,11 +63,13 @@ console.log('Result:', text)
 
 ## WebAssembly
 
-Browser builds are published from `packages/node-llama-wasm` and expose the same
-high-level `loadModel()` / context wrapper shape where browser constraints allow:
+Browser builds are published as the optional `@fugood/node-llama-wasm` package.
+Import `@fugood/llama.node` in browser bundles; the package browser entry
+re-exports the WASM runtime while preserving the same high-level `loadModel()` /
+context wrapper shape where browser constraints allow:
 
 ```js
-import { loadModel } from '@fugood/node-llama-wasm'
+import { loadModel } from '@fugood/llama.node'
 
 const context = await loadModel({
   model: 'https://example.com/model.gguf',

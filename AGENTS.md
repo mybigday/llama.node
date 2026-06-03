@@ -4,7 +4,7 @@ llama.node is a Node.js binding for llama.cpp, designed to maintain API compatib
 
 - Multiple platforms: macOS (arm64/x64), Windows (x64/arm64), Linux (x64/arm64)
 - GPU acceleration: Metal (macOS), Vulkan, CUDA
-- Web platform support: WebAssembly CPU and optional WebGPU via `@fugood/node-llama-wasm`
+- Web platform support: WebAssembly CPU and optional WebGPU via the optional `@fugood/node-llama-wasm` package; browser consumers can import `@fugood/llama.node`
 - Multimodal support: vision and audio processing
 - Text-to-speech (TTS) with vocoder models
 - LoRA adapters for model fine-tuning
@@ -51,6 +51,7 @@ All async operations use N-API AsyncWorker to avoid blocking the event loop:
 - **packages/node-llama-wasm/index.js**: Browser-facing API compatible with the high-level llama.node wrapper where web constraints allow
 - **packages/node-llama-wasm/worker.js**: Dedicated Web Worker runtime used by default to keep all heavy WASM calls off the browser UI thread
 - **packages/node-llama-wasm/wasm/**: Generated WASM artifacts are written here during build and are ignored except for `.gitkeep`
+- **lib/browser.mjs**: Root package browser entry that re-exports `@fugood/node-llama-wasm`, so browser apps can keep importing `@fugood/llama.node`
 - **src/wasm/llama-node-wasm.cpp**: C ABI bridge that exposes llama.node actions to Emscripten
 - **src/wasm/CMakeLists.txt**: Emscripten build configuration for CPU, CPU pthreads, and WebGPU artifacts
 
@@ -64,7 +65,7 @@ The web package supports URL model loading by default, session save as `ArrayBuf
 - **src/wasm/**: Emscripten-specific WASM build target
 - **scripts/build-wasm-package.js**: Builds WASM artifacts into `packages/node-llama-wasm/wasm/`
 - Platform-specific prebuilt packages: `@fugood/node-llama-{platform}-{arch}[-variant]`
-- Browser package: `@fugood/node-llama-wasm`
+- Browser package: `@fugood/node-llama-wasm` (listed as an optional dependency of `@fugood/llama.node`)
 
 The build process applies patches and copies rn-llama sources with prefix transformations:
 - `lm_ggml` → `ggml`

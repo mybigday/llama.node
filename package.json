@@ -4,7 +4,7 @@
   "version": "1.7.4",
   "description": "An another Node binding of llama.cpp",
   "main": "lib/index.js",
-  "browser": "packages/node-llama-wasm/index.js",
+  "browser": "lib/browser.mjs",
   "scripts": {
     "copy-rn-llama-source": "node scripts/copy-rn-llama-source.js",
     "bootstrap": "npm run copy-rn-llama-source && npm install --omit=optional",
@@ -76,7 +76,7 @@
     "src/llama.cpp/ggml/include/*.h",
     "src/llama.cpp/ggml/src/ggml-cpu/**/*.{h,hpp,cpp,cc,c}",
     "src/llama.cpp/ggml/src/ggml-webgpu/**/*.{h,hpp,cpp,cc,c,wgsl,py}",
-    "packages/node-llama-wasm/**/*",
+    "lib/browser.mjs",
     "lib/binding.js",
     "lib/index.js",
     "lib/parallel.js",
@@ -99,7 +99,8 @@
     "@fugood/node-llama-win32-arm64-vulkan": "1.7.4",
     "@fugood/node-llama-win32-x64": "1.7.4",
     "@fugood/node-llama-win32-x64-cuda": "1.7.4",
-    "@fugood/node-llama-win32-x64-vulkan": "1.7.4"
+    "@fugood/node-llama-win32-x64-vulkan": "1.7.4",
+    "@fugood/node-llama-wasm": "1.7.4"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.24.4",
