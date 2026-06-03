@@ -14,8 +14,7 @@ by `@fugood/llama.node`, with browser-specific I/O:
 - WebGPU can be opted into with `n_gpu_layers` when the WASM binary is built with `GGML_WEBGPU=ON`,
   `navigator.gpu` is available, and the browser exposes WebAssembly JSPI
   (`WebAssembly.promising` and `WebAssembly.Suspending`).
-- The distributed build uses WebAssembly Memory64, matching current wllama
-  constraints. Browsers without Memory64 support are not supported.
+- The distributed build uses WebAssembly Memory64, same with [wllama](https://github.com/ngxson/wllama) constraints. Browsers without Memory64 support are not supported.
 - `loadModel()` uses a dedicated Web Worker by default so WASM work does not
   block the browser UI thread. On isolated pages with `SharedArrayBuffer`, the
   CPU path selects the pthread artifact and defaults `n_threads` to
