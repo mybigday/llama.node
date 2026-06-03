@@ -84,6 +84,8 @@ export type LlamaModelOptions = {
     workerPath?: string
     threads?: boolean
     maxThreads?: number
+    cacheDownloads?: boolean
+    cacheName?: string
     module?: any
     moduleFactory?: (options?: Record<string, any>) => Promise<any>
     moduleOptions?: Record<string, any>
@@ -403,6 +405,7 @@ export declare class LlamaContextWrapper {
 }
 
 export declare const WASM_MODEL_SIZE_LIMIT: number
+export declare const WASM_DOWNLOAD_CACHE_NAME: string
 export declare const WASM_CONFIG_PATHS: {
   js: string
   wasm: string
@@ -415,6 +418,8 @@ export declare const WASM_CONFIG_PATHS: {
 export declare function isWebGpuSupported(): boolean
 export declare function isWasmWorkerSupported(): boolean
 export declare function isWasmThreadsSupported(): boolean
+export declare function isWasmDownloadCacheSupported(): boolean
+export declare function clearWasmDownloadCache(cacheName?: string): Promise<boolean>
 
 export declare function initLlama(options?: Record<string, any>): Promise<any>
 export declare function loadModel(
@@ -442,10 +447,12 @@ declare const defaultExport: {
   getBackendDevicesInfo: typeof getBackendDevicesInfo
   toggleNativeLog: typeof toggleNativeLog
   addNativeLogListener: typeof addNativeLogListener
+  clearWasmDownloadCache: typeof clearWasmDownloadCache
   isLibVariantAvailable: typeof isLibVariantAvailable
   isWebGpuSupported: typeof isWebGpuSupported
   isWasmWorkerSupported: typeof isWasmWorkerSupported
   isWasmThreadsSupported: typeof isWasmThreadsSupported
+  isWasmDownloadCacheSupported: typeof isWasmDownloadCacheSupported
   BuildInfo: typeof BuildInfo
 }
 

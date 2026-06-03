@@ -261,7 +261,9 @@
     <script type="module">
       import {
         WASM_MODEL_SIZE_LIMIT,
+        clearWasmDownloadCache,
         initLlama,
+        isWasmDownloadCacheSupported,
         isWebGpuSupported,
         isWasmThreadsSupported,
         isWasmWorkerSupported,
@@ -269,7 +271,9 @@
       } from '../../packages/node-llama-wasm/index.js'
 
       globalThis.llamaNodeWasm = {
+        clearWasmDownloadCache,
         initLlama,
+        isWasmDownloadCacheSupported,
         isWebGpuSupported,
         isWasmThreadsSupported,
         isWasmWorkerSupported,
@@ -287,6 +291,7 @@
         webGpuSupported ? 'WebGPU detected' : 'WebGPU unavailable',
         isWasmWorkerSupported() ? 'Worker runtime' : 'Main thread runtime',
         isWasmThreadsSupported() ? 'WASM threads' : 'single-thread WASM',
+        isWasmDownloadCacheSupported() ? 'download cache' : 'no download cache',
         `model limit ${Math.round(WASM_MODEL_SIZE_LIMIT / 1024 / 1024)} MB`,
       ].join(' | ')
       $('use-gpu').checked = false

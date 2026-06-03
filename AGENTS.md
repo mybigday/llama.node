@@ -139,7 +139,7 @@ Models are loaded through `loadModel()` which:
 4. Returns the wrapper with methods for completion, embedding, etc.
 
 For the web package, `loadModel()`:
-1. Fetches model URLs into the Emscripten virtual filesystem by default
+1. Fetches model URLs into the Emscripten virtual filesystem by default, reusing browser Cache Storage for repeated URL downloads when available
 2. Chooses CPU, CPU pthreads, or WebGPU artifacts from `packages/node-llama-wasm/wasm/`
 3. Runs the runtime in `worker.js` by default so API calls do not block the UI thread
 4. Uses `n_gpu_layers > 0` to opt into WebGPU
@@ -204,7 +204,7 @@ await context.loadSession('session.bin')
 
 Note: Vulkan backend does not support session save/load.
 
-In the web package, `saveSession()` returns an `ArrayBuffer`. `loadSession()` accepts a URL, `Blob`, `ArrayBuffer`, or typed array.
+In the web package, `saveSession()` returns an `ArrayBuffer`. `loadSession()` accepts a URL, `Blob`, `ArrayBuffer`, or typed array. URL downloads for models, sessions, mmproj files, and media are saved in browser Cache Storage by default. Use `wasm: { cacheDownloads: false }` to force network fetches, `wasm.cacheName` to isolate a cache, or `clearWasmDownloadCache()` to clear the default cache.
 
 ### WASM Threading and UI Responsiveness
 
@@ -220,6 +220,7 @@ The web package defaults to a dedicated Worker runtime. All heavy methods should
 On isolated pages with `SharedArrayBuffer`, CPU uses the pthread artifact and `n_threads` defaults to a conservative capped value. Use:
 - `wasm: { threads: false }` to force the single-thread CPU artifact
 - `wasm: { maxThreads: 8 }` to raise the automatic thread cap
+- `wasm: { cacheDownloads: false }` to bypass browser Cache Storage for URL sources
 - `n_threads` to set an explicit thread count
 - `wasm: { worker: false }` only for direct Emscripten/module debugging
 
@@ -247,7 +248,8 @@ On isolated pages with `SharedArrayBuffer`, CPU uses the pthread artifact and `n
 7. **WASM pthread artifact hangs**: Check that `mainScriptUrlOrBlob` points to `llama-node.threads.js` when loading the threaded artifact
 8. **WebGPU unavailable**: Confirm the browser supports `navigator.gpu`, WebAssembly JSPI, and that the WebGPU artifact was built with `npm run build-wasm -- --webgpu`
 9. **Model too large in browser**: Split GGUF files at or above the 2 GB WebAssembly ArrayBuffer limit and load the first split URL
-10. **Slow Docker WASM builds on Apple Silicon**: Use `npm run build-wasm-docker`; it selects `emscripten/emsdk:4.0.14-arm64` instead of running the amd64 image under emulation. Override with `EMSCRIPTEN_IMAGE` or `EMSCRIPTEN_PLATFORM` when needed.
+10. **Unexpected stale web model/session URL bytes**: Call `clearWasmDownloadCache()` from `@fugood/node-llama-wasm`, use a new `wasm.cacheName`, or pass `wasm: { cacheDownloads: false }` while debugging.
+11. **Slow Docker WASM builds on Apple Silicon**: Use `npm run build-wasm-docker`; it selects `emscripten/emsdk:4.0.14-arm64` instead of running the amd64 image under emulation. Override with `EMSCRIPTEN_IMAGE` or `EMSCRIPTEN_PLATFORM` when needed.
 
 ### Debug Build
 

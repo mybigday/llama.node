@@ -1,6 +1,7 @@
 const MAX_WASM_MODEL_BYTES = 2 * 1024 * 1024 * 1024
 
 export const WASM_MODEL_SIZE_LIMIT = MAX_WASM_MODEL_BYTES
+export const WASM_DOWNLOAD_CACHE_NAME = 'llama-node-wasm-downloads-v1'
 
 export const WASM_CONFIG_PATHS = {
   js: new URL('./wasm/llama-node.js', import.meta.url).href,
@@ -16,6 +17,7 @@ const mods = new WeakMap()
 const logListeners = []
 let logEnabled = false
 const defaultModulePromises = new Map()
+const downloadPromises = new Map()
 let nextFileId = 0
 let nextParallelRequestId = 1
 let nextWorkerRequestId = 1
@@ -47,6 +49,18 @@ export const isWasmThreadsSupported = () =>
   typeof Atomics !== 'undefined' &&
   typeof crossOriginIsolated !== 'undefined' &&
   crossOriginIsolated
+
+export const isWasmDownloadCacheSupported = () =>
+  typeof caches !== 'undefined' &&
+  typeof Request !== 'undefined' &&
+  typeof Response !== 'undefined'
+
+export const clearWasmDownloadCache = async (
+  cacheName = WASM_DOWNLOAD_CACHE_NAME,
+) => {
+  if (!isWasmDownloadCacheSupported()) return false
+  return caches.delete(cacheName)
+}
 
 const defaultCpuThreadCount = (options = {}) => {
   const requestedMax = Number(options.wasm?.maxThreads || 4)
@@ -156,8 +170,26 @@ const virtualFileExists = (mod, path) => {
   }
 }
 
-const fetchBytes = async (url, onProgress) => {
-  const response = await fetch(url)
+const resolveDownloadCacheKey = (url, options = {}) => {
+  if (options.cacheDownloads === false || !isWasmDownloadCacheSupported()) {
+    return ''
+  }
+  try {
+    const base = typeof location !== 'undefined' ? location.href : import.meta.url
+    const resolved = new URL(url, base)
+    if (resolved.protocol !== 'http:' && resolved.protocol !== 'https:') {
+      return ''
+    }
+    return resolved.href
+  } catch {
+    return ''
+  }
+}
+
+const getDownloadCacheName = (options = {}) =>
+  options.cacheName || WASM_DOWNLOAD_CACHE_NAME
+
+const readResponseBytes = async (response, url, onProgress) => {
   if (!response.ok) {
     throw new Error(`Failed to fetch ${url}: HTTP ${response.status}`)
   }
@@ -195,25 +227,100 @@ const fetchBytes = async (url, onProgress) => {
   return bytes
 }
 
-const resolveSourceBytes = async (source, onProgress) => {
-  if (typeof source === 'string') return fetchBytes(source, onProgress)
+const cacheResponse = async (cacheName, cacheKey, response) => {
+  try {
+    const cache = await caches.open(cacheName)
+    await cache.put(cacheKey, response)
+  } catch {
+    // Download caching is best-effort; quota or policy failures should not fail loads.
+  }
+}
+
+const fetchBytesFromNetwork = async (
+  url,
+  onProgress,
+  cacheName,
+  cacheKey,
+) => {
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${url}: HTTP ${response.status}`)
+  }
+
+  const total = Number(response.headers.get('content-length') || 0)
+  assertSupportedSize(total)
+
+  const cacheWrite =
+    cacheName && cacheKey
+      ? cacheResponse(cacheName, cacheKey, response.clone())
+      : undefined
+  const bytes = await readResponseBytes(response, url, onProgress)
+  await cacheWrite
+  return bytes
+}
+
+const fetchCachedBytes = async (url, onProgress, options = {}) => {
+  const cacheKey = resolveDownloadCacheKey(url, options)
+  if (!cacheKey) return fetchBytesFromNetwork(url, onProgress)
+
+  const cacheName = getDownloadCacheName(options)
+  const promiseKey = `${cacheName}\n${cacheKey}`
+  const existing = downloadPromises.get(promiseKey)
+  if (existing) {
+    const bytes = await existing
+    onProgress?.(100)
+    return bytes
+  }
+
+  const promise = (async () => {
+    try {
+      const cache = await caches.open(cacheName)
+      const cached = await cache.match(cacheKey)
+      if (cached) return readResponseBytes(cached, url, onProgress)
+    } catch (error) {
+      if (error?.message === modelTooLargeMessage) throw error
+    }
+    return fetchBytesFromNetwork(url, onProgress, cacheName, cacheKey)
+  })()
+
+  downloadPromises.set(promiseKey, promise)
+  try {
+    return await promise
+  } finally {
+    downloadPromises.delete(promiseKey)
+  }
+}
+
+const resolveSourceBytes = async (source, onProgress, downloadOptions = {}) => {
+  if (typeof source === 'string') {
+    return fetchCachedBytes(source, onProgress, downloadOptions)
+  }
   const bytes = await toUint8Array(source)
   assertSupportedSize(bytes.byteLength)
   onProgress?.(100)
   return bytes
 }
 
-const writeModelSources = async (mod, model, onProgress) => {
+const writeModelSources = async (
+  mod,
+  model,
+  onProgress,
+  downloadOptions = {},
+) => {
   const sources = Array.isArray(model) ? model : [model]
   if (sources.length === 0) throw new Error('Model is required')
 
   const paths = []
   for (let i = 0; i < sources.length; i++) {
     const source = sources[i]
-    const bytes = await resolveSourceBytes(source, (progress) => {
-      const base = (i / sources.length) * 100
-      onProgress?.(Math.round(base + progress / sources.length))
-    })
+    const bytes = await resolveSourceBytes(
+      source,
+      (progress) => {
+        const base = (i / sources.length) * 100
+        onProgress?.(Math.round(base + progress / sources.length))
+      },
+      downloadOptions,
+    )
     const fileName =
       typeof source === 'string'
         ? sanitizeFileName(source, `model-${i}.gguf`)
@@ -223,10 +330,10 @@ const writeModelSources = async (mod, model, onProgress) => {
   return paths
 }
 
-const writeSessionSource = async (mod, source) => {
+const writeSessionSource = async (mod, source, downloadOptions = {}) => {
   const bytes =
     typeof source === 'string'
-      ? await fetchBytes(source)
+      ? await fetchCachedBytes(source, undefined, downloadOptions)
       : await toUint8Array(source)
   const path = `/sessions/session-${nextFileId++}.bin`
   writeVirtualFile(mod, path, bytes)
@@ -236,14 +343,20 @@ const writeSessionSource = async (mod, source) => {
 const isDataMediaUrl = (source) =>
   typeof source === 'string' && /^data:(image|audio)\//.test(source)
 
-const writeVirtualSource = async (mod, source, dir, fallbackName) => {
+const writeVirtualSource = async (
+  mod,
+  source,
+  dir,
+  fallbackName,
+  downloadOptions = {},
+) => {
   if (typeof source === 'string') {
     const maybePath = source.replace(/^file:\/\//, '')
     if (virtualFileExists(mod, maybePath)) return maybePath
     if (isDataMediaUrl(source)) return source
   }
 
-  const bytes = await resolveSourceBytes(source)
+  const bytes = await resolveSourceBytes(source, undefined, downloadOptions)
   const fileName =
     typeof source === 'string'
       ? sanitizeFileName(source, fallbackName)
@@ -251,15 +364,31 @@ const writeVirtualSource = async (mod, source, dir, fallbackName) => {
   return writeVirtualFile(mod, `${dir}/${fileName}`, bytes)
 }
 
-const writeProjectorSource = (mod, source) =>
-  writeVirtualSource(mod, source, '/mmproj', `mmproj-${nextFileId++}.gguf`)
+const writeProjectorSource = (mod, source, downloadOptions = {}) =>
+  writeVirtualSource(
+    mod,
+    source,
+    '/mmproj',
+    `mmproj-${nextFileId++}.gguf`,
+    downloadOptions,
+  )
 
-const writeMediaSources = async (mod, mediaPaths = []) => {
+const writeMediaSources = async (
+  mod,
+  mediaPaths = [],
+  downloadOptions = {},
+) => {
   const sources = Array.isArray(mediaPaths) ? mediaPaths : [mediaPaths]
   const paths = []
   for (const source of sources.filter(Boolean)) {
     paths.push(
-      await writeVirtualSource(mod, source, '/media', `media-${nextFileId++}`),
+      await writeVirtualSource(
+        mod,
+        source,
+        '/media',
+        `media-${nextFileId++}`,
+        downloadOptions,
+      ),
     )
   }
   return paths
@@ -774,7 +903,7 @@ export class LlamaParallelAPI {
 }
 
 export class LlamaContextWrapper {
-  constructor(mod, loadResult, loadOptions = {}) {
+  constructor(mod, loadResult, loadOptions = {}, downloadOptions = {}) {
     this.isWorkerRuntime = false
     this.mod = mod
     this.action = createAction(mod)
@@ -782,6 +911,7 @@ export class LlamaContextWrapper {
     this.modelInfo = loadResult.modelInfo
     this.systemInfo = loadResult.systemInfo || ''
     this.loadOptions = loadOptions
+    this.downloadOptions = downloadOptions
     this.parallel = new LlamaParallelAPI(this)
     mods.set(this, mod)
   }
@@ -862,6 +992,7 @@ export class LlamaContextWrapper {
       completionOptions.media_paths = await writeMediaSources(
         this.mod,
         completionOptions.media_paths,
+        this.downloadOptions,
       )
     }
     if (completionOptions.messages && completionOptions.jinja == null) {
@@ -898,7 +1029,7 @@ export class LlamaContextWrapper {
 
   async tokenize(text, { media_paths } = {}) {
     const stagedMediaPaths = media_paths
-      ? await writeMediaSources(this.mod, media_paths)
+      ? await writeMediaSources(this.mod, media_paths, this.downloadOptions)
       : media_paths
     const result = this.action('tokenize', { text, media_paths: stagedMediaPaths })
     return {
@@ -940,7 +1071,7 @@ export class LlamaContextWrapper {
   }
 
   async loadSession(source) {
-    const path = await writeSessionSource(this.mod, source)
+    const path = await writeSessionSource(this.mod, source, this.downloadOptions)
     try {
       await this.actionAsync('load_session', { path })
     } finally {
@@ -967,7 +1098,11 @@ export class LlamaContextWrapper {
   }
   async initMultimodal(options) {
     if (!options?.path) throw new Error('mmproj path is required')
-    const path = await writeProjectorSource(this.mod, options?.path)
+    const path = await writeProjectorSource(
+      this.mod,
+      options?.path,
+      this.downloadOptions,
+    )
     const result = await this.actionAsync('init_multimodal', {
       ...options,
       path,
@@ -1329,12 +1464,18 @@ export const loadModel = async (options, onProgress) => {
     return new LlamaWorkerContextWrapper(client, result, loadOptions)
   }
 
+  const wasmOptions = options.wasm || {}
   const mod = await initLlama({
-    ...(options.wasm || {}),
+    ...wasmOptions,
     webgpu: useWebGpu,
     threads: runtime.useThreads,
   })
-  const modelPaths = await writeModelSources(mod, options.model, onProgress)
+  const modelPaths = await writeModelSources(
+    mod,
+    options.model,
+    onProgress,
+    wasmOptions,
+  )
   const loadOptions = {
     ...options,
     model: modelPaths[0],
@@ -1348,7 +1489,7 @@ export const loadModel = async (options, onProgress) => {
   delete loadOptions.wasm
 
   const result = await createAsyncAction(mod)('load', loadOptions)
-  return new LlamaContextWrapper(mod, result, loadOptions)
+  return new LlamaContextWrapper(mod, result, loadOptions, wasmOptions)
 }
 
 export const loadLlamaModelInfo = async (model, options = {}) => {
@@ -1413,9 +1554,11 @@ export default {
   getBackendDevicesInfo,
   toggleNativeLog,
   addNativeLogListener,
+  clearWasmDownloadCache,
   isLibVariantAvailable,
   isWebGpuSupported,
   isWasmWorkerSupported,
   isWasmThreadsSupported,
+  isWasmDownloadCacheSupported,
   BuildInfo,
 }

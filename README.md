@@ -109,9 +109,13 @@ Emscripten module on the current thread.
 
 Model strings are fetched as URLs by default. `saveSession()` returns an
 `ArrayBuffer`, and `loadSession()` accepts a URL, `Blob`, `ArrayBuffer`, or typed
-array. Browser `ArrayBuffer` limits still apply, so split GGUF files at or above
-the 2 GB limit into smaller shards before loading. WebGPU is opt-in via
-`n_gpu_layers` and requires both `navigator.gpu` and WebAssembly JSPI.
+array. URL downloads are saved in browser Cache Storage by default so repeated
+model/session/media URL loads can reuse the previous bytes; pass
+`wasm: { cacheDownloads: false }` to force a fresh fetch, `wasm.cacheName` to use
+a separate cache, or call `clearWasmDownloadCache()` to clear the default cache.
+Browser `ArrayBuffer` limits still apply, so split GGUF files at or above the 2
+GB limit into smaller shards before loading. WebGPU is opt-in via `n_gpu_layers`
+and requires both `navigator.gpu` and WebAssembly JSPI.
 
 The browser package includes a serial `context.parallel` queue for API
 compatibility. It preserves the parallel API shape for web callers, but it runs

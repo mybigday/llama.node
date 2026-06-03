@@ -6,6 +6,10 @@ This package exposes the same high-level `loadModel()` and context methods used
 by `@fugood/llama.node`, with browser-specific I/O:
 
 - `model` strings are fetched as URLs by default.
+- URL downloads are saved in browser Cache Storage by default, including model,
+  session, mmproj, and media URLs. Use `wasm: { cacheDownloads: false }` to force
+  network fetches, `wasm.cacheName` to isolate a cache, or
+  `clearWasmDownloadCache()` to clear the default cache.
 - `saveSession()` returns an `ArrayBuffer`.
 - `loadSession()` accepts a URL, `Blob`, `ArrayBuffer`, or typed array.
 - `initMultimodal()` accepts an mmproj URL, `Blob`, `ArrayBuffer`, typed array,
@@ -27,7 +31,11 @@ Large model files at or above the browser WebAssembly `ArrayBuffer` limit are
 rejected. Split large GGUF files into shards, preferably 512 MB or smaller.
 
 ```js
-import { isWebGpuSupported, loadModel } from '@fugood/node-llama-wasm'
+import {
+  clearWasmDownloadCache,
+  isWebGpuSupported,
+  loadModel,
+} from '@fugood/node-llama-wasm'
 
 const context = await loadModel({
   model: 'https://huggingface.co/Durlabh/gemma-270m-q4-k-m-gguf/resolve/main/gemma3-270m-it-q4_k_m.gguf',
@@ -40,6 +48,9 @@ const text = await context.detokenize(tokens.tokens)
 const state = await context.saveSession()
 await context.loadSession(new Blob([state]))
 const result = await context.completion({ prompt: text, n_predict: 32 })
+
+// Optional when you want to force the next run to fetch URLs again.
+await clearWasmDownloadCache()
 ```
 
 Build from the repository root:
