@@ -34,6 +34,19 @@ const unsupported = (feature) => {
   throw new Error(`${feature} is not available in the llama.node WASM package yet`)
 }
 
+const writeConsoleLog = (text) => {
+  if (typeof console !== 'undefined' && typeof console.log === 'function') {
+    console.log(text)
+  }
+}
+
+const emitNativeLog = (level, text) => {
+  if (!logEnabled) return
+  for (const listener of logListeners.slice()) {
+    listener(level, text)
+  }
+}
+
 export const isWebGpuSupported = () =>
   typeof navigator !== 'undefined' &&
   !!navigator.gpu &&
@@ -570,6 +583,26 @@ export const initLlama = async (options = {}) => {
           if (file.endsWith('.wasm')) return paths.wasm
           return file
         },
+      }
+      const userPrint = moduleOptions.print
+      const userPrintErr = moduleOptions.printErr
+      moduleOptions.print = (text) => {
+        const logText = String(text)
+        emitNativeLog('info', logText)
+        if (typeof userPrint === 'function') {
+          userPrint(text)
+        } else {
+          writeConsoleLog(text)
+        }
+      }
+      moduleOptions.printErr = (text) => {
+        const logText = String(text)
+        emitNativeLog('info', logText)
+        if (typeof userPrintErr === 'function') {
+          userPrintErr(text)
+        } else {
+          writeConsoleLog(text)
+        }
       }
       if (options.threads && !moduleOptions.mainScriptUrlOrBlob) {
         moduleOptions.mainScriptUrlOrBlob = paths.js
