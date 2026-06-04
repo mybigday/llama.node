@@ -461,6 +461,7 @@ declare const defaultExport: {
   addNativeLogListener: typeof addNativeLogListener
   clearWasmDownloadCache: typeof clearWasmDownloadCache
   isLibVariantAvailable: typeof isLibVariantAvailable
+  isNativeLogEnabled: typeof isNativeLogEnabled
   isWebGpuSupported: typeof isWebGpuSupported
   isWasmWorkerSupported: typeof isWasmWorkerSupported
   isWasmThreadsSupported: typeof isWasmThreadsSupported

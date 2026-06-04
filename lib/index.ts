@@ -50,13 +50,18 @@ export const toggleNativeLog = async (enable: boolean) => {
   refreshNativeLogSetup()
 }
 
+export const isNativeLogEnabled = () => logEnabled
+
 export function addNativeLogListener(
   listener: (level: string, text: string) => void,
 ): { remove: () => void } {
   logListeners.push(listener)
   return {
     remove: () => {
-      logListeners.splice(logListeners.indexOf(listener), 1)
+      const index = logListeners.indexOf(listener)
+      if (index >= 0) {
+        logListeners.splice(index, 1)
+      }
     },
   }
 }

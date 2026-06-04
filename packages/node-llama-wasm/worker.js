@@ -1,6 +1,14 @@
-import { loadModel as loadModelDirect } from './index.js'
+import {
+  addNativeLogListener,
+  loadModel as loadModelDirect,
+  toggleNativeLog as toggleNativeLogDirect,
+} from './index.js'
 
 let context = null
+
+addNativeLogListener((level, text) => {
+  self.postMessage({ type: 'nativeLog', level, text })
+})
 
 const serializeError = (error) => ({
   message: error?.message || String(error),
@@ -23,12 +31,19 @@ const requireContext = () => {
   return context
 }
 
+const setNativeLogEnabled = async (enabled) => {
+  await toggleNativeLogDirect(!!enabled)
+}
+
 const loadModel = async (options, id) => {
   const wasm = {
     ...(options.wasm || {}),
     worker: false,
   }
+  const nativeLogEnabled = !!wasm.nativeLogEnabled
   delete wasm.workerPath
+  delete wasm.nativeLogEnabled
+  await setNativeLogEnabled(nativeLogEnabled)
   context = await loadModelDirect(
     {
       ...options,
@@ -47,6 +62,9 @@ const callMethod = async (id, method, args) => {
   switch (method) {
     case 'loadModel':
       return loadModel(args[0], id)
+    case 'toggleNativeLog':
+      await setNativeLogEnabled(args[0])
+      return undefined
     case 'getFormattedChat':
       return requireContext().getFormattedChat(args[0], args[1], args[2])
     case 'completion':
@@ -95,6 +113,12 @@ const callMethod = async (id, method, args) => {
 
 self.addEventListener('message', async (event) => {
   const message = event.data || {}
+  if (message.type === 'control') {
+    if (message.method === 'toggleNativeLog') {
+      await setNativeLogEnabled(message.args?.[0])
+    }
+    return
+  }
   if (message.type !== 'request') return
 
   try {

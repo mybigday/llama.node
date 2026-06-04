@@ -18,6 +18,7 @@ const logListeners = []
 let logEnabled = false
 const defaultModulePromises = new Map()
 const downloadPromises = new Map()
+const workerClients = new Set()
 let nextFileId = 0
 let nextParallelRequestId = 1
 let nextWorkerRequestId = 1
@@ -34,17 +35,32 @@ const unsupported = (feature) => {
   throw new Error(`${feature} is not available in the llama.node WASM package yet`)
 }
 
-const writeConsoleLog = (text) => {
-  if (typeof console !== 'undefined' && typeof console.log === 'function') {
-    console.log(text)
-  }
-}
-
 const emitNativeLog = (level, text) => {
   if (!logEnabled) return
   for (const listener of logListeners.slice()) {
     listener(level, text)
   }
+}
+
+const createLoggedModuleOptions = (options = {}) => {
+  const moduleOptions = { ...options }
+  const userPrint = moduleOptions.print
+  const userPrintErr = moduleOptions.printErr
+  moduleOptions.print = (text) => {
+    const logText = String(text)
+    emitNativeLog('info', logText)
+    if (typeof userPrint === 'function') {
+      userPrint(text)
+    }
+  }
+  moduleOptions.printErr = (text) => {
+    const logText = String(text)
+    emitNativeLog('info', logText)
+    if (typeof userPrintErr === 'function') {
+      userPrintErr(text)
+    }
+  }
+  return moduleOptions
 }
 
 export const isWebGpuSupported = () =>
@@ -568,7 +584,9 @@ export const initLlama = async (options = {}) => {
     return options.module
   }
   if (options.moduleFactory) {
-    const mod = await options.moduleFactory(options.moduleOptions || {})
+    const mod = await options.moduleFactory(
+      createLoggedModuleOptions(options.moduleOptions || {}),
+    )
     await startLlamaModule(mod, options.webgpu)
     return mod
   }
@@ -577,33 +595,13 @@ export const initLlama = async (options = {}) => {
   if (!defaultModulePromises.has(cacheKey)) {
     defaultModulePromises.set(cacheKey, (async () => {
       const factory = (await import(paths.js)).default
-      const moduleOptions = {
+      const moduleOptions = createLoggedModuleOptions({
         ...(options.moduleOptions || {}),
         locateFile: (file) => {
           if (file.endsWith('.wasm')) return paths.wasm
           return file
         },
-      }
-      const userPrint = moduleOptions.print
-      const userPrintErr = moduleOptions.printErr
-      moduleOptions.print = (text) => {
-        const logText = String(text)
-        emitNativeLog('info', logText)
-        if (typeof userPrint === 'function') {
-          userPrint(text)
-        } else {
-          writeConsoleLog(text)
-        }
-      }
-      moduleOptions.printErr = (text) => {
-        const logText = String(text)
-        emitNativeLog('info', logText)
-        if (typeof userPrintErr === 'function') {
-          userPrintErr(text)
-        } else {
-          writeConsoleLog(text)
-        }
-      }
+      })
       if (options.threads && !moduleOptions.mainScriptUrlOrBlob) {
         moduleOptions.mainScriptUrlOrBlob = paths.js
       }
@@ -675,8 +673,14 @@ class LlamaWorkerClient {
   constructor(options = {}) {
     this.worker = createWorker(options)
     this.requests = new Map()
+    workerClients.add(this)
     this.worker.addEventListener('message', (event) => {
       const message = event.data || {}
+      if (message.type === 'nativeLog') {
+        emitNativeLog(message.level || 'info', message.text || '')
+        return
+      }
+
       const request = this.requests.get(message.id)
       if (!request) return
 
@@ -697,6 +701,7 @@ class LlamaWorkerClient {
       }
     })
     this.worker.addEventListener('error', (event) => {
+      workerClients.delete(this)
       const error = new Error(event.message || 'llama.node WASM worker error')
       for (const request of this.requests.values()) request.reject(error)
       this.requests.clear()
@@ -717,7 +722,16 @@ class LlamaWorkerClient {
     })
   }
 
+  setNativeLogEnabled(enable) {
+    this.worker.postMessage({
+      type: 'control',
+      method: 'toggleNativeLog',
+      args: [!!enable],
+    })
+  }
+
   terminate() {
+    workerClients.delete(this)
     this.worker.terminate()
     for (const request of this.requests.values()) {
       request.reject(new Error('llama.node WASM worker terminated'))
@@ -1550,12 +1564,18 @@ export const loadModel = async (options, onProgress) => {
       wasm: {
         ...(options.wasm || {}),
         threads: runtime.useThreads,
+        nativeLogEnabled: logEnabled,
       },
     }
-    const result = await client.request('loadModel', [loadOptions], {
-      onProgress,
-    })
-    return new LlamaWorkerContextWrapper(client, result, loadOptions)
+    try {
+      const result = await client.request('loadModel', [loadOptions], {
+        onProgress,
+      })
+      return new LlamaWorkerContextWrapper(client, result, loadOptions)
+    } catch (error) {
+      client.terminate()
+      throw error
+    }
   }
 
   const wasmOptions = options.wasm || {}
@@ -1617,7 +1637,10 @@ export const getBackendDevicesInfo = async () => [
 ]
 
 export const toggleNativeLog = async (enable) => {
-  logEnabled = enable
+  logEnabled = !!enable
+  for (const client of workerClients) {
+    client.setNativeLogEnabled(logEnabled)
+  }
 }
 
 export function addNativeLogListener(listener) {
@@ -1650,6 +1673,7 @@ export default {
   addNativeLogListener,
   clearWasmDownloadCache,
   isLibVariantAvailable,
+  isNativeLogEnabled,
   isWebGpuSupported,
   isWasmWorkerSupported,
   isWasmThreadsSupported,

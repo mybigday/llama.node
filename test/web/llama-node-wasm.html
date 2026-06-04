@@ -231,6 +231,10 @@
             <input id="use-gpu" type="checkbox" />
             <span>WebGPU</span>
           </label>
+          <label class="toggle" for="native-log">
+            <input id="native-log" type="checkbox" />
+            <span>Native logs</span>
+          </label>
 
           <div class="row">
             <div>
@@ -261,28 +265,35 @@
     <script type="module">
       import {
         WASM_MODEL_SIZE_LIMIT,
+        addNativeLogListener,
         clearWasmDownloadCache,
         initLlama,
+        isNativeLogEnabled,
         isWasmDownloadCacheSupported,
         isWebGpuSupported,
         isWasmThreadsSupported,
         isWasmWorkerSupported,
         loadModel,
+        toggleNativeLog,
       } from '../../packages/node-llama-wasm/index.js'
 
       globalThis.llamaNodeWasm = {
+        addNativeLogListener,
         clearWasmDownloadCache,
         initLlama,
+        isNativeLogEnabled,
         isWasmDownloadCacheSupported,
         isWebGpuSupported,
         isWasmThreadsSupported,
         isWasmWorkerSupported,
         loadModel,
+        toggleNativeLog,
         WASM_MODEL_SIZE_LIMIT,
       }
 
       const $ = (id) => document.getElementById(id)
       const runButton = $('run')
+      const nativeLogToggle = $('native-log')
       const logEl = $('log')
       const statusIds = ['load', 'ui', 'token', 'completion', 'state', 'tools']
 
@@ -296,6 +307,7 @@
       ].join(' | ')
       $('use-gpu').checked = false
       $('use-gpu').disabled = !webGpuSupported
+      nativeLogToggle.checked = isNativeLogEnabled()
 
       const log = (message, value) => {
         const suffix =
@@ -303,6 +315,39 @@
         logEl.textContent += `${new Date().toISOString()} ${message}${suffix}\n`
         logEl.scrollTop = logEl.scrollHeight
       }
+
+      let nativeLogSubscription = null
+
+      const ensureNativeLogListener = () => {
+        if (nativeLogSubscription) return
+        nativeLogSubscription = addNativeLogListener((level, text) => {
+          const message = String(text || '').trimEnd()
+          if (!message) return
+          log(`native ${level}: ${message}`)
+        })
+      }
+
+      const setNativeLogEnabled = async (enabled) => {
+        if (enabled) ensureNativeLogListener()
+        await toggleNativeLog(enabled)
+        if (!enabled && nativeLogSubscription) {
+          nativeLogSubscription.remove()
+          nativeLogSubscription = null
+        }
+      }
+
+      nativeLogToggle.addEventListener('change', async () => {
+        nativeLogToggle.disabled = true
+        try {
+          await setNativeLogEnabled(nativeLogToggle.checked)
+          log(`native logs ${nativeLogToggle.checked ? 'enabled' : 'disabled'}`)
+        } catch (error) {
+          nativeLogToggle.checked = isNativeLogEnabled()
+          log(error?.stack || error?.message || String(error))
+        } finally {
+          nativeLogToggle.disabled = false
+        }
+      })
 
       const createLoadProgressLogger = () => {
         let lastLabel = ''
@@ -384,6 +429,7 @@
 
         let context
         try {
+          await setNativeLogEnabled(nativeLogToggle.checked)
           const model = $('model-url').value.trim()
           const prompt = $('prompt').value.trim()
 
