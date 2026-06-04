@@ -7,7 +7,7 @@
 
 #undef NAPI_EXTERN
 
-static napi_status (*napi_adjust_external_memory_ptr)(napi_env, int64_t, int64_t*) = NULL;
+static napi_status (*napi_adjust_external_memory_ptr)(node_api_basic_env, int64_t, int64_t*) = NULL;
 static napi_status (*napi_call_function_ptr)(napi_env, napi_value, napi_value, size_t, const napi_value*, napi_value*) = NULL;
 static napi_status (*napi_close_escapable_handle_scope_ptr)(napi_env, napi_escapable_handle_scope) = NULL;
 static napi_status (*napi_close_handle_scope_ptr)(napi_env, napi_handle_scope) = NULL;
@@ -21,8 +21,8 @@ static napi_status (*napi_create_arraybuffer_ptr)(napi_env, size_t, void**, napi
 static napi_status (*napi_create_dataview_ptr)(napi_env, size_t, napi_value, size_t, napi_value*) = NULL;
 static napi_status (*napi_create_double_ptr)(napi_env, double, napi_value*) = NULL;
 static napi_status (*napi_create_error_ptr)(napi_env, napi_value, napi_value, napi_value*) = NULL;
-static napi_status (*napi_create_external_ptr)(napi_env, void*, napi_finalize, void*, napi_value*) = NULL;
-static napi_status (*napi_create_external_arraybuffer_ptr)(napi_env, void*, size_t, napi_finalize, void*, napi_value*) = NULL;
+static napi_status (*napi_create_external_ptr)(napi_env, void*, node_api_basic_finalize, void*, napi_value*) = NULL;
+static napi_status (*napi_create_external_arraybuffer_ptr)(napi_env, void*, size_t, node_api_basic_finalize, void*, napi_value*) = NULL;
 static napi_status (*napi_create_function_ptr)(napi_env, const char*, size_t, napi_callback, void*, napi_value*) = NULL;
 static napi_status (*napi_create_int32_ptr)(napi_env, int32_t, napi_value*) = NULL;
 static napi_status (*napi_create_int64_ptr)(napi_env, int64_t, napi_value*) = NULL;
@@ -41,7 +41,7 @@ static napi_status (*napi_define_class_ptr)(napi_env, const char*, size_t, napi_
 static napi_status (*napi_define_properties_ptr)(napi_env, napi_value, size_t, const napi_property_descriptor*) = NULL;
 static napi_status (*napi_delete_element_ptr)(napi_env, napi_value, uint32_t, bool*) = NULL;
 static napi_status (*napi_delete_property_ptr)(napi_env, napi_value, napi_value, bool*) = NULL;
-static napi_status (*napi_delete_reference_ptr)(napi_env, napi_ref) = NULL;
+static napi_status (*napi_delete_reference_ptr)(node_api_basic_env, napi_ref) = NULL;
 static napi_status (*napi_escape_handle_ptr)(napi_env, napi_escapable_handle_scope, napi_value, napi_value*) = NULL;
 static napi_status (*napi_get_and_clear_last_exception_ptr)(napi_env, napi_value*) = NULL;
 static napi_status (*napi_get_array_length_ptr)(napi_env, napi_value, uint32_t*) = NULL;
@@ -51,7 +51,7 @@ static napi_status (*napi_get_cb_info_ptr)(napi_env, napi_callback_info, size_t*
 static napi_status (*napi_get_dataview_info_ptr)(napi_env, napi_value, size_t*, void**, napi_value*, size_t*) = NULL;
 static napi_status (*napi_get_element_ptr)(napi_env, napi_value, uint32_t, napi_value*) = NULL;
 static napi_status (*napi_get_global_ptr)(napi_env, napi_value*) = NULL;
-static napi_status (*napi_get_last_error_info_ptr)(napi_env, const napi_extended_error_info**) = NULL;
+static napi_status (*napi_get_last_error_info_ptr)(node_api_basic_env, const napi_extended_error_info**) = NULL;
 static napi_status (*napi_get_named_property_ptr)(napi_env, napi_value, const char*, napi_value*) = NULL;
 static napi_status (*napi_get_new_target_ptr)(napi_env, napi_callback_info, napi_value*) = NULL;
 static napi_status (*napi_get_null_ptr)(napi_env, napi_value*) = NULL;
@@ -70,7 +70,7 @@ static napi_status (*napi_get_value_string_latin1_ptr)(napi_env, napi_value, cha
 static napi_status (*napi_get_value_string_utf16_ptr)(napi_env, napi_value, char16_t*, size_t, size_t*) = NULL;
 static napi_status (*napi_get_value_string_utf8_ptr)(napi_env, napi_value, char*, size_t, size_t*) = NULL;
 static napi_status (*napi_get_value_uint32_ptr)(napi_env, napi_value, uint32_t*) = NULL;
-static napi_status (*napi_get_version_ptr)(napi_env, uint32_t*) = NULL;
+static napi_status (*napi_get_version_ptr)(node_api_basic_env, uint32_t*) = NULL;
 static napi_status (*napi_has_element_ptr)(napi_env, napi_value, uint32_t, bool*) = NULL;
 static napi_status (*napi_has_named_property_ptr)(napi_env, napi_value, const char*, bool*) = NULL;
 static napi_status (*napi_has_own_property_ptr)(napi_env, napi_value, napi_value, bool*) = NULL;
@@ -102,36 +102,36 @@ static napi_status (*napi_throw_range_error_ptr)(napi_env, const char*, const ch
 static napi_status (*napi_throw_type_error_ptr)(napi_env, const char*, const char*) = NULL;
 static napi_status (*napi_typeof_ptr)(napi_env, napi_value, napi_valuetype*) = NULL;
 static napi_status (*napi_unwrap_ptr)(napi_env, napi_value, void**) = NULL;
-static napi_status (*napi_wrap_ptr)(napi_env, napi_value, void*, napi_finalize, void*, napi_ref*) = NULL;
+static napi_status (*napi_wrap_ptr)(napi_env, napi_value, void*, node_api_basic_finalize, void*, napi_ref*) = NULL;
 static napi_status (*napi_async_destroy_ptr)(napi_env, napi_async_context) = NULL;
 static napi_status (*napi_async_init_ptr)(napi_env, napi_value, napi_value, napi_async_context*) = NULL;
-static napi_status (*napi_cancel_async_work_ptr)(napi_env, napi_async_work) = NULL;
+static napi_status (*napi_cancel_async_work_ptr)(node_api_basic_env, napi_async_work) = NULL;
 static napi_status (*napi_create_async_work_ptr)(napi_env, napi_value, napi_value, napi_async_execute_callback, napi_async_complete_callback, void*, napi_async_work*) = NULL;
 static napi_status (*napi_create_buffer_ptr)(napi_env, size_t, void**, napi_value*) = NULL;
 static napi_status (*napi_create_buffer_copy_ptr)(napi_env, size_t, const void*, void**, napi_value*) = NULL;
-static napi_status (*napi_create_external_buffer_ptr)(napi_env, size_t, void*, napi_finalize, void*, napi_value*) = NULL;
+static napi_status (*napi_create_external_buffer_ptr)(napi_env, size_t, void*, node_api_basic_finalize, void*, napi_value*) = NULL;
 static napi_status (*napi_delete_async_work_ptr)(napi_env, napi_async_work) = NULL;
 static void (*napi_fatal_error_ptr)(const char*, size_t, const char*, size_t) = NULL;
 static napi_status (*napi_get_buffer_info_ptr)(napi_env, napi_value, void**, size_t*) = NULL;
-static napi_status (*napi_get_node_version_ptr)(napi_env, const napi_node_version**) = NULL;
+static napi_status (*napi_get_node_version_ptr)(node_api_basic_env, const napi_node_version**) = NULL;
 static napi_status (*napi_is_buffer_ptr)(napi_env, napi_value, bool*) = NULL;
 static napi_status (*napi_make_callback_ptr)(napi_env, napi_async_context, napi_value, napi_value, size_t, const napi_value*, napi_value*) = NULL;
 static void (*napi_module_register_ptr)(napi_module*) = NULL;
-static napi_status (*napi_queue_async_work_ptr)(napi_env, napi_async_work) = NULL;
-static napi_status (*napi_get_uv_event_loop_ptr)(napi_env, struct uv_loop_s**) = NULL;
-static napi_status (*napi_add_env_cleanup_hook_ptr)(napi_env, napi_cleanup_hook, void*) = NULL;
+static napi_status (*napi_queue_async_work_ptr)(node_api_basic_env, napi_async_work) = NULL;
+static napi_status (*napi_get_uv_event_loop_ptr)(node_api_basic_env, struct uv_loop_s**) = NULL;
+static napi_status (*napi_add_env_cleanup_hook_ptr)(node_api_basic_env, napi_cleanup_hook, void*) = NULL;
 static napi_status (*napi_close_callback_scope_ptr)(napi_env, napi_callback_scope) = NULL;
 static napi_status (*napi_fatal_exception_ptr)(napi_env, napi_value) = NULL;
 static napi_status (*napi_open_callback_scope_ptr)(napi_env, napi_value, napi_async_context, napi_callback_scope*) = NULL;
-static napi_status (*napi_remove_env_cleanup_hook_ptr)(napi_env, napi_cleanup_hook, void*) = NULL;
+static napi_status (*napi_remove_env_cleanup_hook_ptr)(node_api_basic_env, napi_cleanup_hook, void*) = NULL;
 static napi_status (*napi_acquire_threadsafe_function_ptr)(napi_threadsafe_function) = NULL;
 static napi_status (*napi_call_threadsafe_function_ptr)(napi_threadsafe_function, void*, napi_threadsafe_function_call_mode) = NULL;
 static napi_status (*napi_create_threadsafe_function_ptr)(napi_env, napi_value, napi_value, napi_value, size_t, size_t, void*, napi_finalize, void*, napi_threadsafe_function_call_js, napi_threadsafe_function*) = NULL;
 static napi_status (*napi_get_threadsafe_function_context_ptr)(napi_threadsafe_function, void**) = NULL;
-static napi_status (*napi_ref_threadsafe_function_ptr)(napi_env, napi_threadsafe_function) = NULL;
+static napi_status (*napi_ref_threadsafe_function_ptr)(node_api_basic_env, napi_threadsafe_function) = NULL;
 static napi_status (*napi_release_threadsafe_function_ptr)(napi_threadsafe_function, napi_threadsafe_function_release_mode) = NULL;
-static napi_status (*napi_unref_threadsafe_function_ptr)(napi_env, napi_threadsafe_function) = NULL;
-static napi_status (*napi_add_finalizer_ptr)(napi_env, napi_value, void*, napi_finalize, void*, napi_ref*) = NULL;
+static napi_status (*napi_unref_threadsafe_function_ptr)(node_api_basic_env, napi_threadsafe_function) = NULL;
+static napi_status (*napi_add_finalizer_ptr)(napi_env, napi_value, void*, node_api_basic_finalize, void*, napi_ref*) = NULL;
 static napi_status (*napi_create_date_ptr)(napi_env, double, napi_value*) = NULL;
 static napi_status (*napi_get_date_value_ptr)(napi_env, napi_value, double*) = NULL;
 static napi_status (*napi_is_date_ptr)(napi_env, napi_value, bool*) = NULL;
@@ -139,11 +139,11 @@ static napi_status (*napi_create_bigint_int64_ptr)(napi_env, int64_t, napi_value
 static napi_status (*napi_create_bigint_uint64_ptr)(napi_env, uint64_t, napi_value*) = NULL;
 static napi_status (*napi_create_bigint_words_ptr)(napi_env, int, size_t, const uint64_t*, napi_value*) = NULL;
 static napi_status (*napi_get_all_property_names_ptr)(napi_env, napi_value, napi_key_collection_mode, napi_key_filter, napi_key_conversion, napi_value*) = NULL;
-static napi_status (*napi_get_instance_data_ptr)(napi_env, void**) = NULL;
+static napi_status (*napi_get_instance_data_ptr)(node_api_basic_env, void**) = NULL;
 static napi_status (*napi_get_value_bigint_int64_ptr)(napi_env, napi_value, int64_t*, bool*) = NULL;
 static napi_status (*napi_get_value_bigint_uint64_ptr)(napi_env, napi_value, uint64_t*, bool*) = NULL;
 static napi_status (*napi_get_value_bigint_words_ptr)(napi_env, napi_value, int*, size_t*, uint64_t*) = NULL;
-static napi_status (*napi_set_instance_data_ptr)(napi_env, void*, napi_finalize, void*) = NULL;
+static napi_status (*napi_set_instance_data_ptr)(node_api_basic_env, void*, napi_finalize, void*) = NULL;
 
 static HMODULE napi_module_handle = NULL;
 static int napi_functions_loaded = 0;
@@ -349,7 +349,7 @@ static int discover_and_load_napi_functions() {
 }
 
 
-napi_status napi_adjust_external_memory(napi_env env, int64_t change_in_bytes, int64_t* adjusted_value) {
+napi_status napi_adjust_external_memory(node_api_basic_env env, int64_t change_in_bytes, int64_t* adjusted_value) {
     if (!napi_functions_loaded && !discover_and_load_napi_functions()) {
         return napi_generic_failure;
     }
@@ -517,7 +517,7 @@ napi_status napi_create_error(napi_env env, napi_value code, napi_value msg, nap
     return napi_create_error_ptr(env, code, msg, result);
 }
 
-napi_status napi_create_external(napi_env env, void* data, napi_finalize finalize_cb, void* finalize_hint, napi_value* result) {
+napi_status napi_create_external(napi_env env, void* data, node_api_basic_finalize finalize_cb, void* finalize_hint, napi_value* result) {
     if (!napi_functions_loaded && !discover_and_load_napi_functions()) {
         return napi_generic_failure;
     }
@@ -529,7 +529,7 @@ napi_status napi_create_external(napi_env env, void* data, napi_finalize finaliz
     return napi_create_external_ptr(env, data, finalize_cb, finalize_hint, result);
 }
 
-napi_status napi_create_external_arraybuffer(napi_env env, void* external_data, size_t byte_length, napi_finalize finalize_cb, void* finalize_hint, napi_value* result) {
+napi_status napi_create_external_arraybuffer(napi_env env, void* external_data, size_t byte_length, node_api_basic_finalize finalize_cb, void* finalize_hint, napi_value* result) {
     if (!napi_functions_loaded && !discover_and_load_napi_functions()) {
         return napi_generic_failure;
     }
@@ -757,7 +757,7 @@ napi_status napi_delete_property(napi_env env, napi_value object, napi_value key
     return napi_delete_property_ptr(env, object, key, result);
 }
 
-napi_status napi_delete_reference(napi_env env, napi_ref ref) {
+napi_status napi_delete_reference(node_api_basic_env env, napi_ref ref) {
     if (!napi_functions_loaded && !discover_and_load_napi_functions()) {
         return napi_generic_failure;
     }
@@ -877,7 +877,7 @@ napi_status napi_get_global(napi_env env, napi_value* result) {
     return napi_get_global_ptr(env, result);
 }
 
-napi_status napi_get_last_error_info(napi_env env, const napi_extended_error_info** result) {
+napi_status napi_get_last_error_info(node_api_basic_env env, const napi_extended_error_info** result) {
     if (!napi_functions_loaded && !discover_and_load_napi_functions()) {
         return napi_generic_failure;
     }
@@ -1105,7 +1105,7 @@ napi_status napi_get_value_uint32(napi_env env, napi_value value, uint32_t* resu
     return napi_get_value_uint32_ptr(env, value, result);
 }
 
-napi_status napi_get_version(napi_env env, uint32_t* result) {
+napi_status napi_get_version(node_api_basic_env env, uint32_t* result) {
     if (!napi_functions_loaded && !discover_and_load_napi_functions()) {
         return napi_generic_failure;
     }
@@ -1489,7 +1489,7 @@ napi_status napi_unwrap(napi_env env, napi_value js_object, void** result) {
     return napi_unwrap_ptr(env, js_object, result);
 }
 
-napi_status napi_wrap(napi_env env, napi_value js_object, void* native_object, napi_finalize finalize_cb, void* finalize_hint, napi_ref* result) {
+napi_status napi_wrap(napi_env env, napi_value js_object, void* native_object, node_api_basic_finalize finalize_cb, void* finalize_hint, napi_ref* result) {
     if (!napi_functions_loaded && !discover_and_load_napi_functions()) {
         return napi_generic_failure;
     }
@@ -1525,7 +1525,7 @@ napi_status napi_async_init(napi_env env, napi_value async_resource, napi_value 
     return napi_async_init_ptr(env, async_resource, async_resource_name, result);
 }
 
-napi_status napi_cancel_async_work(napi_env env, napi_async_work work) {
+napi_status napi_cancel_async_work(node_api_basic_env env, napi_async_work work) {
     if (!napi_functions_loaded && !discover_and_load_napi_functions()) {
         return napi_generic_failure;
     }
@@ -1573,7 +1573,7 @@ napi_status napi_create_buffer_copy(napi_env env, size_t length, const void* dat
     return napi_create_buffer_copy_ptr(env, length, data, result_data, result);
 }
 
-napi_status napi_create_external_buffer(napi_env env, size_t length, void* data, napi_finalize finalize_cb, void* finalize_hint, napi_value* result) {
+napi_status napi_create_external_buffer(napi_env env, size_t length, void* data, node_api_basic_finalize finalize_cb, void* finalize_hint, napi_value* result) {
     if (!napi_functions_loaded && !discover_and_load_napi_functions()) {
         return napi_generic_failure;
     }
@@ -1621,7 +1621,7 @@ napi_status napi_get_buffer_info(napi_env env, napi_value value, void** data, si
     return napi_get_buffer_info_ptr(env, value, data, length);
 }
 
-napi_status napi_get_node_version(napi_env env, const napi_node_version** version) {
+napi_status napi_get_node_version(node_api_basic_env env, const napi_node_version** version) {
     if (!napi_functions_loaded && !discover_and_load_napi_functions()) {
         return napi_generic_failure;
     }
@@ -1669,7 +1669,7 @@ void napi_module_register(napi_module* mod) {
     napi_module_register_ptr(mod);
 }
 
-napi_status napi_queue_async_work(napi_env env, napi_async_work work) {
+napi_status napi_queue_async_work(node_api_basic_env env, napi_async_work work) {
     if (!napi_functions_loaded && !discover_and_load_napi_functions()) {
         return napi_generic_failure;
     }
@@ -1681,7 +1681,7 @@ napi_status napi_queue_async_work(napi_env env, napi_async_work work) {
     return napi_queue_async_work_ptr(env, work);
 }
 
-napi_status napi_get_uv_event_loop(napi_env env, struct uv_loop_s** loop) {
+napi_status napi_get_uv_event_loop(node_api_basic_env env, struct uv_loop_s** loop) {
     if (!napi_functions_loaded && !discover_and_load_napi_functions()) {
         return napi_generic_failure;
     }
@@ -1693,7 +1693,7 @@ napi_status napi_get_uv_event_loop(napi_env env, struct uv_loop_s** loop) {
     return napi_get_uv_event_loop_ptr(env, loop);
 }
 
-napi_status napi_add_env_cleanup_hook(napi_env env, napi_cleanup_hook fun, void* arg) {
+napi_status napi_add_env_cleanup_hook(node_api_basic_env env, napi_cleanup_hook fun, void* arg) {
     if (!napi_functions_loaded && !discover_and_load_napi_functions()) {
         return napi_generic_failure;
     }
@@ -1741,7 +1741,7 @@ napi_status napi_open_callback_scope(napi_env env, napi_value resource_object, n
     return napi_open_callback_scope_ptr(env, resource_object, context, result);
 }
 
-napi_status napi_remove_env_cleanup_hook(napi_env env, napi_cleanup_hook fun, void* arg) {
+napi_status napi_remove_env_cleanup_hook(node_api_basic_env env, napi_cleanup_hook fun, void* arg) {
     if (!napi_functions_loaded && !discover_and_load_napi_functions()) {
         return napi_generic_failure;
     }
@@ -1801,7 +1801,7 @@ napi_status napi_get_threadsafe_function_context(napi_threadsafe_function func, 
     return napi_get_threadsafe_function_context_ptr(func, result);
 }
 
-napi_status napi_ref_threadsafe_function(napi_env env, napi_threadsafe_function func) {
+napi_status napi_ref_threadsafe_function(node_api_basic_env env, napi_threadsafe_function func) {
     if (!napi_functions_loaded && !discover_and_load_napi_functions()) {
         return napi_generic_failure;
     }
@@ -1825,7 +1825,7 @@ napi_status napi_release_threadsafe_function(napi_threadsafe_function func, napi
     return napi_release_threadsafe_function_ptr(func, mode);
 }
 
-napi_status napi_unref_threadsafe_function(napi_env env, napi_threadsafe_function func) {
+napi_status napi_unref_threadsafe_function(node_api_basic_env env, napi_threadsafe_function func) {
     if (!napi_functions_loaded && !discover_and_load_napi_functions()) {
         return napi_generic_failure;
     }
@@ -1837,7 +1837,7 @@ napi_status napi_unref_threadsafe_function(napi_env env, napi_threadsafe_functio
     return napi_unref_threadsafe_function_ptr(env, func);
 }
 
-napi_status napi_add_finalizer(napi_env env, napi_value js_object, void* finalize_data, napi_finalize finalize_cb, void* finalize_hint, napi_ref* result) {
+napi_status napi_add_finalizer(napi_env env, napi_value js_object, void* finalize_data, node_api_basic_finalize finalize_cb, void* finalize_hint, napi_ref* result) {
     if (!napi_functions_loaded && !discover_and_load_napi_functions()) {
         return napi_generic_failure;
     }
@@ -1933,7 +1933,7 @@ napi_status napi_get_all_property_names(napi_env env, napi_value object, napi_ke
     return napi_get_all_property_names_ptr(env, object, key_mode, key_filter, key_conversion, result);
 }
 
-napi_status napi_get_instance_data(napi_env env, void** data) {
+napi_status napi_get_instance_data(node_api_basic_env env, void** data) {
     if (!napi_functions_loaded && !discover_and_load_napi_functions()) {
         return napi_generic_failure;
     }
@@ -1981,7 +1981,7 @@ napi_status napi_get_value_bigint_words(napi_env env, napi_value value, int* sig
     return napi_get_value_bigint_words_ptr(env, value, sign_bit, word_count, words);
 }
 
-napi_status napi_set_instance_data(napi_env env, void* data, napi_finalize finalize_cb, void* finalize_hint) {
+napi_status napi_set_instance_data(node_api_basic_env env, void* data, napi_finalize finalize_cb, void* finalize_hint) {
     if (!napi_functions_loaded && !discover_and_load_napi_functions()) {
         return napi_generic_failure;
     }
