@@ -978,6 +978,7 @@ json action_embedding(const json &payload) {
   params.prompt = opt_string(payload, "text");
   params.embd_normalize = opt<int32_t>(payload, "embd_normalize",
                                        params.embd_normalize);
+  g_ctx->params.prompt = params.prompt;
   const auto values = g_ctx->completion->embedding(params);
   return ok({{"embedding", values}});
 }

@@ -53,6 +53,10 @@ const run = (cmd, args, options = {}) => {
   })
 }
 
+const normalizeEmscriptenMemoryGrow = (js) =>
+  // WebAssembly.Memory.grow() takes a numeric page delta even for memory64 builds.
+  js.replaceAll('wasmMemory.grow(BigInt(pages))', 'wasmMemory.grow(pages)')
+
 const commandExists = (cmd) => {
   try {
     execFileSync(process.platform === 'win32' ? 'where' : 'which', [cmd], {
@@ -195,7 +199,7 @@ const main = () => {
     throw new Error('WASM build did not produce llama-node.js and llama-node.wasm')
   }
 
-  fs.copyFileSync(jsSrc, jsDest)
+  fs.writeFileSync(jsDest, normalizeEmscriptenMemoryGrow(fs.readFileSync(jsSrc, 'utf8')))
   fs.copyFileSync(wasmSrc, wasmDest)
 
   const jsSize = fs.statSync(jsDest).size
