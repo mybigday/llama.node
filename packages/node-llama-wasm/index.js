@@ -121,6 +121,18 @@ const resolveRuntimeOptions = (options = {}) => {
   }
 }
 
+const createCpuFallbackOptions = (options = {}) => ({
+  ...options,
+  n_gpu_layers: 0,
+  flash_attn: false,
+  flash_attn_type: 'off',
+})
+
+const warnWebGpuCpuFallback = (error) => {
+  const reason = error?.message || String(error)
+  console.warn(`[llama.node] WebGPU WASM load failed (${reason}); falling back to CPU WASM`)
+}
+
 const isArrayBufferLike = (value) =>
   value instanceof ArrayBuffer ||
   (ArrayBuffer.isView(value) && value.buffer instanceof ArrayBuffer)
@@ -1545,15 +1557,8 @@ class LlamaWorkerContextWrapper {
   }
 }
 
-export const loadModel = async (options, onProgress) => {
-  const runtime = resolveRuntimeOptions(options)
+const loadModelWithRuntime = async (options, onProgress, runtime) => {
   const useWebGpu = runtime.useWebGpu
-  const hasWebGpuSupport = isWebGpuSupported()
-  if (useWebGpu && !hasWebGpuSupport) {
-    throw new Error(
-      'WebGPU requires navigator.gpu plus WebAssembly JSPI support (WebAssembly.promising and WebAssembly.Suspending). Disable WebGPU or use a browser with JSPI enabled.',
-    )
-  }
 
   if (shouldUseWorkerRuntime(options)) {
     const client = new LlamaWorkerClient(options)
@@ -1604,6 +1609,33 @@ export const loadModel = async (options, onProgress) => {
 
   const result = await createAsyncAction(mod)('load', loadOptions)
   return new LlamaContextWrapper(mod, result, loadOptions, wasmOptions)
+}
+
+export const loadModel = async (options, onProgress) => {
+  const runtime = resolveRuntimeOptions(options)
+  if (!runtime.useWebGpu) {
+    return loadModelWithRuntime(options, onProgress, runtime)
+  }
+
+  if (!isWebGpuSupported()) {
+    console.warn(
+      '[llama.node] WebGPU requires navigator.gpu plus WebAssembly JSPI support; falling back to CPU WASM',
+    )
+    const cpuOptions = createCpuFallbackOptions(options)
+    return loadModelWithRuntime(cpuOptions, onProgress, resolveRuntimeOptions(cpuOptions))
+  }
+
+  if (shouldUseWorkerRuntime(options)) {
+    return loadModelWithRuntime(options, onProgress, runtime)
+  }
+
+  try {
+    return await loadModelWithRuntime(options, onProgress, runtime)
+  } catch (error) {
+    warnWebGpuCpuFallback(error)
+    const cpuOptions = createCpuFallbackOptions(options)
+    return loadModelWithRuntime(cpuOptions, onProgress, resolveRuntimeOptions(cpuOptions))
+  }
 }
 
 export const loadLlamaModelInfo = async (model, options = {}) => {
