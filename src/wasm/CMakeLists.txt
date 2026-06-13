@@ -57,6 +57,7 @@ set(LLAMA_CURL OFF CACHE BOOL "Build curl")
 set(LLAMA_OPENSSL OFF CACHE BOOL "Use OpenSSL" FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
 set(GGML_OPENMP OFF CACHE BOOL "Disable OpenMP for WASM" FORCE)
+set(MTMD_VIDEO OFF CACHE BOOL "Disable mtmd video helpers for WASM" FORCE)
 
 if (LLAMA_NODE_WASM_WEBGPU)
   set(GGML_WEBGPU ON CACHE BOOL "ggml: use WebGPU" FORCE)
