@@ -81,6 +81,30 @@ try {
         /mtmd_decode_use_non_causal\(mtmd_ctx\)/g,
         "mtmd_decode_use_non_causal(mtmd_ctx, nullptr)",
       );
+      content = content.replace(
+        /mtmd::bitmap bmp\(mtmd_helper_bitmap_init_from_buf\(mtmd_wrapper->mtmd_ctx, media_data\.data\(\), media_data\.size\(\)\)\);/g,
+        [
+          "auto bmp_res = mtmd_helper_bitmap_init_from_buf(mtmd_wrapper->mtmd_ctx, media_data.data(), media_data.size(), false);",
+          "            mtmd::bitmap bmp(bmp_res.bitmap);",
+          "            mtmd_helper::video_ptr video(bmp_res.video_ctx);",
+          "            if (video) {",
+          "                bitmaps.entries.clear();",
+          '                throw std::runtime_error("Video media is not supported yet");',
+          "            }",
+        ].join("\n"),
+      );
+      content = content.replace(
+        /mtmd::bitmap bmp\(mtmd_helper_bitmap_init_from_file\(mtmd_wrapper->mtmd_ctx, media_path\.c_str\(\)\)\);/g,
+        [
+          "auto bmp_res = mtmd_helper_bitmap_init_from_file(mtmd_wrapper->mtmd_ctx, media_path.c_str(), false);",
+          "            mtmd::bitmap bmp(bmp_res.bitmap);",
+          "            mtmd_helper::video_ptr video(bmp_res.video_ctx);",
+          "            if (video) {",
+          "                bitmaps.entries.clear();",
+          '                throw std::runtime_error("Video media is not supported yet");',
+          "            }",
+        ].join("\n"),
+      );
 
       // Write the processed content to destination
       fs.writeFileSync(destPath, content);
