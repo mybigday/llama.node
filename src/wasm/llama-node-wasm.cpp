@@ -325,6 +325,26 @@ void apply_grammar_trigger_options(common_params &params, const json &options) {
   }
 }
 
+void append_chat_template_grammar_trigger(
+    llama_context *ctx, common_params_sampling &sampling,
+    const common_grammar_trigger &trigger) {
+  if (trigger.type == COMMON_GRAMMAR_TRIGGER_TYPE_WORD) {
+    const auto ids = common_tokenize(ctx, trigger.value, false, true);
+    if (ids.size() == 1 &&
+        sampling.preserved_tokens.find(ids[0]) !=
+            sampling.preserved_tokens.end()) {
+      common_grammar_trigger token_trigger;
+      token_trigger.type = COMMON_GRAMMAR_TRIGGER_TYPE_TOKEN;
+      token_trigger.value = trigger.value;
+      token_trigger.token = ids[0];
+      sampling.grammar_triggers.push_back(std::move(token_trigger));
+      return;
+    }
+  }
+
+  sampling.grammar_triggers.push_back(trigger);
+}
+
 json token_probs_json(
     llama_context *ctx,
     const std::vector<rnllama::completion_token_output> &probs) {
@@ -716,7 +736,8 @@ json action_completion(const json &options) {
         params.sampling.grammar = {grammar_type, jinja_chat_params.grammar};
         params.sampling.grammar_lazy = jinja_chat_params.grammar_lazy;
         for (const auto &trigger : jinja_chat_params.grammar_triggers) {
-          params.sampling.grammar_triggers.push_back(trigger);
+          append_chat_template_grammar_trigger(g_ctx->ctx, params.sampling,
+                                               trigger);
         }
         has_grammar = true;
       }
