@@ -47,6 +47,16 @@ export type LlamaModelSource =
 
 export type LlamaMediaSource = LlamaModelSource
 
+export type LlamaKvCacheType =
+  | 'f16'
+  | 'f32'
+  | 'q8_0'
+  | 'q4_0'
+  | 'q4_1'
+  | 'iq4_nl'
+  | 'q5_0'
+  | 'q5_1'
+
 export type LlamaDownloadProgress = {
   progress: number
   source?: 'network' | 'cache' | 'memory' | 'buffer'
@@ -61,6 +71,8 @@ export type LlamaDownloadProgress = {
 
 export type LlamaModelOptions = {
   model: LlamaModelSource | LlamaModelSource[]
+  model_draft?: LlamaModelSource
+  draft_model?: LlamaModelSource
   chat_template?: string
   embedding?: boolean
   embd_normalize?: number
@@ -73,8 +85,8 @@ export type LlamaModelOptions = {
   n_gpu_layers?: number
   flash_attn_type?: 'auto' | 'on' | 'off'
   flash_attn?: boolean
-  cache_type_k?: 'f16' | 'f32' | 'q8_0' | 'q4_0' | 'q4_1' | 'q5_0' | 'q5_1'
-  cache_type_v?: 'f16' | 'f32' | 'q8_0' | 'q4_0' | 'q4_1' | 'q5_0' | 'q5_1'
+  cache_type_k?: LlamaKvCacheType
+  cache_type_v?: LlamaKvCacheType
   ctx_shift?: boolean
   kv_unified?: boolean
   swa_full?: boolean
@@ -87,6 +99,10 @@ export type LlamaModelOptions = {
   spec_draft_n_max?: number
   spec_draft_n_min?: number
   spec_draft_p_min?: number
+  spec_draft_p_split?: number
+  spec_draft_n_gpu_layers?: number
+  spec_draft_cache_type_k?: LlamaKvCacheType
+  spec_draft_cache_type_v?: LlamaKvCacheType
   lib_variant?: LibVariant
   wasm?: {
     jsPath?: string
@@ -167,6 +183,7 @@ export type LlamaCompletionOptions = {
   spec_draft_n_max?: number
   spec_draft_n_min?: number
   spec_draft_p_min?: number
+  spec_draft_p_split?: number
 }
 
 export type SpeculativeType = 'none' | 'draft-mtp' | 'mtp'
@@ -180,10 +197,17 @@ export type LlamaSpeculativeOptions = {
   p_min?: number
   p_split?: number
   draft?: {
+    model?: LlamaModelSource
+    path?: LlamaModelSource
+    model_draft?: LlamaModelSource
+    draft_model?: LlamaModelSource
     n_max?: number
     n_min?: number
     p_min?: number
     p_split?: number
+    n_gpu_layers?: number
+    cache_type_k?: LlamaKvCacheType
+    cache_type_v?: LlamaKvCacheType
   }
 }
 

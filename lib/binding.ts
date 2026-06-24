@@ -18,8 +18,27 @@ export type ChatMessage = {
   content?: string | MessagePart[]
 }
 
+export type LlamaKvCacheType =
+  | 'f16'
+  | 'f32'
+  | 'q8_0'
+  | 'q4_0'
+  | 'q4_1'
+  | 'iq4_nl'
+  | 'q5_0'
+  | 'q5_1'
+
 export type LlamaModelOptions = {
   model: string
+  /**
+   * Optional separate draft model path for MTP/speculative decoding.
+   * Leave unset for embedded MTP models.
+   */
+  model_draft?: string
+  /**
+   * Alias for model_draft.
+   */
+  draft_model?: string
   chat_template?: string
   embedding?: boolean
   embd_normalize?: number
@@ -43,24 +62,8 @@ export type LlamaModelOptions = {
   n_gpu_layers?: number
   flash_attn_type?: 'auto' | 'on' | 'off'
   flash_attn?: boolean // Deprecated: use flash_attn_type instead
-  cache_type_k?:
-    | 'f16'
-    | 'f32'
-    | 'q8_0'
-    | 'q4_0'
-    | 'q4_1'
-    | 'iq4_nl'
-    | 'q5_0'
-    | 'q5_1'
-  cache_type_v?:
-    | 'f16'
-    | 'f32'
-    | 'q8_0'
-    | 'q4_0'
-    | 'q4_1'
-    | 'iq4_nl'
-    | 'q5_0'
-    | 'q5_1'
+  cache_type_k?: LlamaKvCacheType
+  cache_type_v?: LlamaKvCacheType
   /**
    * Enable context shifting to handle prompts larger than context size
    */
@@ -114,6 +117,10 @@ export type LlamaModelOptions = {
   spec_draft_n_max?: number
   spec_draft_n_min?: number
   spec_draft_p_min?: number
+  spec_draft_p_split?: number
+  spec_draft_n_gpu_layers?: number
+  spec_draft_cache_type_k?: LlamaKvCacheType
+  spec_draft_cache_type_v?: LlamaKvCacheType
 }
 
 export type CompletionResponseFormat = {
@@ -142,10 +149,21 @@ export type LlamaSpeculativeOptions = {
   p_min?: number
   p_split?: number
   draft?: {
+    /**
+     * Optional separate draft model path for MTP/speculative decoding.
+     * When omitted, MTP uses the loaded target model's embedded draft layers.
+     */
+    model?: string
+    path?: string
+    model_draft?: string
+    draft_model?: string
     n_max?: number
     n_min?: number
     p_min?: number
     p_split?: number
+    n_gpu_layers?: number
+    cache_type_k?: LlamaKvCacheType
+    cache_type_v?: LlamaKvCacheType
   }
 }
 
@@ -259,6 +277,7 @@ export type LlamaCompletionOptions = {
   spec_draft_n_max?: number
   spec_draft_n_min?: number
   spec_draft_p_min?: number
+  spec_draft_p_split?: number
 }
 
 /**

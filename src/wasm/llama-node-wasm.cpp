@@ -114,6 +114,29 @@ void apply_speculative_type_names(common_params_speculative &speculative,
   speculative.types = common_speculative_types_from_names(type_names);
 }
 
+void apply_speculative_draft_options_json(
+    const json &options, common_params_speculative_draft &draft) {
+  draft.mparams.path = opt_string(options, "model", draft.mparams.path);
+  draft.mparams.path = opt_string(options, "path", draft.mparams.path);
+  draft.mparams.path = opt_string(options, "model_draft", draft.mparams.path);
+  draft.mparams.path = opt_string(options, "draft_model", draft.mparams.path);
+  draft.n_max = opt<int32_t>(options, "n_max", draft.n_max);
+  draft.n_min = opt<int32_t>(options, "n_min", draft.n_min);
+  draft.p_min = opt<float>(options, "p_min", draft.p_min);
+  draft.p_split = opt<float>(options, "p_split", draft.p_split);
+  draft.n_gpu_layers = opt<int32_t>(options, "n_gpu_layers", draft.n_gpu_layers);
+
+  const std::string cache_type_k = opt_string(options, "cache_type_k");
+  if (!cache_type_k.empty()) {
+    draft.cache_type_k = rnllama::kv_cache_type_from_str(cache_type_k);
+  }
+
+  const std::string cache_type_v = opt_string(options, "cache_type_v");
+  if (!cache_type_v.empty()) {
+    draft.cache_type_v = rnllama::kv_cache_type_from_str(cache_type_v);
+  }
+}
+
 void apply_speculative_options_json(const json &options,
                                     common_params &params) {
   std::vector<std::string> type_names;
@@ -142,25 +165,12 @@ void apply_speculative_options_json(const json &options,
         push_speculative_type_names(value.at("types"), type_names);
       }
 
-      params.speculative.draft.n_max =
-          opt<int32_t>(value, "n_max", params.speculative.draft.n_max);
-      params.speculative.draft.n_min =
-          opt<int32_t>(value, "n_min", params.speculative.draft.n_min);
-      params.speculative.draft.p_min =
-          opt<float>(value, "p_min", params.speculative.draft.p_min);
-      params.speculative.draft.p_split =
-          opt<float>(value, "p_split", params.speculative.draft.p_split);
+      apply_speculative_draft_options_json(value, params.speculative.draft);
 
       if (value.contains("draft") && value.at("draft").is_object()) {
         const auto &draft = value.at("draft");
-        params.speculative.draft.n_max =
-            opt<int32_t>(draft, "n_max", params.speculative.draft.n_max);
-        params.speculative.draft.n_min =
-            opt<int32_t>(draft, "n_min", params.speculative.draft.n_min);
-        params.speculative.draft.p_min =
-            opt<float>(draft, "p_min", params.speculative.draft.p_min);
-        params.speculative.draft.p_split =
-            opt<float>(draft, "p_split", params.speculative.draft.p_split);
+        apply_speculative_draft_options_json(draft,
+                                             params.speculative.draft);
       }
     }
   }
@@ -181,6 +191,35 @@ void apply_speculative_options_json(const json &options,
       opt<float>(options, "spec_draft_p_min", params.speculative.draft.p_min);
   params.speculative.draft.p_min =
       opt<float>(options, "speculative.p_min", params.speculative.draft.p_min);
+  params.speculative.draft.p_split =
+      opt<float>(options, "spec_draft_p_split",
+                 params.speculative.draft.p_split);
+  params.speculative.draft.p_split =
+      opt<float>(options, "speculative.p_split",
+                 params.speculative.draft.p_split);
+  params.speculative.draft.mparams.path =
+      opt_string(options, "model_draft",
+                 params.speculative.draft.mparams.path);
+  params.speculative.draft.mparams.path =
+      opt_string(options, "draft_model",
+                 params.speculative.draft.mparams.path);
+  params.speculative.draft.n_gpu_layers =
+      opt<int32_t>(options, "spec_draft_n_gpu_layers",
+                   params.speculative.draft.n_gpu_layers);
+
+  const std::string draft_cache_type_k =
+      opt_string(options, "spec_draft_cache_type_k");
+  if (!draft_cache_type_k.empty()) {
+    params.speculative.draft.cache_type_k =
+        rnllama::kv_cache_type_from_str(draft_cache_type_k);
+  }
+
+  const std::string draft_cache_type_v =
+      opt_string(options, "spec_draft_cache_type_v");
+  if (!draft_cache_type_v.empty()) {
+    params.speculative.draft.cache_type_v =
+        rnllama::kv_cache_type_from_str(draft_cache_type_v);
+  }
 
   apply_speculative_type_names(params.speculative, type_names);
 

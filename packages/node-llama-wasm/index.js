@@ -475,6 +475,62 @@ const writeProjectorSource = (mod, source, downloadOptions = {}) =>
     downloadOptions,
   )
 
+const isSpeculativeOptionsObject = (value) =>
+  value && typeof value === 'object' && !Array.isArray(value)
+
+const getDraftModelSource = (options = {}) => {
+  const speculative = isSpeculativeOptionsObject(options.speculative)
+    ? options.speculative
+    : undefined
+  const draft = isSpeculativeOptionsObject(speculative?.draft)
+    ? speculative.draft
+    : undefined
+  return (
+    options.model_draft ??
+    options.draft_model ??
+    draft?.model ??
+    draft?.path ??
+    draft?.model_draft ??
+    draft?.draft_model
+  )
+}
+
+const stageDraftModelOptions = async (mod, options, downloadOptions = {}) => {
+  const source = getDraftModelSource(options)
+  if (!source) return options
+
+  const path = await writeVirtualSource(
+    mod,
+    source,
+    '/models',
+    `draft-model-${nextFileId++}.gguf`,
+    downloadOptions,
+  )
+  const staged = {
+    ...options,
+    model_draft: path,
+  }
+  delete staged.draft_model
+
+  if (isSpeculativeOptionsObject(staged.speculative)) {
+    const draft = isSpeculativeOptionsObject(staged.speculative.draft)
+      ? staged.speculative.draft
+      : {}
+    staged.speculative = {
+      ...staged.speculative,
+      draft: {
+        ...draft,
+        model: path,
+        path: undefined,
+        model_draft: undefined,
+        draft_model: undefined,
+      },
+    }
+  }
+
+  return staged
+}
+
 const writeMediaSources = async (
   mod,
   mediaPaths = [],
@@ -1595,12 +1651,13 @@ const loadModelWithRuntime = async (options, onProgress, runtime) => {
     onProgress,
     wasmOptions,
   )
-  const loadOptions = {
+  let loadOptions = {
     ...options,
     model: modelPaths[0],
     n_threads: runtime.nThreads,
     n_gpu_layers: options.n_gpu_layers ?? 0,
   }
+  loadOptions = await stageDraftModelOptions(mod, loadOptions, wasmOptions)
   if (loadOptions.flash_attn == null && loadOptions.flash_attn_type == null) {
     loadOptions.flash_attn_type = 'off'
   }

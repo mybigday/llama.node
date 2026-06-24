@@ -11,6 +11,10 @@
 #include <string>
 #include <vector>
 
+namespace rnllama {
+ggml_type kv_cache_type_from_str(const std::string &s);
+}
+
 typedef std::unique_ptr<common_sampler, decltype(&common_sampler_free)>
     LlamaCppSampling;
 typedef std::unique_ptr<llama_batch, decltype(&llama_batch_free)> LlamaCppBatch;
@@ -112,6 +116,36 @@ static void apply_speculative_type_names(
   speculative.types = common_speculative_types_from_names(type_names);
 }
 
+static void apply_speculative_draft_options(
+    const Napi::Object &options, common_params_speculative_draft &draft) {
+  draft.mparams.path =
+      get_option<std::string>(options, "model", draft.mparams.path);
+  draft.mparams.path =
+      get_option<std::string>(options, "path", draft.mparams.path);
+  draft.mparams.path =
+      get_option<std::string>(options, "model_draft", draft.mparams.path);
+  draft.mparams.path =
+      get_option<std::string>(options, "draft_model", draft.mparams.path);
+  draft.n_max = get_option<int32_t>(options, "n_max", draft.n_max);
+  draft.n_min = get_option<int32_t>(options, "n_min", draft.n_min);
+  draft.p_min = get_option<float>(options, "p_min", draft.p_min);
+  draft.p_split = get_option<float>(options, "p_split", draft.p_split);
+  draft.n_gpu_layers =
+      get_option<int32_t>(options, "n_gpu_layers", draft.n_gpu_layers);
+
+  const std::string cache_type_k =
+      get_option<std::string>(options, "cache_type_k", "");
+  if (!cache_type_k.empty()) {
+    draft.cache_type_k = rnllama::kv_cache_type_from_str(cache_type_k);
+  }
+
+  const std::string cache_type_v =
+      get_option<std::string>(options, "cache_type_v", "");
+  if (!cache_type_v.empty()) {
+    draft.cache_type_v = rnllama::kv_cache_type_from_str(cache_type_v);
+  }
+}
+
 static void apply_speculative_options(const Napi::Object &options,
                                       common_params &params) {
   std::vector<std::string> type_names;
@@ -153,33 +187,12 @@ static void apply_speculative_options(const Napi::Object &options,
         }
       }
 
-      params.speculative.draft.n_max =
-          get_option<int32_t>(speculative, "n_max",
-                              params.speculative.draft.n_max);
-      params.speculative.draft.n_min =
-          get_option<int32_t>(speculative, "n_min",
-                              params.speculative.draft.n_min);
-      params.speculative.draft.p_min =
-          get_option<float>(speculative, "p_min",
-                            params.speculative.draft.p_min);
-      params.speculative.draft.p_split =
-          get_option<float>(speculative, "p_split",
-                            params.speculative.draft.p_split);
+      apply_speculative_draft_options(speculative,
+                                      params.speculative.draft);
 
       if (speculative.Has("draft") && speculative.Get("draft").IsObject()) {
         const auto draft = speculative.Get("draft").As<Napi::Object>();
-        params.speculative.draft.n_max =
-            get_option<int32_t>(draft, "n_max",
-                                params.speculative.draft.n_max);
-        params.speculative.draft.n_min =
-            get_option<int32_t>(draft, "n_min",
-                                params.speculative.draft.n_min);
-        params.speculative.draft.p_min =
-            get_option<float>(draft, "p_min",
-                              params.speculative.draft.p_min);
-        params.speculative.draft.p_split =
-            get_option<float>(draft, "p_split",
-                              params.speculative.draft.p_split);
+        apply_speculative_draft_options(draft, params.speculative.draft);
       }
     }
   }
@@ -202,6 +215,35 @@ static void apply_speculative_options(const Napi::Object &options,
   params.speculative.draft.p_min =
       get_option<float>(options, "speculative.p_min",
                         params.speculative.draft.p_min);
+  params.speculative.draft.p_split =
+      get_option<float>(options, "spec_draft_p_split",
+                        params.speculative.draft.p_split);
+  params.speculative.draft.p_split =
+      get_option<float>(options, "speculative.p_split",
+                        params.speculative.draft.p_split);
+  params.speculative.draft.mparams.path =
+      get_option<std::string>(options, "model_draft",
+                              params.speculative.draft.mparams.path);
+  params.speculative.draft.mparams.path =
+      get_option<std::string>(options, "draft_model",
+                              params.speculative.draft.mparams.path);
+  params.speculative.draft.n_gpu_layers =
+      get_option<int32_t>(options, "spec_draft_n_gpu_layers",
+                          params.speculative.draft.n_gpu_layers);
+
+  const std::string draft_cache_type_k =
+      get_option<std::string>(options, "spec_draft_cache_type_k", "");
+  if (!draft_cache_type_k.empty()) {
+    params.speculative.draft.cache_type_k =
+        rnllama::kv_cache_type_from_str(draft_cache_type_k);
+  }
+
+  const std::string draft_cache_type_v =
+      get_option<std::string>(options, "spec_draft_cache_type_v", "");
+  if (!draft_cache_type_v.empty()) {
+    params.speculative.draft.cache_type_v =
+        rnllama::kv_cache_type_from_str(draft_cache_type_v);
+  }
 
   apply_speculative_type_names(params.speculative, type_names);
 
