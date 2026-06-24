@@ -6,6 +6,7 @@ import {
   toggleNativeLog,
   addNativeLogListener,
   getBackendDevicesInfo,
+  type JinjaFormattedChatResult,
 } from '../lib'
 
 const filterCompletionResult = (result: any) => {
@@ -129,37 +130,50 @@ test('completion with tools', async () => {
     model: path.resolve(__dirname, './Qwen3-0.6B-Q6_K.gguf'),
     vocab_only: true,
   })
-  expect(
-    model.getFormattedChat(
-      [
-        {
-          role: 'user',
-          content: 'What is the sum of 1 and 2?',
-        },
-      ],
-      undefined,
+  const formattedChat = model.getFormattedChat(
+    [
       {
-        tools: [
-          {
-            type: 'function',
-            function: {
-              name: 'calc',
-              description: 'Calculates the result of a math expression.',
-              parameters: {
-                type: 'object',
-                properties: {
-                  expression: {
-                    type: 'string',
-                    description: 'The math expression to evaluate.',
-                  },
+        role: 'user',
+        content: 'What is the sum of 1 and 2?',
+      },
+    ],
+    undefined,
+    {
+      tools: [
+        {
+          type: 'function',
+          function: {
+            name: 'calc',
+            description: 'Calculates the result of a math expression.',
+            parameters: {
+              type: 'object',
+              properties: {
+                expression: {
+                  type: 'string',
+                  description: 'The math expression to evaluate.',
                 },
               },
             },
           },
-        ],
-      },
-    ),
-  ).toMatchSnapshot()
+        },
+      ],
+    },
+  ) as JinjaFormattedChatResult
+  expect(JSON.parse(formattedChat.chat_parser)).toEqual(
+    expect.objectContaining({
+      root: expect.any(Number),
+      rules: expect.objectContaining({
+        'tool-calc': expect.any(Number),
+        'tool-call': expect.any(Number),
+        'tool-calls': expect.any(Number),
+      }),
+    }),
+  )
+  expect(formattedChat.grammar).toContain('tool-call ::=')
+  expect(formattedChat).toMatchSnapshot({
+    chat_parser: expect.any(String),
+    grammar: expect.any(String),
+  })
 })
 
 test('completion accepts thinking budget params', async () => {
