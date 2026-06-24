@@ -95,7 +95,9 @@ jobs:
             package: node-llama-win32-x64
             toolchain: clang-cl
           # Windows x64 CUDA
-          - os: windows-latest
+          # CUDA 12.x CMake/Visual Studio integration is not available on the
+          # Windows 2025 VS 2026 image currently behind windows-latest.
+          - os: windows-2022
             arch: x64
             target: cuda
             package: node-llama-win32-x64-cuda
