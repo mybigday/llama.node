@@ -1,8 +1,8 @@
 diff --git a/src/llama.cpp/common/CMakeLists.txt b/src/llama.cpp/common/CMakeLists.txt
-index c42320c46..c37f072e6 100644
+index 4cf580a05..167824525 100644
 --- a/src/llama.cpp/common/CMakeLists.txt
 +++ b/src/llama.cpp/common/CMakeLists.txt
-@@ -171,4 +171,10 @@ if (LLAMA_LLGUIDANCE)
+@@ -167,4 +167,10 @@ if (LLAMA_LLGUIDANCE)
      endif()
  endif()
  
@@ -40,7 +40,7 @@ index b166ee5a1..e38e25070 100644
  
  analyze_reasoning::analyze_reasoning(const common_chat_template & tmpl, bool supports_tools)
 diff --git a/src/llama.cpp/common/chat.cpp b/src/llama.cpp/common/chat.cpp
-index cee6ad650..b688c137c 100644
+index 22d2ee4a2..afc30314b 100644
 --- a/src/llama.cpp/common/chat.cpp
 +++ b/src/llama.cpp/common/chat.cpp
 @@ -32,11 +32,22 @@ using json = nlohmann::ordered_json;
@@ -102,7 +102,7 @@ index cee6ad650..b688c137c 100644
                          msg.content_parts.push_back(msg_part);
                      }
                  } else if (!content.is_null()) {
-@@ -1528,6 +1550,73 @@ static common_chat_params common_chat_params_init_functionary_v3_2(const common_
+@@ -1532,6 +1554,73 @@ static common_chat_params common_chat_params_init_functionary_v3_2(const common_
      return data;
  }
  
@@ -176,7 +176,7 @@ index cee6ad650..b688c137c 100644
  // Kimi K2 Thinking - uses unique tool call ID format: functions.<name>:<index>
  // The ID contains both the function name and an incrementing counter
  static common_chat_params common_chat_params_init_kimi_k2(const common_chat_template &    tmpl,
-@@ -2411,6 +2500,12 @@ std::optional<common_chat_params> common_chat_try_specialized_template(
+@@ -2575,6 +2664,12 @@ std::optional<common_chat_params> common_chat_try_specialized_template(
          return common_chat_params_init_functionary_v3_2(tmpl, params);
      }
  
@@ -189,8 +189,8 @@ index cee6ad650..b688c137c 100644
      // Kimi K2 Thinking - uses unique tool call ID format: functions.<name>:<index>
      // Detection: template has "<|tool_calls_section_begin|>" and "functions." prefix in tool call IDs
      if (src.find("<|tool_calls_section_begin|>") != std::string::npos &&
-@@ -2760,3 +2855,38 @@ std::map<std::string, bool> common_chat_templates_get_caps(const common_chat_tem
-     GGML_ASSERT(chat_templates->template_default != nullptr);
+@@ -2945,3 +3040,38 @@ std::map<std::string, bool> common_chat_templates_get_caps(const common_chat_tem
+     }
      return chat_templates->template_default->caps.to_map();
  }
 +
@@ -283,10 +283,10 @@ index 7898f1623..5c6fe908d 100644
  std::vector<common_chat_msg> common_chat_msgs_parse_oaicompat(const nlohmann::ordered_json & messages);
  
 diff --git a/src/llama.cpp/common/common.cpp b/src/llama.cpp/common/common.cpp
-index a14e7bbed..bad65a11b 100644
+index 8f13217ab..21e7c838a 100644
 --- a/src/llama.cpp/common/common.cpp
 +++ b/src/llama.cpp/common/common.cpp
-@@ -1534,6 +1534,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
+@@ -1555,6 +1555,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
          mparams.devices = params.devices.data();
      }
  
@@ -295,10 +295,10 @@ index a14e7bbed..bad65a11b 100644
      mparams.main_gpu        = params.main_gpu;
      mparams.split_mode      = params.split_mode;
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index 75a6036a0..8de61ebcd 100644
+index 153531700..59a108f97 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
-@@ -273,6 +273,7 @@ struct common_params_sampling {
+@@ -283,6 +283,7 @@ struct common_params_sampling {
      // reasoning budget sampler parameters
      // these are populated by the server/CLI based on chat template params
      int32_t                  reasoning_budget_tokens   = -1;   // -1 = disabled, >= 0 = token budget
@@ -306,7 +306,7 @@ index 75a6036a0..8de61ebcd 100644
      std::vector<llama_token> reasoning_budget_start;           // start tag token sequence
      std::vector<llama_token> reasoning_budget_end;             // end tag token sequence
      std::vector<llama_token> reasoning_budget_forced;          // forced sequence (message + end tag)
-@@ -433,6 +434,7 @@ struct lr_opt {
+@@ -447,6 +448,7 @@ struct lr_opt {
  struct ggml_opt_optimizer_params common_opt_lr_pars(void * userdata);
  
  struct common_params {
@@ -486,10 +486,10 @@ index f7c557af4..4c2f58fdd 100644
              check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
              if (NOT "${GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E}" STREQUAL "")
 diff --git a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-index e612ec392..31b260e7e 100644
+index 0c78879cb..00b72999d 100644
 --- a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
 +++ b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-@@ -3527,8 +3527,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
+@@ -3769,8 +3769,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
      GGML_UNUSED(dev);
  }
  
@@ -515,7 +515,7 @@ index e612ec392..31b260e7e 100644
      *total = *free;
  
      GGML_UNUSED(dev);
-@@ -3909,6 +3925,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+@@ -4151,6 +4167,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
          } catch (const std::exception & exc) {
              GGML_LOG_ERROR("ggml-hex: failed to create device/session %zu\n", i);
              devices[i].context = nullptr;
@@ -524,7 +524,7 @@ index e612ec392..31b260e7e 100644
          }
      }
  }
-@@ -4047,7 +4065,12 @@ static void ggml_hexagon_init(ggml_backend_reg * reg) {
+@@ -4296,7 +4314,12 @@ static void ggml_hexagon_init(ggml_backend_reg * reg) {
  #if defined(__ANDROID__)
      if (opt_arch < 75) {
          opt_ndev = 1;

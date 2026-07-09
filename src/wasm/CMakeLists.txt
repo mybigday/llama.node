@@ -91,6 +91,7 @@ add_link_options(
   -sALLOW_MEMORY_GROWTH=1
   -sINITIAL_MEMORY=128MB
   -sMAXIMUM_MEMORY=4096MB
+  -sSTACK_SIZE=8MB
   -sMEMORY64=1
   -fwasm-exceptions
   -sFORCE_FILESYSTEM=1
