@@ -817,7 +817,8 @@ json action_completion(const json &options) {
   g_ctx->params.n_ctx = params.n_ctx;
   g_ctx->params.n_batch = params.n_batch;
   g_ctx->params.ctx_shift = params.ctx_shift;
-  completion->prefill_text = opt_string(options, "prefill_text");
+  completion->prefill_text =
+      rnllama::utf8_sanitize(opt_string(options, "prefill_text"));
 
   if (!completion->initSampling()) {
     throw std::runtime_error("Failed to initialize sampling");
@@ -840,9 +841,9 @@ json action_completion(const json &options) {
       chat_format, common_reasoning_format_from_name(reasoning_format),
       generation_prompt, chat_parser);
 
-  std::string text;
   json streamed_tokens = json::array();
   int token_count = 0;
+  size_t sent_count = 0;
   const int max_tokens = params.n_predict < 0
                              ? std::numeric_limits<int>::max()
                              : params.n_predict;
@@ -853,19 +854,34 @@ json action_completion(const json &options) {
       break;
     }
     token_count++;
+    if (completion->incomplete) {
+      continue;
+    }
+
     const std::string token_text = common_token_to_piece(g_ctx->ctx,
                                                          token_output.tok);
-    text += token_text;
-    streamed_tokens.push_back(token_text);
+    size_t pos = std::min(sent_count, completion->generated_text.size());
+    const std::string str_test = completion->generated_text.substr(pos);
 
-    if (!stop_words.empty()) {
-      const size_t stop_pos =
-          completion->findStoppingStrings(text, token_text.size(),
-                                          rnllama::STOP_FULL);
-      if (stop_pos != std::string::npos) {
-        text = text.substr(0, stop_pos);
-        break;
-      }
+    bool is_stop_full = false;
+    size_t stop_pos = completion->findStoppingStrings(
+        str_test, token_text.size(), rnllama::STOP_FULL);
+    if (stop_pos != std::string::npos) {
+      is_stop_full = true;
+      completion->generated_text.erase(
+          completion->generated_text.begin() + pos + stop_pos,
+          completion->generated_text.end());
+      pos = std::min(sent_count, completion->generated_text.size());
+    } else {
+      stop_pos = completion->findStoppingStrings(
+          str_test, token_text.size(), rnllama::STOP_PARTIAL);
+    }
+
+    if (stop_pos == std::string::npos ||
+        (!completion->has_next_token && !is_stop_full && stop_pos > 0)) {
+      const std::string to_send = completion->generated_text.substr(pos);
+      sent_count += to_send.size();
+      streamed_tokens.push_back(to_send);
     }
   }
 
@@ -873,7 +889,12 @@ json action_completion(const json &options) {
     completion->stopped_limit = true;
   }
 
+  completion->endCompletion();
+
   const auto timings = llama_perf_context(g_ctx->ctx);
+  const double predicted_n =
+      static_cast<double>(completion->num_tokens_predicted);
+  const double predicted_ms = completion->t_token_generation * 1e3;
   json result = ok({
       {"chat_format", chat_format},
       {"tokens_evaluated",
@@ -884,8 +905,7 @@ json action_completion(const json &options) {
       {"truncated", completion->truncated},
       {"context_full", completion->context_full},
       {"interrupted", false},
-      {"text", completion->generated_text.empty() ? text
-                                                  : completion->generated_text},
+      {"text", completion->generated_text},
       {"stopped_eos", completion->stopped_eos},
       {"stopped_words", completion->stopped_word},
       {"stopping_word", completion->stopping_word},
@@ -900,13 +920,12 @@ json action_completion(const json &options) {
          timings.t_p_eval_ms > 0
              ? 1e3 / timings.t_p_eval_ms * timings.n_p_eval
              : 0.0},
-        {"predicted_n", timings.n_eval},
-        {"predicted_ms", timings.t_eval_ms},
+        {"predicted_n", predicted_n},
+        {"predicted_ms", predicted_ms},
         {"predicted_per_token_ms",
-         timings.n_eval > 0 ? timings.t_eval_ms / timings.n_eval : 0.0},
+         predicted_n > 0 ? predicted_ms / predicted_n : 0.0},
         {"predicted_per_second",
-         timings.t_eval_ms > 0 ? 1e3 / timings.t_eval_ms * timings.n_eval
-                                : 0.0}}},
+         predicted_ms > 0 ? 1e3 / predicted_ms * predicted_n : 0.0}}},
   });
 
   try {
@@ -930,7 +949,6 @@ json action_completion(const json &options) {
         token_probs_json(g_ctx->ctx, completion->generated_token_probs);
   }
 
-  completion->endCompletion();
   return result;
 }
 

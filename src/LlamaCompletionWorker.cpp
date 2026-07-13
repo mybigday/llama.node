@@ -100,7 +100,7 @@ void LlamaCompletionWorker::Execute() {
     _rn_ctx->params.ctx_shift = _params.ctx_shift;
 
     // Set prefill text
-    completion->prefill_text = _prefill_text;
+    completion->prefill_text = rnllama::utf8_sanitize(_prefill_text);
 
     // Set up TTS guide tokens if enabled
     if (_has_vocoder && _rn_ctx->tts_wrapper != nullptr) {
@@ -139,6 +139,7 @@ void LlamaCompletionWorker::Execute() {
     // Main completion loop
     int token_count = 0;
     const int max_tokens = _params.n_predict < 0 ? std::numeric_limits<int>::max() : _params.n_predict;
+    size_t sent_count = 0;
     while (completion->has_next_token && !_interrupted && token_count < max_tokens) {
       // Get next token using rn-llama completion
       rnllama::completion_token_output token_output = completion->doCompletion();
@@ -148,22 +149,38 @@ void LlamaCompletionWorker::Execute() {
       }
 
       token_count++;
-
-      std::string token_text = common_token_to_piece(_rn_ctx->ctx, token_output.tok);
-      _result.text += token_text;
-
-      // Check for stopping strings after adding the token
-      if (!_stop_words.empty()) {
-        size_t stop_pos = completion->findStoppingStrings(_result.text, token_text.size(), rnllama::STOP_FULL);
-        if (stop_pos != std::string::npos) {
-          // Found a stop word, truncate the result and break
-          _result.text = _result.text.substr(0, stop_pos);
-          break;
-        }
+      if (completion->incomplete) {
+        continue;
       }
 
-      // Handle streaming callback
-      if (_has_callback && !completion->incomplete) {
+      std::string token_text = common_token_to_piece(_rn_ctx->ctx, token_output.tok);
+      size_t pos = std::min(sent_count, completion->generated_text.size());
+      const std::string str_test = completion->generated_text.substr(pos);
+
+      bool is_stop_full = false;
+      size_t stop_pos = completion->findStoppingStrings(
+          str_test, token_text.size(), rnllama::STOP_FULL);
+      if (stop_pos != std::string::npos) {
+        is_stop_full = true;
+        completion->generated_text.erase(
+            completion->generated_text.begin() + pos + stop_pos,
+            completion->generated_text.end());
+        pos = std::min(sent_count, completion->generated_text.size());
+      } else {
+        stop_pos = completion->findStoppingStrings(
+            str_test, token_text.size(), rnllama::STOP_PARTIAL);
+      }
+
+      if (stop_pos == std::string::npos ||
+          (!completion->has_next_token && !is_stop_full && stop_pos > 0)) {
+        const std::string to_send = completion->generated_text.substr(pos);
+        sent_count += to_send.size();
+
+        // Handle streaming callback
+        if (!_has_callback) {
+          continue;
+        }
+
         struct TokenData {
           std::string token;
           std::string content;
@@ -185,9 +202,8 @@ void LlamaCompletionWorker::Execute() {
         // Extract completion probabilities if n_probs > 0, similar to iOS implementation
         std::vector<rnllama::completion_token_output> probs_output;
         if (_rn_ctx->params.sampling.n_probs > 0) {
-          const std::vector<llama_token> to_send_toks = common_tokenize(_rn_ctx->ctx, token_text, false);
           size_t probs_pos = std::min(_sent_token_probs_index, completion->generated_token_probs.size());
-          size_t probs_stop_pos = std::min(_sent_token_probs_index + to_send_toks.size(), completion->generated_token_probs.size());
+          size_t probs_stop_pos = completion->generated_token_probs.size();
           if (probs_pos < probs_stop_pos) {
             probs_output = std::vector<rnllama::completion_token_output>(
               completion->generated_token_probs.begin() + probs_pos,
@@ -198,7 +214,7 @@ void LlamaCompletionWorker::Execute() {
         }
 
         TokenData *token_data = new TokenData{
-          token_text,
+          to_send,
           partial_output.content,
           partial_output.reasoning_content,
           partial_output.tool_calls,
@@ -372,26 +388,43 @@ void LlamaCompletionWorker::OnOK() {
                                                   timings_token.n_p_eval));
   timingsResult.Set("prompt_ms", Napi::Number::New(Napi::AsyncWorker::Env(),
                                                    timings_token.t_p_eval_ms));
-  timingsResult.Set(
-      "prompt_per_token_ms",
-      Napi::Number::New(Napi::AsyncWorker::Env(),
-                        timings_token.t_p_eval_ms / timings_token.n_p_eval));
+  const double prompt_per_token_ms = timings_token.n_p_eval > 0
+                                         ? timings_token.t_p_eval_ms /
+                                               timings_token.n_p_eval
+                                         : 0.0;
+  timingsResult.Set("prompt_per_token_ms",
+                    Napi::Number::New(Napi::AsyncWorker::Env(),
+                                      prompt_per_token_ms));
+  const double prompt_per_second = timings_token.t_p_eval_ms > 0
+                                       ? 1e3 / timings_token.t_p_eval_ms *
+                                             timings_token.n_p_eval
+                                       : 0.0;
   timingsResult.Set("prompt_per_second",
                     Napi::Number::New(Napi::AsyncWorker::Env(),
-                                      1e3 / timings_token.t_p_eval_ms *
-                                          timings_token.n_p_eval));
+                                      prompt_per_second));
+
+  const double predicted_n =
+      _rn_ctx->completion != nullptr
+          ? static_cast<double>(_rn_ctx->completion->num_tokens_predicted)
+          : static_cast<double>(_result.tokens_predicted);
+  const double predicted_ms =
+      _rn_ctx->completion != nullptr
+          ? _rn_ctx->completion->t_token_generation * 1e3
+          : timings_token.t_eval_ms;
   timingsResult.Set("predicted_n", Napi::Number::New(Napi::AsyncWorker::Env(),
-                                                     timings_token.n_eval));
+                                                     predicted_n));
   timingsResult.Set("predicted_ms", Napi::Number::New(Napi::AsyncWorker::Env(),
-                                                      timings_token.t_eval_ms));
-  timingsResult.Set(
-      "predicted_per_token_ms",
-      Napi::Number::New(Napi::AsyncWorker::Env(),
-                        timings_token.t_eval_ms / timings_token.n_eval));
-  timingsResult.Set(
-      "predicted_per_second",
-      Napi::Number::New(Napi::AsyncWorker::Env(),
-                        1e3 / timings_token.t_eval_ms * timings_token.n_eval));
+                                                      predicted_ms));
+  const double predicted_per_token_ms =
+      predicted_n > 0 ? predicted_ms / predicted_n : 0.0;
+  timingsResult.Set("predicted_per_token_ms",
+                    Napi::Number::New(Napi::AsyncWorker::Env(),
+                                      predicted_per_token_ms));
+  const double predicted_per_second =
+      predicted_ms > 0 ? 1e3 / predicted_ms * predicted_n : 0.0;
+  timingsResult.Set("predicted_per_second",
+                    Napi::Number::New(Napi::AsyncWorker::Env(),
+                                      predicted_per_second));
 
   result.Set("timings", timingsResult);
 
