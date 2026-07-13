@@ -303,6 +303,7 @@ void LlamaCompletionWorker::Execute() {
 
 void LlamaCompletionWorker::OnOK() {
   auto env = Napi::AsyncWorker::Env();
+  const bool vocab_only = _params.vocab_only;
   auto result = Napi::Object::New(env);
   result.Set("chat_format", Napi::Number::New(env, _chat_format));
   result.Set("tokens_evaluated",
@@ -318,8 +319,11 @@ void LlamaCompletionWorker::OnOK() {
   result.Set("truncated", Napi::Boolean::New(env, _result.truncated));
   result.Set("context_full", Napi::Boolean::New(env, _result.context_full));
   result.Set("interrupted", Napi::Boolean::New(env, _interrupted));
-  // Use the generated text from rn-llama completion if available, otherwise use our result text
-  std::string final_text = (_rn_ctx->completion != nullptr) ? _rn_ctx->completion->generated_text : _result.text;
+  // A vocab-only completion does not run or rewind the shared completion
+  // context, so none of its generated state applies to this result.
+  std::string final_text = (!vocab_only && _rn_ctx->completion != nullptr)
+                               ? _rn_ctx->completion->generated_text
+                               : _result.text;
   result.Set("text", Napi::String::New(env, final_text.c_str()));
   result.Set("stopped_eos", Napi::Boolean::New(env, _result.stopped_eos));
   result.Set("stopped_words", Napi::Boolean::New(env, _result.stopped_words));
@@ -331,7 +335,7 @@ void LlamaCompletionWorker::OnOK() {
   Napi::Array tool_calls = Napi::Array::New(Napi::AsyncWorker::Env());
   std::string reasoning_content = "";
   std::string content;
-  if (!_interrupted && _rn_ctx->completion != nullptr) {
+  if (!vocab_only && !_interrupted && _rn_ctx->completion != nullptr) {
     try {
       auto final_output = _rn_ctx->completion->parseChatOutput(false);
       reasoning_content = final_output.reasoning_content;
@@ -376,41 +380,49 @@ void LlamaCompletionWorker::OnOK() {
   }
 
   // Add completion_probabilities to final result
-  if (_rn_ctx->params.sampling.n_probs > 0 && _rn_ctx->completion != nullptr && !_rn_ctx->completion->generated_token_probs.empty()) {
+  if (!vocab_only && _rn_ctx->params.sampling.n_probs > 0 &&
+      _rn_ctx->completion != nullptr &&
+      !_rn_ctx->completion->generated_token_probs.empty()) {
     result.Set("completion_probabilities", TokenProbsToArray(env, _rn_ctx->ctx, _rn_ctx->completion->generated_token_probs));
   }
 
-  auto ctx = _rn_ctx->ctx;
-  const auto timings_token = llama_perf_context(ctx);
-
   auto timingsResult = Napi::Object::New(Napi::AsyncWorker::Env());
+  double prompt_n = 0.0;
+  double prompt_ms = 0.0;
+  double predicted_n = 0.0;
+  double predicted_ms = 0.0;
+
+  // Vocab-only completion exits before inference starts. Reading the shared
+  // context here would expose model-load or previous-completion counters,
+  // which vary by backend and platform.
+  if (!vocab_only) {
+    const auto timings_token = llama_perf_context(_rn_ctx->ctx);
+    prompt_n = static_cast<double>(timings_token.n_p_eval);
+    prompt_ms = timings_token.t_p_eval_ms;
+    predicted_n = _rn_ctx->completion != nullptr
+                      ? static_cast<double>(
+                            _rn_ctx->completion->num_tokens_predicted)
+                      : static_cast<double>(_result.tokens_predicted);
+    predicted_ms = _rn_ctx->completion != nullptr
+                       ? _rn_ctx->completion->t_token_generation * 1e3
+                       : timings_token.t_eval_ms;
+  }
+
   timingsResult.Set("prompt_n", Napi::Number::New(Napi::AsyncWorker::Env(),
-                                                  timings_token.n_p_eval));
+                                                  prompt_n));
   timingsResult.Set("prompt_ms", Napi::Number::New(Napi::AsyncWorker::Env(),
-                                                   timings_token.t_p_eval_ms));
-  const double prompt_per_token_ms = timings_token.n_p_eval > 0
-                                         ? timings_token.t_p_eval_ms /
-                                               timings_token.n_p_eval
-                                         : 0.0;
+                                                   prompt_ms));
+  const double prompt_per_token_ms =
+      prompt_n > 0 ? prompt_ms / prompt_n : 0.0;
   timingsResult.Set("prompt_per_token_ms",
                     Napi::Number::New(Napi::AsyncWorker::Env(),
                                       prompt_per_token_ms));
-  const double prompt_per_second = timings_token.t_p_eval_ms > 0
-                                       ? 1e3 / timings_token.t_p_eval_ms *
-                                             timings_token.n_p_eval
-                                       : 0.0;
+  const double prompt_per_second =
+      prompt_ms > 0 ? 1e3 / prompt_ms * prompt_n : 0.0;
   timingsResult.Set("prompt_per_second",
                     Napi::Number::New(Napi::AsyncWorker::Env(),
                                       prompt_per_second));
 
-  const double predicted_n =
-      _rn_ctx->completion != nullptr
-          ? static_cast<double>(_rn_ctx->completion->num_tokens_predicted)
-          : static_cast<double>(_result.tokens_predicted);
-  const double predicted_ms =
-      _rn_ctx->completion != nullptr
-          ? _rn_ctx->completion->t_token_generation * 1e3
-          : timings_token.t_eval_ms;
   timingsResult.Set("predicted_n", Napi::Number::New(Napi::AsyncWorker::Env(),
                                                      predicted_n));
   timingsResult.Set("predicted_ms", Napi::Number::New(Napi::AsyncWorker::Env(),
