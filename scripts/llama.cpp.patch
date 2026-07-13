@@ -295,7 +295,7 @@ index 8f13217ab..21e7c838a 100644
      mparams.main_gpu        = params.main_gpu;
      mparams.split_mode      = params.split_mode;
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index 153531700..59a108f97 100644
+index 7ed1a9827..ffe0ce0d2 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
 @@ -283,6 +283,7 @@ struct common_params_sampling {
@@ -486,10 +486,10 @@ index f7c557af4..4c2f58fdd 100644
              check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
              if (NOT "${GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E}" STREQUAL "")
 diff --git a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-index 0c78879cb..00b72999d 100644
+index 76c71d7ee..2d9b05cae 100644
 --- a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
 +++ b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-@@ -3769,8 +3769,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
+@@ -3870,8 +3870,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
      GGML_UNUSED(dev);
  }
  
@@ -515,7 +515,7 @@ index 0c78879cb..00b72999d 100644
      *total = *free;
  
      GGML_UNUSED(dev);
-@@ -4151,6 +4167,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+@@ -4252,6 +4268,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
          } catch (const std::exception & exc) {
              GGML_LOG_ERROR("ggml-hex: failed to create device/session %zu\n", i);
              devices[i].context = nullptr;
@@ -524,7 +524,7 @@ index 0c78879cb..00b72999d 100644
          }
      }
  }
-@@ -4296,7 +4314,12 @@ static void ggml_hexagon_init(ggml_backend_reg * reg) {
+@@ -4397,7 +4415,12 @@ static void ggml_hexagon_init(ggml_backend_reg * reg) {
  #if defined(__ANDROID__)
      if (opt_arch < 75) {
          opt_ndev = 1;
