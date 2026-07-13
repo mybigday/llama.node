@@ -169,7 +169,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.run.outputs.should-run == 'true'
         with:
-          node-version: 20
+          node-version: 24
           registry-url: 'https://registry.npmjs.org'
       - name: Install CUDA
         if: steps.run.outputs.should-run == 'true' && matrix.target == 'cuda' && matrix.cuda-version
@@ -254,7 +254,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.run.outputs.should-run == 'true'
         with:
-          node-version: 20
+          node-version: 24
           registry-url: 'https://registry.npmjs.org'
       - name: Copy rn-llama sources
         if: steps.run.outputs.should-run == 'true'

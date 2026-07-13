@@ -11,7 +11,7 @@ jobs:
         submodules: 'true'
     - uses: actions/setup-node@v4
       with:
-        node-version: 20
+        node-version: 24
     - name: Install LLVM and Clang
       run: |
         curl -L https://apt.llvm.org/llvm.sh | ALL=1 sudo bash -s 18
@@ -38,7 +38,7 @@ jobs:
         submodules: 'true'
     - uses: actions/setup-node@v4
       with:
-        node-version: 20
+        node-version: 24
     - run: npm run copy-rn-llama-source
     - name: Build WASM package (CPU smoke)
       run: |
