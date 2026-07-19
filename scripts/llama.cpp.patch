@@ -15,10 +15,10 @@ index 4cf580a05..167824525 100644
 +
 +target_link_libraries(${TARGET} PRIVATE ${LLAMA_COMMON_WIN_LIBS} PUBLIC llama Threads::Threads)
 diff --git a/src/llama.cpp/common/chat-diff-analyzer.cpp b/src/llama.cpp/common/chat-diff-analyzer.cpp
-index b166ee5a1..e38e25070 100644
+index 127278dfb..e0d219c54 100644
 --- a/src/llama.cpp/common/chat-diff-analyzer.cpp
 +++ b/src/llama.cpp/common/chat-diff-analyzer.cpp
-@@ -408,7 +408,7 @@ std::string autoparser::detect_user_start_marker(const common_chat_template & tm
+@@ -410,7 +410,7 @@ std::string autoparser::detect_user_start_marker(const common_chat_template & tm
  
      auto candidate = usermsg.substr(0, usermsg.find(USER_MSG));
      auto candidate_split = segmentize_markers(candidate);
@@ -27,7 +27,7 @@ index b166ee5a1..e38e25070 100644
      bool encountered_marker = false;
      for (const auto & mrk : candidate_split) {
          std::string lower_mrk = std::string(mrk.value);
-@@ -423,9 +423,9 @@ std::string autoparser::detect_user_start_marker(const common_chat_template & tm
+@@ -425,9 +425,9 @@ std::string autoparser::detect_user_start_marker(const common_chat_template & tm
              continue;
          }
          encountered_marker |= mrk.type == segment_type::MARKER;
@@ -295,10 +295,10 @@ index 8f13217ab..21e7c838a 100644
      mparams.main_gpu        = params.main_gpu;
      mparams.split_mode      = params.split_mode;
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index 7ed1a9827..ffe0ce0d2 100644
+index bffc1767a..09cade27f 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
-@@ -283,6 +283,7 @@ struct common_params_sampling {
+@@ -284,6 +284,7 @@ struct common_params_sampling {
      // reasoning budget sampler parameters
      // these are populated by the server/CLI based on chat template params
      int32_t                  reasoning_budget_tokens   = -1;   // -1 = disabled, >= 0 = token budget
@@ -306,7 +306,7 @@ index 7ed1a9827..ffe0ce0d2 100644
      std::vector<llama_token> reasoning_budget_start;           // start tag token sequence
      std::vector<llama_token> reasoning_budget_end;             // end tag token sequence
      std::vector<llama_token> reasoning_budget_forced;          // forced sequence (message + end tag)
-@@ -447,6 +448,7 @@ struct lr_opt {
+@@ -448,6 +449,7 @@ struct lr_opt {
  struct ggml_opt_optimizer_params common_opt_lr_pars(void * userdata);
  
  struct common_params {
@@ -473,7 +473,7 @@ index 75a299e23..558584d6d 100644
      }
  
 diff --git a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
-index f7c557af4..4c2f58fdd 100644
+index 836bae4d0..e20246796 100644
 --- a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
 +++ b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
 @@ -103,7 +103,7 @@ function(ggml_add_cpu_backend_variant_impl tag_name)
@@ -486,10 +486,10 @@ index f7c557af4..4c2f58fdd 100644
              check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
              if (NOT "${GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E}" STREQUAL "")
 diff --git a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-index 76c71d7ee..2d9b05cae 100644
+index 9388a59c1..6e3f3f597 100644
 --- a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
 +++ b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-@@ -3870,8 +3870,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
+@@ -3933,8 +3933,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
      GGML_UNUSED(dev);
  }
  
@@ -515,7 +515,7 @@ index 76c71d7ee..2d9b05cae 100644
      *total = *free;
  
      GGML_UNUSED(dev);
-@@ -4252,6 +4268,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+@@ -4318,6 +4334,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
          } catch (const std::exception & exc) {
              GGML_LOG_ERROR("ggml-hex: failed to create device/session %zu\n", i);
              devices[i].context = nullptr;
@@ -524,7 +524,7 @@ index 76c71d7ee..2d9b05cae 100644
          }
      }
  }
-@@ -4397,7 +4415,12 @@ static void ggml_hexagon_init(ggml_backend_reg * reg) {
+@@ -4472,7 +4490,12 @@ static void ggml_hexagon_init(ggml_backend_reg * reg) {
  #if defined(__ANDROID__)
      if (opt_arch < 75) {
          opt_ndev = 1;
@@ -539,10 +539,10 @@ index 76c71d7ee..2d9b05cae 100644
  #endif
  
 diff --git a/src/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt b/src/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
-index 5aeb6e97b..598f14884 100644
+index 1dc6a145d..9c99c7589 100644
 --- a/src/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
 +++ b/src/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
-@@ -137,7 +137,7 @@ if (Vulkan_FOUND)
+@@ -149,7 +149,7 @@ if (Vulkan_FOUND)
      endif()
  
      # Set up toolchain for host compilation whether cross-compiling or not
@@ -551,7 +551,7 @@ index 5aeb6e97b..598f14884 100644
          if (GGML_VULKAN_SHADERS_GEN_TOOLCHAIN)
              set(HOST_CMAKE_TOOLCHAIN_FILE ${GGML_VULKAN_SHADERS_GEN_TOOLCHAIN})
          else()
-@@ -157,7 +157,7 @@ if (Vulkan_FOUND)
+@@ -169,7 +169,7 @@ if (Vulkan_FOUND)
  
      include(ExternalProject)
  
