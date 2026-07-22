@@ -90,6 +90,16 @@ export type LlamaModelOptions = {
   ctx_shift?: boolean
   kv_unified?: boolean
   swa_full?: boolean
+  /**
+   * Memory budget (MiB) for the cross-turn KV prefix cache on recurrent/hybrid
+   * models. 0 disables it; no-op on pure-attention models. Default 160.
+   */
+  state_cache_budget_mb?: number
+  /**
+   * Max snapshots to keep (secondary cap; the byte budget is primary).
+   * 0 = no count cap. Default 8.
+   */
+  state_cache_max_checkpoints?: number
   use_mmap?: boolean
   vocab_only?: boolean
   rope_freq_base?: number

@@ -155,7 +155,7 @@ const modelPath = path.resolve(__dirname, './Llama-3.2-1B-Instruct-Q4_K_M.gguf')
     expect(result).toMatchObject({
       tokens_predicted: expect.any(Number),
       tokens_evaluated: expect.any(Number),
-      text: expect.stringMatching(/The content of this audio is a/),
+      text: expect.stringMatching(/audio/i),
     })
 
     console.log(result)

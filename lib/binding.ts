@@ -82,6 +82,16 @@ export type LlamaModelOptions = {
    */
   n_cpu_moe?: number
   /**
+   * Memory budget (MiB) for the cross-turn KV prefix cache on recurrent/hybrid
+   * models. 0 disables it; no-op on pure-attention models. Default 160.
+   */
+  state_cache_budget_mb?: number
+  /**
+   * Max snapshots to keep (secondary cap; the byte budget is primary).
+   * 0 = no count cap. Default 8.
+   */
+  state_cache_max_checkpoints?: number
+  /**
    * List of device names to use for offloading
    * Device names can be obtained from getBackendDevicesInfo()
    * Example: ['Metal', 'BLAS', 'CPU']

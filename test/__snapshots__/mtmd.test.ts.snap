@@ -21,7 +21,8 @@ What is the content of this audio?
 exports[`multimodal with images 1`] = `
 {
   "bitmap_hashes": [
-    "848984200801287295",
+    "source:848984200801287295",
+    "chunk:1:64:848984200801287295",
   ],
   "chunk_pos": [
     0,

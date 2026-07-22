@@ -411,6 +411,14 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
 
   // Use rn-llama context instead of direct session
   _rn_ctx = new llama_rn_context();
+  const int32_t state_cache_budget_mb =
+      get_option<int32_t>(options, "state_cache_budget_mb", 160);
+  _rn_ctx->state_cache_budget_bytes =
+      state_cache_budget_mb > 0
+          ? static_cast<size_t>(state_cache_budget_mb) * 1024 * 1024
+          : 0;
+  _rn_ctx->state_cache_max_checkpoints =
+      get_option<int32_t>(options, "state_cache_max_checkpoints", 8);
   _rn_ctx->is_load_interrupted = false;
   _rn_ctx->loading_progress = 0;
 

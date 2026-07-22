@@ -557,6 +557,14 @@ json action_load(const json &payload) {
   backend_init(params.n_gpu_layers > 0);
 
   g_ctx.reset(new rnllama::llama_rn_context());
+  const int32_t state_cache_budget_mb =
+      opt<int32_t>(payload, "state_cache_budget_mb", 160);
+  g_ctx->state_cache_budget_bytes =
+      state_cache_budget_mb > 0
+          ? static_cast<size_t>(state_cache_budget_mb) * 1024 * 1024
+          : 0;
+  g_ctx->state_cache_max_checkpoints =
+      opt<int32_t>(payload, "state_cache_max_checkpoints", 8);
 
   if (!g_ctx->loadModel(params)) {
     g_ctx.reset();
