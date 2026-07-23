@@ -765,7 +765,7 @@ index 3c73db443..2e810f5bc 100644
 @@ -238,8 +238,9 @@ struct decode_embd_batch {
      }
  };
-
+ 
 -// Helper function for decoding an image whose embeddings have already been calculated
 -int32_t mtmd_helper_decode_image_chunk(
 +// Internal form of mtmd_helper_decode_image_chunk() that can request logits
@@ -789,13 +789,13 @@ index 3c73db443..2e810f5bc 100644
 +    if (logits_last) {
 +        batch_embd.batch.logits[n_tokens - 1] = true;
 +    }
-
+ 
      const bool use_non_causal = mtmd_decode_use_non_causal(ctx, chunk);
      if (use_non_causal) {
 @@ -335,6 +340,23 @@ int32_t mtmd_helper_decode_image_chunk(
      return 0;
  }
-
+ 
 +// Helper function for decoding an image whose embeddings have already been calculated
 +int32_t mtmd_helper_decode_image_chunk(
 +        mtmd_context * ctx,
@@ -818,7 +818,7 @@ index 3c73db443..2e810f5bc 100644
          const mtmd_input_chunk * chunk,
 @@ -394,7 +416,9 @@ int32_t mtmd_helper_eval_chunk_single(mtmd_context * ctx,
          LOG_INF("%s slice encoded in %" PRId64 " ms\n", name, ggml_time_ms() - t0);
-
+ 
          float * embd = mtmd_get_output_embd(ctx);
 -        ret = mtmd_helper_decode_image_chunk(ctx, lctx, chunk, embd, n_past, seq_id, n_batch, new_n_past, nullptr, nullptr);
 +        ret = mtmd_helper_decode_image_chunk_impl(
