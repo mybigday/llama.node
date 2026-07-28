@@ -330,8 +330,13 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   params.rope_freq_base = get_option<float>(options, "rope_freq_base", 0.0f);
   params.rope_freq_scale = get_option<float>(options, "rope_freq_scale", 0.0f);
 
-  params.use_mlock = get_option<bool>(options, "use_mlock", false);
-  params.use_mmap = get_option<bool>(options, "use_mmap", true);
+  const bool use_mlock = get_option<bool>(options, "use_mlock", false);
+  const bool use_mmap = get_option<bool>(options, "use_mmap", true);
+  params.load_mode = use_mmap
+                         ? (use_mlock ? LLAMA_LOAD_MODE_MMAP_MLOCK
+                                      : LLAMA_LOAD_MODE_MMAP)
+                         : (use_mlock ? LLAMA_LOAD_MODE_MLOCK
+                                      : LLAMA_LOAD_MODE_NONE);
   params.no_extra_bufts = get_option<bool>(options, "no_extra_bufts", false);
   params.numa =
       static_cast<ggml_numa_strategy>(get_option<uint32_t>(options, "numa", 0));
@@ -790,8 +795,8 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
     if (!chatParams.thinking_start_tag.empty()) {
       result.Set("thinking_start_tag", chatParams.thinking_start_tag);
     }
-    if (!chatParams.thinking_end_tag.empty()) {
-      result.Set("thinking_end_tag", chatParams.thinking_end_tag);
+    if (!chatParams.thinking_end_tags.empty()) {
+      result.Set("thinking_end_tag", chatParams.thinking_end_tags.front());
     }
     // preserved_tokens: string[]
     Napi::Array preserved_tokens = Napi::Array::New(env);

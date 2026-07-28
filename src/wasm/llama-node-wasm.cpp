@@ -242,12 +242,14 @@ bool is_thinking_forced_open(const common_chat_params &chat_params) {
     return false;
   }
 
-  if (chat_params.thinking_end_tag.empty()) {
-    return true;
+  size_t last_end = std::string::npos;
+  for (const auto &end_tag : chat_params.thinking_end_tags) {
+    const size_t pos = chat_params.generation_prompt.rfind(end_tag);
+    if (pos != std::string::npos &&
+        (last_end == std::string::npos || pos > last_end)) {
+      last_end = pos;
+    }
   }
-
-  const size_t last_end =
-      chat_params.generation_prompt.rfind(chat_params.thinking_end_tag);
   return last_end == std::string::npos || last_end < last_start;
 }
 
@@ -272,18 +274,22 @@ void apply_reasoning_budget_json(const json &options, llama_context *ctx,
   }
 
   std::string thinking_start_tag = opt_string(options, "thinking_start_tag");
-  std::string thinking_end_tag = opt_string(options, "thinking_end_tag");
+  const std::string thinking_end_tag = opt_string(options, "thinking_end_tag");
+  std::vector<std::string> thinking_end_tags;
+  if (!thinking_end_tag.empty()) {
+    thinking_end_tags.push_back(thinking_end_tag);
+  }
 
   if (chat_params != nullptr) {
     if (thinking_start_tag.empty()) {
       thinking_start_tag = chat_params->thinking_start_tag;
     }
-    if (thinking_end_tag.empty()) {
-      thinking_end_tag = chat_params->thinking_end_tag;
+    if (thinking_end_tags.empty()) {
+      thinking_end_tags = chat_params->thinking_end_tags;
     }
   }
 
-  if (thinking_end_tag.empty()) {
+  if (thinking_end_tags.empty()) {
     return;
   }
 
@@ -294,10 +300,17 @@ void apply_reasoning_budget_json(const json &options, llama_context *ctx,
     sampling.reasoning_budget_start =
         common_tokenize(ctx, thinking_start_tag, false, true);
   }
-  sampling.reasoning_budget_end =
-      common_tokenize(ctx, thinking_end_tag, false, true);
-  sampling.reasoning_budget_forced = common_tokenize(
-      ctx, thinking_budget_message + thinking_end_tag, false, true);
+  for (const auto &end_tag : thinking_end_tags) {
+    const auto end_tokens = common_tokenize(ctx, end_tag, false, true);
+    if (end_tokens.empty()) {
+      continue;
+    }
+    if (sampling.reasoning_budget_end.empty()) {
+      sampling.reasoning_budget_forced = common_tokenize(
+          ctx, thinking_budget_message + end_tag, false, true);
+    }
+    sampling.reasoning_budget_end.push_back(end_tokens);
+  }
 
   if (sampling.reasoning_budget_end.empty() ||
       sampling.reasoning_budget_forced.empty()) {
@@ -544,8 +557,9 @@ common_params params_from_load_options(const json &options) {
   params.swa_full = opt<bool>(options, "swa_full", false);
   params.rope_freq_base = opt<float>(options, "rope_freq_base", 0.0f);
   params.rope_freq_scale = opt<float>(options, "rope_freq_scale", 0.0f);
-  params.use_mlock = false;
-  params.use_mmap = opt<bool>(options, "use_mmap", true);
+  params.load_mode = opt<bool>(options, "use_mmap", true)
+                         ? LLAMA_LOAD_MODE_MMAP
+                         : LLAMA_LOAD_MODE_NONE;
   params.no_extra_bufts = opt<bool>(options, "no_extra_bufts", false);
   apply_speculative_options_json(options, params);
 
@@ -1048,7 +1062,9 @@ json action_formatted_chat(const json &payload) {
                {"generation_prompt", chat_params.generation_prompt},
                {"thinking_forced_open", false},
                {"thinking_start_tag", chat_params.thinking_start_tag},
-               {"thinking_end_tag", chat_params.thinking_end_tag},
+               {"thinking_end_tag", chat_params.thinking_end_tags.empty()
+                                        ? ""
+                                        : chat_params.thinking_end_tags.front()},
                {"preserved_tokens", chat_params.preserved_tokens},
                {"additional_stops", chat_params.additional_stops},
                {"chat_parser", chat_params.parser}});
