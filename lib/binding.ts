@@ -307,6 +307,8 @@ export type LlamaParallelCompletionOptions = LlamaCompletionOptions & {
    * File path to save session state to after completion.
    * The session state will be saved to this file path when the completion finishes.
    * You can then pass this path to `load_state_path` in a subsequent request to resume.
+   * For multimodal conversations a `<path>.meta` sidecar file is written next
+   * to the state file (media identity); keep the two files together.
    * Example: `'/path/to/session.bin'` or `'file:///path/to/session.bin'`
    */
   save_state_path?: string

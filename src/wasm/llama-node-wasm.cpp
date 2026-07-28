@@ -1019,13 +1019,54 @@ json action_save_session(const json &payload) {
 json action_load_session(const json &payload) {
   require_context();
   const std::string path = opt_string(payload, "path", "/session.bin");
-  std::vector<llama_token> tokens(g_ctx->n_ctx);
+  std::vector<llama_token> tokens(llama_n_ctx(g_ctx->ctx));
   size_t count = 0;
   if (!llama_state_load_file(g_ctx->ctx, path.c_str(), tokens.data(),
                              tokens.size(), &count)) {
     throw std::runtime_error("Failed to load session");
   }
+  // Keep media placeholders and verify that their token count is consistent
+  // with the restored memory before allowing the next decode to reuse it.
   tokens.resize(count);
+  auto *memory = llama_get_memory(g_ctx->ctx);
+  const llama_pos n_tokens = static_cast<llama_pos>(tokens.size());
+  const llama_pos pos_max = llama_memory_seq_pos_max(memory, 0);
+  const bool tokens_have_media =
+      std::find(tokens.begin(), tokens.end(), LLAMA_TOKEN_NULL) != tokens.end();
+  const bool mrope_media =
+      rnllama::model_uses_mrope(g_ctx->model) && tokens_have_media;
+  bool resumable =
+      pos_max + 1 == n_tokens ||
+      (mrope_media && pos_max >= 0 && pos_max + 1 < n_tokens);
+
+  if (!resumable && pos_max + 1 > n_tokens) {
+    resumable = llama_memory_seq_rm(memory, 0, n_tokens, -1) &&
+                llama_memory_seq_pos_max(memory, 0) + 1 == n_tokens;
+    if (resumable) {
+      const bool recurrent_or_hybrid =
+          llama_model_is_recurrent(g_ctx->model) ||
+          llama_model_is_hybrid(g_ctx->model);
+      const int32_t n_swa =
+          g_ctx->params.swa_full ? 0 : llama_model_n_swa(g_ctx->model);
+      if (n_swa > 0 && !recurrent_or_hybrid) {
+        const llama_pos pos_min = llama_memory_seq_pos_min(memory, 0);
+        const llama_pos pos_min_threshold =
+            std::max<llama_pos>(0, n_tokens - n_swa);
+        resumable =
+            pos_min == 0 || (pos_min > 0 && pos_min < pos_min_threshold);
+      }
+    }
+  }
+
+  if (!resumable) {
+    llama_memory_seq_rm(memory, 0, 0, -1);
+    tokens.clear();
+  }
+
+  // Browser sessions are returned as a single ArrayBuffer, without the native
+  // sidecar. Fail closed so multimodal input is reprocessed after a load.
+  g_ctx->setMediaHashes({});
+  count = tokens.size();
   g_ctx->completion->embd = std::move(tokens);
   g_ctx->completion->n_past = static_cast<llama_pos>(count);
   return ok({{"tokens_loaded", count}});
