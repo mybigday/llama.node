@@ -135,15 +135,19 @@ async function main() {
     //   path: path.join(testDir, 'mmproj-ultravox-v0_5-llama-3_2-1b-f16.gguf'),
     //   url: 'https://huggingface.co/ggml-org/ultravox-v0_5-llama-3_2-1b-GGUF/resolve/main/mmproj-ultravox-v0_5-llama-3_2-1b-f16.gguf?download=true'
     // },
-    // // TTS
-    // {
-    //   path: path.join(testDir, 'OuteTTS-0.3-500M-Q4_K_M.gguf'),
-    //   url: 'https://huggingface.co/OuteAI/OuteTTS-0.3-500M-GGUF/resolve/main/OuteTTS-0.3-500M-Q4_K_M.gguf?download=true',
-    // },
-    // {
-    //   path: path.join(testDir, 'WavTokenizer.gguf'),
-    //   url: 'https://huggingface.co/ggml-org/WavTokenizer/resolve/main/WavTokenizer-Large-75-Q5_1.gguf?download=true',
-    // },
+    // TTS (codec.cpp) — smallest backbone + codec pair (~281MB total)
+    {
+      path: path.join(testDir, 'Soprano-1.1-80M.F16.gguf'),
+      urls: [
+        'https://huggingface.co/BricksDisplay/Soprano-1.1-80M-GGUF/resolve/main/Soprano-1.1-80M.F16.gguf?download=true',
+      ],
+    },
+    {
+      path: path.join(testDir, 'Soprano-codec-F32.gguf'),
+      urls: [
+        'https://huggingface.co/BricksDisplay/Soprano-1.1-80M-GGUF/resolve/main/codec-F32.gguf?download=true',
+      ],
+    },
     // Uncomment to download model use in examples
     // {
     //   path: path.join(path.join(__dirname, '../examples'), 'gpt-oss-20b-mxfp4.gguf'),

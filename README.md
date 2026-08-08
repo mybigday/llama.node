@@ -61,6 +61,57 @@ const { text } = await context.completion(
 console.log('Result:', text)
 ```
 
+## Text-to-Speech (TTS) — Experimental
+
+TTS is backed by [codec.cpp](https://github.com/mybigday/codec.cpp) (vendored
+via the llama.rn submodule) and supports OuteTTS v0.x/v1.0, Soprano 1.1,
+NeuTTS Nano/Air, CSM 1B, Qwen3-TTS 0.6B, MOSS-TTSD, MOSS-TTS-Realtime,
+Chatterbox T3 (incl. multilingual), and BlueMagpie-TTS. The API mirrors
+llama.rn and may change without a major version bump.
+
+```js
+import { loadModel } from '@fugood/llama.node'
+
+const context = await loadModel({
+  model: 'path/to/tts-backbone.gguf',
+  n_gpu_layers: 99,
+  ctx_shift: false,
+})
+context.initVocoder({ path: 'path/to/codec.gguf', n_batch: 4096 })
+
+const caps = context.getTTSCapabilities() // { family, requiresPhonemes, ... }
+const { prompt, grammar, embedding } = await context.getFormattedAudioCompletion({
+  prompt: 'Hello from llama.node!',
+  // speaker: 'default' | SpeakerPayload | LlamaSpeaker (voice clone)
+  // phonemizer: (text, language) => ipaText, // required for NeuTTS
+})
+
+const result = await context.completion({
+  prompt,
+  grammar,
+  embedding,
+  temperature: 0.7,
+  top_p: 0.9,
+  n_predict: 4096,
+  stop: ['<|im_end|>', '<|SPEECH_GENERATION_END|>'],
+})
+
+const sampleRate = context.getAudioSampleRate()
+const audio = result.embeddings?.length // continuous-latent flow (BlueMagpie)
+  ? await context.decodeAudioEmbeddings(result.embeddings, result.embedding_dim)
+  : await context.decodeAudioTokens(result.audio_tokens) // token flow
+
+// Voice cloning (models with speaker encoders, e.g. Chatterbox / Qwen3-TTS):
+// const speaker = context.createSpeaker({ refAudio: pcmFloat32, refAudioSampleRate: 24000, refText: '...' })
+// ...pass `speaker` to getFormattedAudioCompletion / completion, then speaker.release()
+
+context.releaseVocoder()
+```
+
+Runnable examples for every supported model family live in
+[`examples/tts/`](examples/tts/) — download model pairs with
+`node examples/tts/download-models.mjs <model-key>|all`.
+
 ## WebAssembly
 
 Browser builds are published as the optional `@fugood/node-llama-wasm` package.
