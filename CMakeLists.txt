@@ -195,6 +195,8 @@ include_directories(
   "src/llama.cpp/ggml/include"
   "src/llama.cpp/ggml/src"
   "src/tools/mtmd"
+  "src/rn-llama/codec/include"
+  "src/rn-llama/codec/common"
 )
 
 file(
@@ -222,7 +224,18 @@ file(
     "src/DetokenizeWorker.h"
     "src/DecodeAudioTokenWorker.cpp"
     "src/DecodeAudioTokenWorker.h"
-    "src/rn-llama/*"
+    "src/rn-llama/*.c"
+    "src/rn-llama/*.cpp"
+    "src/rn-llama/*.h"
+    "src/rn-llama/*.hpp"
+    # codec.cpp (vendored via llama.rn) — TTS vocoder/audio-LM backend
+    "src/rn-llama/codec/src/*.cpp"
+    "src/rn-llama/codec/src/batch/*.cpp"
+    "src/rn-llama/codec/src/models/*.cpp"
+    "src/rn-llama/codec/src/ops/*.cpp"
+    "src/rn-llama/codec/src/runtime/*.cpp"
+    "src/rn-llama/codec/src/lm/*.cpp"
+    "src/rn-llama/codec/common/*.cpp"
 )
 
 if (NOT MSVC AND CMAKE_SYSTEM_NAME STREQUAL "Windows")

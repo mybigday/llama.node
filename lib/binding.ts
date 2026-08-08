@@ -1,4 +1,7 @@
 import path from 'path'
+import type { TTSCapabilities } from './tts'
+
+export type NativeTTSCapabilities = TTSCapabilities
 
 export type MessagePart = {
   type: string
@@ -269,10 +272,15 @@ export type LlamaCompletionOptions = {
    */
   media_paths?: string | string[]
   /**
-   * Guide tokens to use for audio completion.
-   * Help prevent hallucinations by forcing the TTS to use the correct words.
+   * Output token embeddings during generation (TTS continuous-latent /
+   * embedding-driven flows). Also allows an empty prompt.
    */
-  guide_tokens?: number[] | Int32Array
+  embedding?: boolean
+  /**
+   * Native speaker registry id for voice-clone TTS injection (from
+   * createSpeaker). -1 or omitted means no speaker override.
+   */
+  speakerId?: number
   /**
    * Number of top token probabilities to return for each generated token.
    * When > 0, completion_probabilities will be included in streaming callbacks and final result.
@@ -360,6 +368,12 @@ export type LlamaCompletionResult = {
   context_full: boolean
   interrupted: boolean
   audio_tokens?: Array<number>
+  /**
+   * Continuous-latent TTS flow (e.g. BlueMagpie): captured audio latents,
+   * frame-major [n_frames * embedding_dim]. Feed into decodeAudioEmbeddings.
+   */
+  embeddings?: Float32Array
+  embedding_dim?: number
   completion_probabilities?: CompletionProbability[]
   timings: {
     prompt_n: number
@@ -668,11 +682,15 @@ export interface LlamaContext {
   releaseMultimodal(): void
 
   /**
-   * Load a vocoder model
-   * @param options Object containing path and optional n_batch
+   * Load a vocoder / codec model (codec.cpp GGUF)
+   * @param options Object containing path, optional n_batch and use_gpu
    * @returns boolean indicating if loading was successful
    */
-  initVocoder(options: { path: string; n_batch?: number }): boolean
+  initVocoder(options: {
+    path: string
+    n_batch?: number
+    use_gpu?: boolean
+  }): boolean
 
   /**
    * Unload the vocoder model
@@ -686,25 +704,53 @@ export interface LlamaContext {
   isVocoderEnabled(): boolean
 
   /**
+   * Get the TTS capabilities snapshot for the loaded backbone + vocoder
+   */
+  getTTSCapabilities(): NativeTTSCapabilities
+
+  /**
+   * Get the output sample rate of the loaded codec
+   */
+  getAudioSampleRate(): number
+
+  /**
    * Get the formatted prompt for audio completion
-   * @param speaker Speaker name or null
+   * @param speaker Speaker JSON string or null
    * @param text Text to complete
+   * @param speakerId Native speaker registry id (voice clone), -1 = none
    * @returns Formatted audio completion
    */
   getFormattedAudioCompletion(
     speaker: string | null,
     text: string,
+    speakerId?: number,
   ): {
     prompt: string
     grammar?: string
+    embedding: boolean
+    flow: 'tokens' | 'continuous_embd' | ''
   }
 
   /**
-   * Get guide tokens for audio completion
-   * @param text Text to complete
-   * @returns Guide tokens
+   * Register a voice-clone speaker from raw reference PCM
    */
-  getAudioCompletionGuideTokens(text: string): Int32Array
+  createSpeaker(options: {
+    pcm: Float32Array | number[]
+    sample_rate: number
+    ref_text?: string
+    emotion?: number
+    bake?: boolean
+  }): { id: number; family: string; rows: number; baked: boolean }
+
+  /**
+   * Run the speaker-encode path for an existing (unbaked) speaker
+   */
+  bakeSpeaker(id: number): { rows: number; baked: boolean }
+
+  /**
+   * Remove a speaker from the native registry
+   */
+  releaseSpeaker(id: number): void
 
   /**
    * Decode audio tokens to audio data
@@ -712,6 +758,16 @@ export interface LlamaContext {
    * @returns Promise resolving to decoded audio tokens
    */
   decodeAudioTokens(tokens: number[] | Int32Array): Promise<Float32Array>
+
+  /**
+   * Decode continuous audio latents (BlueMagpie flow) to audio data
+   * @param embeddings Frame-major latents [n_frames * embeddingDim]
+   * @param embeddingDim Latent dimension
+   */
+  decodeAudioEmbeddings(
+    embeddings: number[] | Float32Array,
+    embeddingDim: number,
+  ): Promise<Float32Array>
 
   // Parallel decoding methods
 

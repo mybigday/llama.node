@@ -36,3 +36,7 @@ packages/node-llama-wasm/wasm/llama-node.threads.js
 packages/node-llama-wasm/wasm/llama-node.threads.wasm
 packages/node-llama-wasm/wasm/llama-node.webgpu.js
 packages/node-llama-wasm/wasm/llama-node.webgpu.wasm
+
+# TTS example artifacts
+examples/tts/models/
+examples/tts/*.wav

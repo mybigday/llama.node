@@ -2,57 +2,69 @@ import path from 'path'
 import fs from 'fs'
 import * as wav from 'node-wav'
 import { loadModel } from '../lib'
-import speaker from './speaker.json'
 
-const modelPath = path.resolve(__dirname, './OuteTTS-0.3-500M-Q4_K_M.gguf');
-const vocoderPath = path.resolve(__dirname, './WavTokenizer.gguf');
+// Smallest codec.cpp TTS pair (~281MB total) — see scripts/download-test-models.js
+const modelPath = path.resolve(__dirname, './Soprano-1.1-80M.F16.gguf')
+const vocoderPath = path.resolve(__dirname, './Soprano-codec-F32.gguf')
 
-(fs.existsSync(modelPath) ? test : test.skip)('TTS', async () => {
-  const model = await loadModel({
-    model: modelPath,
-    n_ctx: 8192,
-    n_batch: 8192,
-    n_ubatch: 128,
-    n_threads: 4,
-    n_gpu_layers: 99,
-    ctx_shift: false,
-  });
-  await model.initVocoder({
-    path: vocoderPath,
-    n_batch: 2048,
-  });
-  expect(model.isVocoderEnabled()).toBe(true);
-  const text = 'Hello, my name is John Doe';
-  const { prompt, grammar } = model.getFormattedAudioCompletion(JSON.stringify(speaker), text);
-  expect(prompt).toBeDefined();
-  expect(grammar).toBeDefined();
-  const tokens = model.getAudioCompletionGuideTokens(text);
-  expect(tokens).toBeDefined();
-  const result = await model.completion({
-    prompt,
-    temperature: 0.4,
-    penalty_repeat: 1.1,
-    penalty_last_n: 64,
-    guide_tokens: tokens,
-    top_k: 40,
-    top_p: 0.9,
-    min_p: 0.05,
-    mirostat_tau: 5,
-    mirostat_eta: 0.1,
-    mirostat: 0,
-    grammar,
-    n_predict: 3840,
-    stop: ['<|audio_end|>', '<|im_end|>'],
-  });
-  const { audio_tokens: audioTokens } = result;
-  console.log(result);
-  const audio = await model.decodeAudioTokens(audioTokens!);
-  expect(audio.length).toBeGreaterThan(0);
-  fs.writeFileSync(
-    path.resolve(__dirname, './tts-result.wav'),
-    wav.encode([audio], { sampleRate: 24000, bitDepth: 16 }),
-  );
-  await model.releaseVocoder();
-  expect(model.isVocoderEnabled()).toBe(false);
-  await model.release();
-}, 1e8);
+const testIf = fs.existsSync(modelPath) && fs.existsSync(vocoderPath) ? test : test.skip
+
+testIf(
+  'TTS (codec.cpp)',
+  async () => {
+    const model = await loadModel({
+      model: modelPath,
+      n_ctx: 4096,
+      n_batch: 4096,
+      n_threads: 4,
+      n_gpu_layers: 99,
+      ctx_shift: false,
+    })
+    expect(model.initVocoder({ path: vocoderPath, n_batch: 4096 })).toBe(true)
+    expect(model.isVocoderEnabled()).toBe(true)
+
+    const caps = model.getTTSCapabilities()
+    expect(caps.family).toBe('soprano')
+    expect(typeof caps.type).toBe('number')
+
+    const sampleRate = model.getAudioSampleRate()
+    expect(sampleRate).toBeGreaterThan(0)
+
+    const text = 'Hello, my name is John Doe.'
+    const formatted = await model.getFormattedAudioCompletion({ prompt: text })
+    expect(formatted.prompt).toBeTruthy()
+    expect(formatted.flow).toBe('tokens')
+
+    const result = await model.completion({
+      prompt: formatted.prompt,
+      grammar: formatted.grammar,
+      embedding: formatted.embedding,
+      temperature: 0.7,
+      top_p: 0.9,
+      n_predict: 512,
+      stop: ['<|im_end|>', '<|SPEECH_GENERATION_END|>'],
+    })
+
+    let audio: Float32Array
+    if (result.embeddings?.length && result.embedding_dim) {
+      audio = await model.decodeAudioEmbeddings(
+        result.embeddings,
+        result.embedding_dim,
+      )
+    } else {
+      expect(result.audio_tokens?.length).toBeGreaterThan(0)
+      audio = await model.decodeAudioTokens(result.audio_tokens!)
+    }
+    expect(audio.length).toBeGreaterThan(0)
+
+    fs.writeFileSync(
+      path.resolve(__dirname, './tts-result.wav'),
+      wav.encode([audio], { sampleRate, bitDepth: 16 }),
+    )
+
+    model.releaseVocoder()
+    expect(model.isVocoderEnabled()).toBe(false)
+    await model.release()
+  },
+  1e8,
+)

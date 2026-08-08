@@ -198,11 +198,26 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
        InstanceMethod<&LlamaContext::GetFormattedAudioCompletion>(
            "getFormattedAudioCompletion",
            static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::GetAudioCompletionGuideTokens>(
-           "getAudioCompletionGuideTokens",
+       InstanceMethod<&LlamaContext::GetTTSCapabilities>(
+           "getTTSCapabilities",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::GetAudioSampleRate>(
+           "getAudioSampleRate",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::CreateSpeaker>(
+           "createSpeaker",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::BakeSpeaker>(
+           "bakeSpeaker",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::ReleaseSpeaker>(
+           "releaseSpeaker",
            static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::DecodeAudioTokens>(
            "decodeAudioTokens",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::DecodeAudioEmbeddings>(
+           "decodeAudioEmbeddings",
            static_cast<napi_property_attributes>(napi_enumerable)),
        // Parallel decoding methods
        InstanceMethod<&LlamaContext::EnableParallelMode>(
@@ -1067,7 +1082,10 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   } else {
     params.prompt = get_option<std::string>(options, "prompt", "");
   }
-  if (params.prompt.empty()) {
+  // Allow an empty prompt when running an embedding-driven TTS generation
+  // (e.g. Chatterbox: the backbone has no tokenizer; text is stashed natively).
+  bool embedding_mode = get_option<bool>(options, "embedding", false);
+  if (params.prompt.empty() && !embedding_mode && media_paths.empty()) {
     Napi::TypeError::New(env, "Prompt is required")
         .ThrowAsJavaScriptException();
   }
@@ -1122,31 +1140,15 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
       get_option<int32_t>(options, "seed", LLAMA_DEFAULT_SEED);
   params.sampling.n_probs = get_option<int32_t>(options, "n_probs", 0);
 
-  // guide_tokens
-  std::vector<llama_token> guide_tokens;
-  if (options.Has("guide_tokens")) {
-    auto guide_tokens_value = options.Get("guide_tokens");
-    if (guide_tokens_value.IsArray()) {
-      auto guide_tokens_array = guide_tokens_value.As<Napi::Array>();
-      for (size_t i = 0; i < guide_tokens_array.Length(); i++) {
-        guide_tokens.push_back(guide_tokens_array.Get(i).ToNumber().Int32Value());
-      }
-    } else if (guide_tokens_value.IsTypedArray()) {
-      auto guide_tokens_typed_array = guide_tokens_value.As<Napi::TypedArray>();
-      if (guide_tokens_typed_array.TypedArrayType() == napi_int32_array) {
-        auto guide_tokens_int32_array = guide_tokens_value.As<Napi::Int32Array>();
-        size_t length = guide_tokens_int32_array.ElementLength();
-        const int32_t* data = guide_tokens_int32_array.Data();
-        guide_tokens.resize(length);
-        memcpy(guide_tokens.data(), data, length * sizeof(int32_t));
-      } else {
-        Napi::TypeError::New(env, "guide_tokens must be Array<number> or Int32Array").ThrowAsJavaScriptException();
-        return env.Undefined();
-      }
-    } else {
-      Napi::TypeError::New(env, "guide_tokens must be Array<number> or Int32Array").ThrowAsJavaScriptException();
-      return env.Undefined();
-    }
+  // Output token embeddings during generation (TTS continuous-latent /
+  // embedding-driven flows).
+  params.embedding = embedding_mode;
+  llama_set_embeddings(_rn_ctx->ctx, params.embedding);
+
+  // Native speaker registry id for voice-clone TTS injection (-1 = none).
+  if (_rn_ctx->tts_wrapper != nullptr) {
+    _rn_ctx->tts_wrapper->pending_speaker_id =
+        get_option<int32_t>(options, "speakerId", -1);
   }
 
   Napi::Function callback;
@@ -1156,8 +1158,8 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
 
   auto *worker =
       new LlamaCompletionWorker(info, _rn_ctx, callback, params, stop_words,
-                                chat_format, generation_prompt, reasoning_format, chat_parser, media_paths, guide_tokens,
-                                _rn_ctx->has_vocoder, _rn_ctx->tts_wrapper ? _rn_ctx->tts_wrapper->type : rnllama::UNKNOWN, prefill_text);
+                                chat_format, generation_prompt, reasoning_format, chat_parser, media_paths,
+                                _rn_ctx->has_vocoder, prefill_text);
   worker->Queue();
   _wip = worker;
   worker->OnComplete([this]() { _wip = nullptr; });
@@ -1489,6 +1491,8 @@ Napi::Value LlamaContext::InitVocoder(const Napi::CallbackInfo &info) {
   auto options = info[0].As<Napi::Object>();
   auto vocoder_path = options.Get("path").ToString().Utf8Value();
   auto n_batch = get_option<int32_t>(options, "n_batch", _rn_ctx->params.n_batch);
+  auto use_gpu =
+      get_option<bool>(options, "use_gpu", _rn_ctx->params.n_gpu_layers > 0);
   if (vocoder_path.empty()) {
     Napi::TypeError::New(env, "vocoder path is required")
         .ThrowAsJavaScriptException();
@@ -1498,7 +1502,7 @@ Napi::Value LlamaContext::InitVocoder(const Napi::CallbackInfo &info) {
         .ThrowAsJavaScriptException();
     return Napi::Boolean::New(env, false);
   }
-  bool result = _rn_ctx->initVocoder(vocoder_path, n_batch);
+  bool result = _rn_ctx->initVocoder(vocoder_path, n_batch, use_gpu);
   if (!result) {
     Napi::Error::New(env, "Failed to initialize vocoder")
         .ThrowAsJavaScriptException();
@@ -1518,7 +1522,7 @@ Napi::Value LlamaContext::IsVocoderEnabled(const Napi::CallbackInfo &info) {
   return Napi::Boolean::New(env, _rn_ctx->isVocoderEnabled());
 }
 
-// getFormattedAudioCompletion(speaker: string|null, text: string): object
+// getFormattedAudioCompletion(speaker: string|null, text: string, speakerId?: number): object
 Napi::Value
 LlamaContext::GetFormattedAudioCompletion(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
@@ -1528,6 +1532,9 @@ LlamaContext::GetFormattedAudioCompletion(const Napi::CallbackInfo &info) {
   }
   auto text = info[1].ToString().Utf8Value();
   auto speaker_json = info[0].IsString() ? info[0].ToString().Utf8Value() : "";
+  int speaker_id = info.Length() > 2 && info[2].IsNumber()
+                       ? info[2].ToNumber().Int32Value()
+                       : -1;
 
   if (!_rn_ctx->tts_wrapper) {
     Napi::Error::New(env, "Vocoder not initialized")
@@ -1535,37 +1542,141 @@ LlamaContext::GetFormattedAudioCompletion(const Napi::CallbackInfo &info) {
     return env.Undefined();
   }
 
-  auto result_data = _rn_ctx->tts_wrapper->getFormattedAudioCompletion(_rn_ctx, speaker_json, text);
+  auto result_data = _rn_ctx->tts_wrapper->getFormattedAudioCompletion(
+      _rn_ctx, speaker_json, text, speaker_id);
   Napi::Object result = Napi::Object::New(env);
   result.Set("prompt", Napi::String::New(env, result_data.prompt));
-  if (result_data.grammar) {
+  if (!result_data.grammar.empty()) {
     result.Set("grammar", Napi::String::New(env, result_data.grammar));
   }
+  result.Set("embedding", Napi::Boolean::New(env, result_data.embedding));
+  result.Set("flow", Napi::String::New(env, result_data.flow));
   return result;
 }
 
-// getAudioCompletionGuideTokens(text: string): Int32Array
-Napi::Value
-LlamaContext::GetAudioCompletionGuideTokens(const Napi::CallbackInfo &info) {
+// getTTSCapabilities(): object
+Napi::Value LlamaContext::GetTTSCapabilities(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
-  if (info.Length() < 1 || !info[0].IsString()) {
-    Napi::TypeError::New(env,
-                         "String expected for audio completion guide tokens")
-        .ThrowAsJavaScriptException();
-    return env.Undefined();
-  }
-  auto text = info[0].ToString().Utf8Value();
-
   if (!_rn_ctx->tts_wrapper) {
     Napi::Error::New(env, "Vocoder not initialized")
         .ThrowAsJavaScriptException();
     return env.Undefined();
   }
+  auto caps = _rn_ctx->tts_wrapper->getTTSCapabilities(_rn_ctx);
+  Napi::Object result = Napi::Object::New(env);
+  result.Set("type", Napi::Number::New(env, caps.type));
+  result.Set("promptKind", Napi::String::New(env, caps.prompt_kind));
+  result.Set("family", Napi::String::New(env, caps.family));
+  result.Set("requiresPhonemes", Napi::Boolean::New(env, caps.requires_phonemes));
+  result.Set("defaultLanguage", Napi::String::New(env, caps.default_language));
+  return result;
+}
 
-  auto result = _rn_ctx->tts_wrapper->getAudioCompletionGuideTokens(_rn_ctx, text);
-  auto tokens = Napi::Int32Array::New(env, result.size());
-  memcpy(tokens.Data(), result.data(), result.size() * sizeof(int32_t));
-  return tokens;
+// getAudioSampleRate(): number
+Napi::Value LlamaContext::GetAudioSampleRate(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (!_rn_ctx->tts_wrapper) {
+    Napi::Error::New(env, "Vocoder not initialized")
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+  return Napi::Number::New(env, _rn_ctx->tts_wrapper->getAudioSampleRate());
+}
+
+// createSpeaker(options: object): object
+Napi::Value LlamaContext::CreateSpeaker(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (!_rn_ctx->tts_wrapper) {
+    Napi::Error::New(env, "Vocoder not initialized")
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+  if (info.Length() < 1 || !info[0].IsObject()) {
+    Napi::TypeError::New(env, "Object is expected for speaker options")
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+  auto options = info[0].As<Napi::Object>();
+
+  std::vector<float> pcm;
+  auto pcm_val = options.Get("pcm");
+  if (pcm_val.IsTypedArray()) {
+    auto js_pcm = pcm_val.As<Napi::Float32Array>();
+    pcm.resize(js_pcm.ElementLength());
+    memcpy(pcm.data(), js_pcm.Data(), js_pcm.ElementLength() * sizeof(float));
+  } else if (pcm_val.IsArray()) {
+    auto js_pcm = pcm_val.As<Napi::Array>();
+    pcm.resize(js_pcm.Length());
+    for (size_t i = 0; i < js_pcm.Length(); i++) {
+      pcm[i] = js_pcm.Get(i).ToNumber().FloatValue();
+    }
+  } else {
+    Napi::TypeError::New(env, "pcm must be a Float32Array or number array")
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+  int sample_rate = get_option<int32_t>(options, "sample_rate", 0);
+  auto ref_text = options.Has("ref_text")
+                      ? options.Get("ref_text").ToString().Utf8Value()
+                      : std::string();
+  bool has_emotion = options.Has("emotion") && options.Get("emotion").IsNumber();
+  float emotion =
+      has_emotion ? options.Get("emotion").ToNumber().FloatValue() : 0.5f;
+  bool bake = get_option<bool>(options, "bake", false);
+
+  int id = _rn_ctx->tts_wrapper->createSpeaker(_rn_ctx, pcm, sample_rate,
+                                               ref_text, emotion, has_emotion,
+                                               bake);
+  const auto *spk = _rn_ctx->tts_wrapper->getSpeaker(id);
+  if (spk == nullptr) {
+    Napi::Error::New(env, "Failed to create speaker")
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+  auto caps = _rn_ctx->tts_wrapper->getTTSCapabilities(_rn_ctx);
+  Napi::Object result = Napi::Object::New(env);
+  result.Set("id", Napi::Number::New(env, id));
+  result.Set("family", Napi::String::New(env, caps.family));
+  result.Set("rows", Napi::Number::New(env, spk->rows));
+  result.Set("baked", Napi::Boolean::New(env, spk->baked));
+  return result;
+}
+
+// bakeSpeaker(id: number): object
+Napi::Value LlamaContext::BakeSpeaker(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (!_rn_ctx->tts_wrapper) {
+    Napi::Error::New(env, "Vocoder not initialized")
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+  if (info.Length() < 1 || !info[0].IsNumber()) {
+    Napi::TypeError::New(env, "Speaker id is required")
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+  int id = info[0].ToNumber().Int32Value();
+  if (!_rn_ctx->tts_wrapper->bakeSpeaker(_rn_ctx, id)) {
+    Napi::Error::New(env, "bakeSpeaker: speaker id not found or encode failed")
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+  const auto *spk = _rn_ctx->tts_wrapper->getSpeaker(id);
+  Napi::Object result = Napi::Object::New(env);
+  result.Set("rows", Napi::Number::New(env, spk ? spk->rows : 0));
+  result.Set("baked", Napi::Boolean::New(env, spk ? spk->baked : false));
+  return result;
+}
+
+// releaseSpeaker(id: number): void
+void LlamaContext::ReleaseSpeaker(const Napi::CallbackInfo &info) {
+  if (!_rn_ctx->tts_wrapper) {
+    return;
+  }
+  if (info.Length() < 1 || !info[0].IsNumber()) {
+    return;
+  }
+  _rn_ctx->tts_wrapper->releaseSpeaker(info[0].ToNumber().Int32Value());
 }
 
 // decodeAudioTokens(tokens: number[]|Int32Array): Float32Array
@@ -1599,6 +1710,40 @@ Napi::Value LlamaContext::DecodeAudioTokens(const Napi::CallbackInfo &info) {
   }
 
   auto *worker = new DecodeAudioTokenWorker(info, _rn_ctx, tokens);
+  worker->Queue();
+  return worker->Promise();
+}
+
+// decodeAudioEmbeddings(embeddings: number[]|Float32Array, embeddingDim: number): Promise<Float32Array>
+Napi::Value LlamaContext::DecodeAudioEmbeddings(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (info.Length() < 2 || !info[1].IsNumber()) {
+    Napi::TypeError::New(env, "embeddings and embeddingDim are required")
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+  std::vector<float> embeddings;
+  if (info[0].IsTypedArray()) {
+    auto js_embd = info[0].As<Napi::Float32Array>();
+    embeddings.resize(js_embd.ElementLength());
+    memcpy(embeddings.data(), js_embd.Data(),
+           js_embd.ElementLength() * sizeof(float));
+  } else if (info[0].IsArray()) {
+    auto js_embd = info[0].As<Napi::Array>();
+    embeddings.resize(js_embd.Length());
+    for (size_t i = 0; i < js_embd.Length(); i++) {
+      embeddings[i] = js_embd.Get(i).ToNumber().FloatValue();
+    }
+  } else {
+    Napi::TypeError::New(env,
+                         "Embeddings must be a number array or a Float32Array")
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+  int embedding_dim = info[1].ToNumber().Int32Value();
+
+  auto *worker =
+      new DecodeAudioTokenWorker(info, _rn_ctx, std::move(embeddings), embedding_dim);
   worker->Queue();
   return worker->Promise();
 }
