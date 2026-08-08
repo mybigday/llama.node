@@ -415,7 +415,14 @@ class LlamaContextWrapper {
       payload = speaker
     } else {
       const name = typeof speaker === 'string' ? speaker : 'default'
-      payload = lookupVoice(caps.family, name, language)
+      // The built-in OuteTTS voice is a legacy word/codes payload that only
+      // fits the legacy / V0.3 prompt builders. OuteTTS 1.0 expects per-word
+      // c1/c2 codes — resolving the legacy payload for it poisons the prompt
+      // (codeless word blocks), so V1.0 falls back to speaker-less generation.
+      payload =
+        caps.promptKind === 'outetts_v1_0'
+          ? null
+          : lookupVoice(caps.family, name, language)
       if (typeof speaker === 'string' && !payload) {
         throw new Error(
           `Unknown built-in voice '${name}' for ${caps.family} (${language})`,

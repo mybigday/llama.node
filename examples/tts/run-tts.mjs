@@ -77,12 +77,17 @@ export const runTTS = async (modelKey, options = {}) => {
   })
   console.log(`Flow: ${formatted.flow || 'tokens'}`)
 
-  // NeuTTS prefers flat sampling; everything else works well at 0.7/0.9
-  // (matches the llama.rn example defaults).
-  const sampling =
-    caps.family === 'neutts'
-      ? { temperature: 1.0, top_k: 50, top_p: 1.0 }
-      : { temperature: 0.7, top_p: 0.9 }
+  // NeuTTS prefers flat sampling; OuteTTS 0.x needs top_k=4 (llama.cpp's tts
+  // example default — wider sampling garbles the 500M model's audio codes);
+  // everything else works well at 0.7/0.9 (matches the llama.rn example).
+  const isLegacyOuteTTS =
+    caps.promptKind === 'outetts_legacy' || caps.promptKind === 'outetts_v0_3'
+  let sampling = { temperature: 0.7, top_p: 0.9 }
+  if (caps.family === 'neutts') {
+    sampling = { temperature: 1.0, top_k: 50, top_p: 1.0 }
+  } else if (isLegacyOuteTTS) {
+    sampling = { temperature: 0.7, top_p: 0.9, top_k: 4 }
+  }
 
   console.log('Generating audio...')
   const startTime = Date.now()
