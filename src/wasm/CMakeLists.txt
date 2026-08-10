@@ -113,12 +113,21 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/../llama.cpp/ggml/src
   ${CMAKE_CURRENT_SOURCE_DIR}/../llama.cpp/tools/mtmd
   ${CMAKE_CURRENT_SOURCE_DIR}/../llama.cpp/vendor
+  ${CMAKE_CURRENT_SOURCE_DIR}/../rn-llama/codec/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../rn-llama/codec/common
 )
 
 file(
   GLOB RN_LLAMA_SOURCE_FILES
     "../rn-llama/*.c"
     "../rn-llama/*.cpp"
+    "../rn-llama/codec/src/*.cpp"
+    "../rn-llama/codec/src/batch/*.cpp"
+    "../rn-llama/codec/src/models/*.cpp"
+    "../rn-llama/codec/src/ops/*.cpp"
+    "../rn-llama/codec/src/runtime/*.cpp"
+    "../rn-llama/codec/src/lm/*.cpp"
+    "../rn-llama/codec/common/*.cpp"
 )
 
 add_executable(llama-node

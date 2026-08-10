@@ -63,6 +63,7 @@
     "src/*.{cc,c,h,hpp}",
     "src/wasm/**/*",
     "src/rn-llama/*",
+    "src/rn-llama/codec/**/*",
     "src/DecodeAudioTokenWorker.cpp",
     "src/DetokenizeWorker.cpp",
     "src/DisposeWorker.cpp",

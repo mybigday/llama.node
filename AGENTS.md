@@ -23,7 +23,11 @@ The codebase uses N-API to bridge Node.js and llama.cpp:
   - `rn-llama.cpp/h`: Core llama context wrapper
   - `rn-completion.cpp/h`: Completion logic
   - `rn-mtmd.hpp`: Multimodal (vision/audio) support
-  - `rn-tts.cpp/h`: Text-to-speech functionality
+  - `rn-tts.cpp/h`: Text-to-speech functionality (experimental, codec.cpp-based)
+  - `codec/`: Vendored [codec.cpp](https://github.com/mybigday/codec.cpp) tree
+    (copied from llama.rn's `cpp/codec`) — vocoder/codec models and audio-LM
+    drivers for the TTS families (WavTokenizer, DAC, Mimi, NeuCodec, SNAC,
+    S3G, AudioVAE, ...)
 
 ### Worker Pattern
 
@@ -35,7 +39,7 @@ All async operations use N-API AsyncWorker to avoid blocking the event loop:
 - **EmbeddingWorker**: Generate embeddings
 - **RerankWorker**: Document reranking
 - **LoadSessionWorker/SaveSessionWorker**: Context state persistence
-- **DecodeAudioTokenWorker**: TTS audio token decoding
+- **DecodeAudioTokenWorker**: TTS audio token / continuous-latent decoding
 
 ### TypeScript API Layer (lib/)
 
@@ -70,6 +74,13 @@ The web package supports URL model loading by default, session save as `ArrayBuf
 The build process applies patches and copies rn-llama sources with prefix transformations:
 - `lm_ggml` → `ggml`
 - `LM_GGML` → `GGML`
+- `lm_gguf` → `gguf`
+- `LM_GGUF` → `GGUF`
+
+`scripts/llama.cpp.patch` also carries the `barbet` architecture (BlueMagpie-TTS
+backbone) ported from llama.rn's `scripts/patches/barbet-*` + vendored
+`models/barbet.cpp`; regenerate it with `scripts/regenerate-patch.sh` after
+editing the `src/llama.cpp` working tree.
 
 ## Common Development Commands
 
@@ -228,7 +239,7 @@ On isolated pages with `SharedArrayBuffer`, CPU uses the pthread artifact and `n
 ## Testing Considerations
 
 - Test models are cached in `test/*.gguf` (downloaded on first test run)
-- Models used: tiny-random-llama, flan-t5-small, bge-small-en, Qwen3-0.6B
+- Models used: tiny-random-llama, flan-t5-small, bge-small-en, Qwen3-0.6B, Soprano-1.1-80M (+ codec, smallest TTS pair)
 - Tests verify: completion, streaming, tokenization, embeddings, multimodal, TTS
 - Use `vocab_only: true` for fast model info/tokenization tests without loading full model
 - Browser WASM test page: `test/web/llama-node-wasm.html`

@@ -1308,8 +1308,26 @@ export class LlamaContextWrapper {
   getFormattedAudioCompletion() {
     unsupported('TTS audio completion')
   }
-  getAudioCompletionGuideTokens() {
+  getTTSCapabilities() {
     unsupported('TTS audio completion')
+  }
+
+  getAudioSampleRate() {
+    unsupported('TTS audio completion')
+  }
+
+  createSpeaker() {
+    unsupported('TTS audio completion')
+  }
+
+  bakeSpeaker() {
+    unsupported('TTS audio completion')
+  }
+
+  releaseSpeaker() {}
+
+  decodeAudioEmbeddings() {
+    unsupported('TTS audio decoding')
   }
   decodeAudioTokens() {
     unsupported('TTS audio decoding')
@@ -1595,8 +1613,26 @@ class LlamaWorkerContextWrapper {
     unsupported('TTS audio completion')
   }
 
-  getAudioCompletionGuideTokens() {
+  getTTSCapabilities() {
     unsupported('TTS audio completion')
+  }
+
+  getAudioSampleRate() {
+    unsupported('TTS audio completion')
+  }
+
+  createSpeaker() {
+    unsupported('TTS audio completion')
+  }
+
+  bakeSpeaker() {
+    unsupported('TTS audio completion')
+  }
+
+  releaseSpeaker() {}
+
+  decodeAudioEmbeddings() {
+    unsupported('TTS audio decoding')
   }
 
   decodeAudioTokens() {

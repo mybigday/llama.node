@@ -58,8 +58,13 @@ private:
   void ReleaseVocoder(const Napi::CallbackInfo &info);
   Napi::Value IsVocoderEnabled(const Napi::CallbackInfo &info);
   Napi::Value GetFormattedAudioCompletion(const Napi::CallbackInfo &info);
-  Napi::Value GetAudioCompletionGuideTokens(const Napi::CallbackInfo &info);
+  Napi::Value GetTTSCapabilities(const Napi::CallbackInfo &info);
+  Napi::Value GetAudioSampleRate(const Napi::CallbackInfo &info);
+  Napi::Value CreateSpeaker(const Napi::CallbackInfo &info);
+  Napi::Value BakeSpeaker(const Napi::CallbackInfo &info);
+  void ReleaseSpeaker(const Napi::CallbackInfo &info);
   Napi::Value DecodeAudioTokens(const Napi::CallbackInfo &info);
+  Napi::Value DecodeAudioEmbeddings(const Napi::CallbackInfo &info);
 
   // Parallel decoding methods
   Napi::Value EnableParallelMode(const Napi::CallbackInfo &info);

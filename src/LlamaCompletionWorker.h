@@ -25,9 +25,7 @@ public:
                         std::string reasoning_format,
                         const std::string &chat_parser = "",
                         const std::vector<std::string> &media_paths = {},
-                        const std::vector<llama_token> &guide_tokens = {},
                         bool has_vocoder = false,
-                        rnllama::tts_type tts_type_val = rnllama::UNKNOWN,
                         const std::string &prefill_text = "");
 
   ~LlamaCompletionWorker();
@@ -53,15 +51,12 @@ private:
   std::string _reasoning_format;
   std::string _chat_parser;
   std::vector<std::string> _media_paths;
-  std::vector<llama_token> _guide_tokens;
   std::string _prefill_text;
   std::function<void()> _onComplete;
   bool _has_callback = false;
   bool _interrupted = false;
   Napi::ThreadSafeFunction _tsfn;
-  bool _next_token_uses_guide_token = true;
   bool _has_vocoder;
-  rnllama::tts_type _tts_type;
   size_t _sent_token_probs_index = 0;
   struct {
     size_t tokens_evaluated = 0;
@@ -76,5 +71,7 @@ private:
     std::string stopping_word;
     bool stopped_limited = false;
     std::vector<llama_token> audio_tokens;
+    std::vector<float> embeddings;
+    int embedding_dim = 0;
   } _result;
 };
