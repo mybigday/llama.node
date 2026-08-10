@@ -106,6 +106,83 @@ try {
         ].join("\n"),
       );
 
+      if (file === "rn-tts.cpp") {
+        content = content.replace(
+          "    std::vector<llama_token_data> buf;\n",
+          [
+            "    std::vector<llama_token_data> buf;",
+            "    uint32_t seed = 0;",
+            "    float temp = 0.0f;",
+            "    int32_t top_k = 0;",
+            "    float top_p = 0.0f;",
+            "    float rep_penalty = 1.0f;",
+            "    int32_t rep_last_n = 0;",
+            "",
+          ].join("\n"),
+        );
+        content = content.replace(
+          [
+            "    void init(uint32_t seed, float temp, int32_t top_k, float top_p,",
+            "              float rep_penalty, int32_t rep_last_n) {",
+            "        if (chain) { llama_sampler_free(chain); chain = nullptr; }",
+            "        llama_sampler_chain_params sp = llama_sampler_chain_default_params();",
+            "        sp.no_perf = true;",
+            "        chain = llama_sampler_chain_init(sp);",
+            "        if (temp <= 0.0f) {",
+            "            llama_sampler_chain_add(chain, llama_sampler_init_greedy());",
+            "            return;",
+            "        }",
+            "        if (rep_penalty != 1.0f) {",
+            "            const int32_t last_n = rep_last_n > 0 ? rep_last_n : -1;",
+            "            llama_sampler_chain_add(chain,",
+            "                llama_sampler_init_penalties(last_n, rep_penalty, 0.0f, 0.0f));",
+            "        }",
+            "        llama_sampler_chain_add(chain, llama_sampler_init_temp(temp));",
+            "        if (top_k > 0) llama_sampler_chain_add(chain, llama_sampler_init_top_k(top_k));",
+            "        if (top_p > 0.0f && top_p < 1.0f)",
+            "            llama_sampler_chain_add(chain, llama_sampler_init_top_p(top_p, 1));",
+            "        llama_sampler_chain_add(chain, llama_sampler_init_dist(seed));",
+            "    }",
+          ].join("\n"),
+          [
+            "    void init(uint32_t seed, float temp, int32_t top_k, float top_p,",
+            "              float rep_penalty, int32_t rep_last_n) {",
+            "        if (chain) { llama_sampler_free(chain); chain = nullptr; }",
+            "        this->seed = seed;",
+            "        this->temp = temp;",
+            "        this->top_k = top_k;",
+            "        this->top_p = top_p;",
+            "        this->rep_penalty = rep_penalty;",
+            "        this->rep_last_n = rep_last_n;",
+            "    }",
+            "",
+            "    void init_chain(int32_t n_vocab) {",
+            "        llama_sampler_chain_params sp = llama_sampler_chain_default_params();",
+            "        sp.no_perf = true;",
+            "        chain = llama_sampler_chain_init(sp);",
+            "        if (temp <= 0.0f) {",
+            "            llama_sampler_chain_add(chain, llama_sampler_init_greedy());",
+            "            return;",
+            "        }",
+            "        if (rep_penalty != 1.0f) {",
+            "            const int32_t last_n = rep_last_n > 0 ? rep_last_n : -1;",
+            "            llama_sampler_chain_add(chain,",
+            "                llama_sampler_init_penalties(n_vocab, last_n, rep_penalty, 0.0f, 0.0f));",
+            "        }",
+            "        llama_sampler_chain_add(chain, llama_sampler_init_temp(temp));",
+            "        if (top_k > 0) llama_sampler_chain_add(chain, llama_sampler_init_top_k(top_k));",
+            "        if (top_p > 0.0f && top_p < 1.0f)",
+            "            llama_sampler_chain_add(chain, llama_sampler_init_top_p(top_p, 1));",
+            "        llama_sampler_chain_add(chain, llama_sampler_init_dist(seed));",
+            "    }",
+          ].join("\n"),
+        );
+        content = content.replace(
+          "    int32_t sample(const float * logits, int32_t n) {\n        if (n <= 0 || !chain) return 0;",
+          "    int32_t sample(const float * logits, int32_t n) {\n        if (n <= 0) return 0;\n        if (!chain) init_chain(n);",
+        );
+      }
+
       // Write the processed content to destination
       fs.writeFileSync(destPath, content);
 

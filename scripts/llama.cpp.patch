@@ -283,10 +283,10 @@ index 6d5b220ae..1e5b83045 100644
  std::vector<common_chat_msg> common_chat_msgs_parse_oaicompat(const nlohmann::ordered_json & messages);
  
 diff --git a/src/llama.cpp/common/common.cpp b/src/llama.cpp/common/common.cpp
-index d9ce57551..de61ef21e 100644
+index ffe3e7761..f433c8860 100644
 --- a/src/llama.cpp/common/common.cpp
 +++ b/src/llama.cpp/common/common.cpp
-@@ -1550,19 +1550,19 @@ done:
+@@ -1539,19 +1539,19 @@ done:
      return res;
  }
  
@@ -309,7 +309,7 @@ index d9ce57551..de61ef21e 100644
      auto * mem = llama_get_memory(ctx);
      llama_memory_seq_add(mem, seq_id, p0, p1, delta);
  }
-@@ -1612,6 +1612,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
+@@ -1601,6 +1601,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
          mparams.devices = params.devices.data();
      }
  
@@ -318,7 +318,7 @@ index d9ce57551..de61ef21e 100644
      mparams.main_gpu        = params.main_gpu;
      mparams.split_mode      = params.split_mode;
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index 78d087756..c82f884d3 100644
+index 4811345f9..f9ccf0260 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
 @@ -286,6 +286,7 @@ struct common_params_sampling {
@@ -329,7 +329,7 @@ index 78d087756..c82f884d3 100644
      std::vector<llama_token>  reasoning_budget_start;          // start tag token sequence
      std::vector<llama_tokens> reasoning_budget_end;            // end tag token sequences; the first tag is used as the forcing sequence
      std::vector<llama_token>  reasoning_budget_forced;         // forced sequence (message + first end tag)
-@@ -446,6 +447,7 @@ struct lr_opt {
+@@ -438,6 +439,7 @@ struct lr_opt {
  struct ggml_opt_optimizer_params common_opt_lr_pars(void * userdata);
  
  struct common_params {
@@ -337,7 +337,7 @@ index 78d087756..c82f884d3 100644
      int32_t n_predict             =    -1; // max. number of new tokens to predict, -1 == no limit
      int32_t n_ctx                 =     0; // context size, 0 == context the model was trained with
      int32_t n_batch               =  2048; // logical batch size for prompt processing (must be >=32 to use BLAS)
-@@ -959,6 +961,11 @@ enum common_context_seq_rm_type {
+@@ -955,6 +957,11 @@ enum common_context_seq_rm_type {
  // note: clears the memory of the context
  common_context_seq_rm_type common_context_can_seq_rm(llama_context * ctx);
  
@@ -467,10 +467,10 @@ index 2d1e74ad1..55d08afd0 100644
              auto & entry = queue[tail];
              entry.is_end = true;
 diff --git a/src/llama.cpp/common/sampling.cpp b/src/llama.cpp/common/sampling.cpp
-index 5698c0263..b9d6bec05 100644
+index ec9c885dd..8dc10b121 100644
 --- a/src/llama.cpp/common/sampling.cpp
 +++ b/src/llama.cpp/common/sampling.cpp
-@@ -314,16 +314,26 @@ struct common_sampler * common_sampler_init(
+@@ -309,16 +309,26 @@ struct common_sampler * common_sampler_init(
  
      // reasoning budget sampler (skip when budget is unlimited unless a lazy grammar is active, which needs rbudget for thinking-block suppression)
      if (!params.reasoning_budget_start.empty() && !params.reasoning_budget_end.empty() && (params.grammar_lazy || params.reasoning_budget_tokens >= 0 || params.reasoning_control)) {
@@ -794,7 +794,7 @@ index fb41a961d..6587883c7 100644
              if (cond.empty()) {
                  throw std::runtime_error("#elif without #if");
 diff --git a/src/llama.cpp/src/llama-arch.cpp b/src/llama.cpp/src/llama-arch.cpp
-index ea0ddd114..76e068c22 100644
+index 836cfade2..0eebda613 100644
 --- a/src/llama.cpp/src/llama-arch.cpp
 +++ b/src/llama.cpp/src/llama-arch.cpp
 @@ -143,6 +143,7 @@ static const std::map<llm_arch, const char *> LLM_ARCH_NAMES = {
@@ -803,9 +803,9 @@ index ea0ddd114..76e068c22 100644
      { LLM_ARCH_MELLUM,           "mellum"           },
 +    { LLM_ARCH_BARBET,           "barbet"           },
      { LLM_ARCH_NANBEIGE,         "nanbeige"         },
+     { LLM_ARCH_QWEN3TTS,         "qwen3tts"         },
      { LLM_ARCH_UNKNOWN,          "(unknown)"        },
- };
-@@ -969,6 +970,7 @@ bool llm_arch_is_hybrid(const llm_arch & arch) {
+@@ -970,6 +971,7 @@ bool llm_arch_is_hybrid(const llm_arch & arch) {
          case LLM_ARCH_QWEN35:
          case LLM_ARCH_QWEN35MOE:
          case LLM_ARCH_DEEPSEEK4:
@@ -814,7 +814,7 @@ index ea0ddd114..76e068c22 100644
          default:
              return false;
 diff --git a/src/llama.cpp/src/llama-arch.h b/src/llama.cpp/src/llama-arch.h
-index cbc97085e..630d64d07 100644
+index 49c2a6ac3..f1824dca8 100644
 --- a/src/llama.cpp/src/llama-arch.h
 +++ b/src/llama.cpp/src/llama-arch.h
 @@ -148,6 +148,7 @@ enum llm_arch {
@@ -823,10 +823,10 @@ index cbc97085e..630d64d07 100644
      LLM_ARCH_DFLASH,
 +    LLM_ARCH_BARBET,
      LLM_ARCH_NANBEIGE,
+     LLM_ARCH_QWEN3TTS,
      LLM_ARCH_UNKNOWN,
- };
 diff --git a/src/llama.cpp/src/llama-grammar.cpp b/src/llama.cpp/src/llama-grammar.cpp
-index 363644464..5c4971a3a 100644
+index c685346b6..c897c3f19 100644
 --- a/src/llama.cpp/src/llama-grammar.cpp
 +++ b/src/llama.cpp/src/llama-grammar.cpp
 @@ -96,7 +96,9 @@ static bool is_digit_char(char c) {
@@ -862,10 +862,10 @@ index 363644464..5c4971a3a 100644
          pos = parse_space(pos + 1, true);
          pos = parse_sequence(pos, rule_name, rule, is_nested);
 diff --git a/src/llama.cpp/src/llama-model.cpp b/src/llama.cpp/src/llama-model.cpp
-index 8fff1a432..7594cb257 100644
+index 4cc1c0a1c..bb5d27cc3 100644
 --- a/src/llama.cpp/src/llama-model.cpp
 +++ b/src/llama.cpp/src/llama-model.cpp
-@@ -214,6 +214,8 @@ static llama_model * llama_model_mapping(llm_arch arch, const llama_model_params
+@@ -216,6 +216,8 @@ static llama_model * llama_model_mapping(llm_arch arch, const llama_model_params
              return new llama_model_nemotron_h(params);
          case LLM_ARCH_NEMOTRON_H_MOE:
              return new llama_model_nemotron_h_moe(params);
@@ -874,7 +874,7 @@ index 8fff1a432..7594cb257 100644
          case LLM_ARCH_EXAONE:
              return new llama_model_exaone(params);
          case LLM_ARCH_EXAONE4:
-@@ -1849,7 +1851,8 @@ void llama_model::print_info() const {
+@@ -1851,7 +1853,8 @@ void llama_model::print_info() const {
                  arch == LLM_ARCH_QWEN35 ||
                  arch == LLM_ARCH_QWEN35MOE ||
                  arch == LLM_ARCH_NEMOTRON_H ||
@@ -884,7 +884,7 @@ index 8fff1a432..7594cb257 100644
              LLAMA_LOG_INFO("%s: ssm_d_conv            = %u\n",     __func__, hparams.ssm_d_conv);
              LLAMA_LOG_INFO("%s: ssm_d_inner           = %u\n",     __func__, hparams.ssm_d_inner);
              LLAMA_LOG_INFO("%s: ssm_d_state           = %u\n",     __func__, hparams.ssm_d_state);
-@@ -2680,6 +2683,7 @@ llama_rope_type llama_model_rope_type(const llama_model * model) {
+@@ -2682,6 +2685,7 @@ llama_rope_type llama_model_rope_type(const llama_model * model) {
          case LLM_ARCH_STEP35:
          case LLM_ARCH_TALKIE:
          case LLM_ARCH_MELLUM:
@@ -1086,10 +1086,10 @@ index 000000000..165f04534
 +    return cur;
 +}
 diff --git a/src/llama.cpp/src/models/models.h b/src/llama.cpp/src/models/models.h
-index 5f206621d..13f64e0cc 100644
+index ad3dadaf3..2fc161112 100644
 --- a/src/llama.cpp/src/models/models.h
 +++ b/src/llama.cpp/src/models/models.h
-@@ -1460,6 +1460,27 @@ struct llama_model_nemotron_h_moe : public llama_model_nemotron_h {
+@@ -1465,6 +1465,27 @@ struct llama_model_nemotron_h_moe : public llama_model_nemotron_h {
  };
  
  
@@ -1118,10 +1118,10 @@ index 5f206621d..13f64e0cc 100644
      llama_model_exaone(const struct llama_model_params & params) : llama_model_base(params) {}
      void load_arch_hparams(llama_model_loader & ml) override;
 diff --git a/src/llama.cpp/tools/mtmd/mtmd-helper.cpp b/src/llama.cpp/tools/mtmd/mtmd-helper.cpp
-index 90451d02e..ded0603a6 100644
+index d77c93966..7cbecb601 100644
 --- a/src/llama.cpp/tools/mtmd/mtmd-helper.cpp
 +++ b/src/llama.cpp/tools/mtmd/mtmd-helper.cpp
-@@ -261,8 +261,9 @@ private:
+@@ -107,8 +107,9 @@ private:
      bool enabled_;
  };
  
@@ -1133,7 +1133,7 @@ index 90451d02e..ded0603a6 100644
          mtmd_context * ctx,
          struct llama_context * lctx,
          const mtmd_input_chunk * chunk,
-@@ -270,6 +271,7 @@ int32_t mtmd_helper_decode_image_chunk(
+@@ -116,6 +117,7 @@ int32_t mtmd_helper_decode_image_chunk(
          llama_pos n_past,
          llama_seq_id seq_id,
          int32_t n_batch,
@@ -1141,7 +1141,7 @@ index 90451d02e..ded0603a6 100644
          llama_pos * new_n_past,
          mtmd_helper_post_decode_callback callback,
          void * user_data) {
-@@ -309,6 +311,9 @@ int32_t mtmd_helper_decode_image_chunk(
+@@ -155,6 +157,9 @@ int32_t mtmd_helper_decode_image_chunk(
      } else {
          batch_embd.set_position_normal(n_past, seq_id);
      }
@@ -1151,7 +1151,7 @@ index 90451d02e..ded0603a6 100644
  
      const bool use_non_causal = mtmd_decode_use_non_causal(ctx, chunk);
      const scope_non_causal non_causal(lctx, use_non_causal);
-@@ -346,6 +351,23 @@ int32_t mtmd_helper_decode_image_chunk(
+@@ -192,6 +197,23 @@ int32_t mtmd_helper_decode_image_chunk(
      return 0;
  }
  
@@ -1175,7 +1175,7 @@ index 90451d02e..ded0603a6 100644
  int32_t mtmd_helper_eval_chunk_single(mtmd_context * ctx,
          struct llama_context * lctx,
          const mtmd_input_chunk * chunk,
-@@ -405,7 +427,9 @@ int32_t mtmd_helper_eval_chunk_single(mtmd_context * ctx,
+@@ -251,7 +273,9 @@ int32_t mtmd_helper_eval_chunk_single(mtmd_context * ctx,
          LOG_INF("%s slice encoded in %" PRId64 " ms\n", name, ggml_time_ms() - t0);
  
          float * embd = mtmd_get_output_embd(ctx);
