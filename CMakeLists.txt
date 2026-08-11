@@ -262,6 +262,11 @@ if (TO_PACKAGE AND GGML_HEXAGON)
 endif()
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES} ${CMAKE_JS_SRC})
+if (WIN32)
+  # MSVC's math constants (including M_PI) are opt-in. codec.cpp uses them
+  # across several translation units, including when compiled with clang-cl.
+  target_compile_definitions(${PROJECT_NAME} PRIVATE _USE_MATH_DEFINES)
+endif()
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
 target_link_libraries(${PROJECT_NAME} ${CMAKE_JS_LIB} llama ggml llama-common mtmd ${CMAKE_THREAD_LIBS_INIT})
 
