@@ -73,6 +73,9 @@ try {
 
       // Read the file and process it to remove lm_ and LM_ prefixes
       let content = fs.readFileSync(srcPath, "utf8");
+      // Git checks files out with CRLF on Windows. Normalize before applying
+      // multiline compatibility rewrites, which are intentionally written in LF.
+      content = content.replace(/\r\n/g, "\n");
       content = content.replace(/lm_ggml/g, "ggml");
       content = content.replace(/LM_GGML/g, "GGML");
       content = content.replace(/lm_gguf/g, "gguf");
@@ -181,6 +184,16 @@ try {
           "    int32_t sample(const float * logits, int32_t n) {\n        if (n <= 0 || !chain) return 0;",
           "    int32_t sample(const float * logits, int32_t n) {\n        if (n <= 0) return 0;\n        if (!chain) init_chain(n);",
         );
+
+        if (
+          !content.includes(
+            "llama_sampler_init_penalties(n_vocab, last_n, rep_penalty, 0.0f, 0.0f)",
+          ) || !content.includes("if (!chain) init_chain(n);")
+        ) {
+          throw new Error(
+            "Failed to apply llama.cpp sampler compatibility rewrites to rn-tts.cpp",
+          );
+        }
       }
 
       // Write the processed content to destination
@@ -210,6 +223,7 @@ try {
         log(`Skipping ${entry.name} (reference host loop, not used)`, "yellow");
       } else if (/\.(c|cc|cpp|h|hpp|inc)$/.test(entry.name)) {
         let content = fs.readFileSync(srcPath, "utf8");
+        content = content.replace(/\r\n/g, "\n");
         content = content.replace(/lm_ggml/g, "ggml");
         content = content.replace(/LM_GGML/g, "GGML");
         content = content.replace(/lm_gguf/g, "gguf");
