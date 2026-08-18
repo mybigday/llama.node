@@ -375,6 +375,7 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   }
 
   params.cpuparams.strict_cpu = get_option<bool>(options, "cpu_strict", false);
+  params.cpuparams_batch = params.cpuparams;
 
   try {
     apply_speculative_options(options, params);
@@ -482,7 +483,6 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
     _rn_ctx = nullptr;
     Napi::TypeError::New(env, "Failed to load model").ThrowAsJavaScriptException();
   }
-  _rn_ctx->attachThreadpoolsIfAvailable();
 
   // Collect used devices from the loaded model
   if (_rn_ctx->llama_init->model()) {

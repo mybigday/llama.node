@@ -538,6 +538,7 @@ common_params params_from_load_options(const json &options) {
   params.pooling_type = static_cast<enum llama_pooling_type>(
       pooling_type_from_str(opt_string(options, "pooling_type")));
   params.cpuparams.n_threads = opt<int32_t>(options, "n_threads", 1);
+  params.cpuparams_batch = params.cpuparams;
   params.n_gpu_layers = opt<int32_t>(options, "n_gpu_layers", 0);
   params.flash_attn_type =
       rnllama::flash_attn_type_from_str(opt_string(options, "flash_attn_type",
@@ -584,7 +585,6 @@ json action_load(const json &payload) {
     g_ctx.reset();
     throw std::runtime_error("Failed to load model");
   }
-  g_ctx->attachThreadpoolsIfAvailable();
 
   return ok({{"modelInfo", model_info_json()},
              {"systemInfo", common_params_get_system_info(params)}});
