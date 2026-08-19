@@ -1,6 +1,6 @@
 {
   "name": "@fugood/node-llama-wasm",
-  "version": "1.8.0-rc.2",
+  "version": "1.8.0-rc.3",
   "description": "WebAssembly package for llama.node browser inference",
   "type": "module",
   "main": "index.js",
