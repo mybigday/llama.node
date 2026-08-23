@@ -109,6 +109,17 @@ try {
         ].join("\n"),
       );
 
+      if (file === "rn-llama.cpp") {
+        content = content.replace(
+          /common_chat_msgs_parse_oaicompat\(json::parse\(messages\)\)/g,
+          "common_chat_msgs_parse_oaicompat(common_json::parse(messages))",
+        );
+        content = content.replace(
+          /common_chat_tools_parse_oaicompat\(json::parse\(tools\)\)/g,
+          "common_chat_tools_parse_oaicompat(common_json::parse(tools))",
+        );
+      }
+
       if (file === "rn-tts.cpp") {
         content = content.replace(
           "    std::vector<llama_token_data> buf;\n",

@@ -1093,7 +1093,7 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   if (!has_grammar_set && !json_schema_str.empty()) {
     params.sampling.grammar = {
         COMMON_GRAMMAR_TYPE_OUTPUT_FORMAT,
-        json_schema_to_grammar(json::parse(json_schema_str))};
+        json_schema_to_grammar(common_json::parse(json_schema_str))};
   }
   params.sampling.generation_prompt = generation_prompt;
   apply_reasoning_budget(
