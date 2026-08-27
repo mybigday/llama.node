@@ -40,7 +40,7 @@ index a7e370578..ac919abc8 100644
  
  analyze_reasoning::analyze_reasoning(const common_chat_template & tmpl, bool supports_tools)
 diff --git a/src/llama.cpp/common/chat.cpp b/src/llama.cpp/common/chat.cpp
-index 24618d35a..2b07b12cf 100644
+index 743ecde0a..bd47a4c4d 100644
 --- a/src/llama.cpp/common/chat.cpp
 +++ b/src/llama.cpp/common/chat.cpp
 @@ -34,11 +34,22 @@ using json = common_json;
@@ -102,7 +102,7 @@ index 24618d35a..2b07b12cf 100644
                          msg.content_parts.push_back(msg_part);
                      }
                  } else if (!content.is_null()) {
-@@ -1761,6 +1783,73 @@ static common_chat_params common_chat_params_init_functionary_v3_2(const common_
+@@ -1768,6 +1790,73 @@ static common_chat_params common_chat_params_init_functionary_v3_2(const common_
      return data;
  }
  
@@ -176,7 +176,7 @@ index 24618d35a..2b07b12cf 100644
  // Kimi K2 Thinking - uses unique tool call ID format: functions.<name>:<index>
  // The ID contains both the function name and an incrementing counter
  static common_chat_params common_chat_params_init_kimi_k2(const common_chat_template &    tmpl,
-@@ -3503,6 +3592,12 @@ std::optional<common_chat_params> common_chat_try_specialized_template(
+@@ -3510,6 +3599,12 @@ std::optional<common_chat_params> common_chat_try_specialized_template(
          return common_chat_params_init_functionary_v3_2(tmpl, params);
      }
  
@@ -189,7 +189,7 @@ index 24618d35a..2b07b12cf 100644
      // Kimi K2 Thinking - uses unique tool call ID format: functions.<name>:<index>
      // Detection: template has "<|tool_calls_section_begin|>" and "functions." prefix in tool call IDs
      if (src.find("<|tool_calls_section_begin|>") != std::string::npos &&
-@@ -3906,3 +4001,38 @@ std::map<std::string, bool> common_chat_templates_get_caps(const common_chat_tem
+@@ -3913,3 +4008,38 @@ std::map<std::string, bool> common_chat_templates_get_caps(const common_chat_tem
      }
      return chat_templates->template_default->caps.to_map();
  }
@@ -274,10 +274,10 @@ index cb39e3458..e7a864a4d 100644
  std::vector<common_chat_msg> common_chat_msgs_parse_oaicompat(const common_json & messages);
  
 diff --git a/src/llama.cpp/common/common.cpp b/src/llama.cpp/common/common.cpp
-index d84d57ac9..c7fb914d3 100644
+index 3d54bd600..4bfc346e8 100644
 --- a/src/llama.cpp/common/common.cpp
 +++ b/src/llama.cpp/common/common.cpp
-@@ -1621,19 +1621,19 @@ done:
+@@ -1622,19 +1622,19 @@ done:
      return res;
  }
  
@@ -300,7 +300,7 @@ index d84d57ac9..c7fb914d3 100644
      auto * mem = llama_get_memory(ctx);
      llama_memory_seq_add(mem, seq_id, p0, p1, delta);
  }
-@@ -1683,6 +1683,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
+@@ -1684,6 +1684,7 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
          mparams.devices = params.devices.data();
      }
  
@@ -309,10 +309,10 @@ index d84d57ac9..c7fb914d3 100644
      mparams.main_gpu        = params.main_gpu;
      mparams.split_mode      = params.split_mode;
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index de49dac9f..643bd8da0 100644
+index 51518f343..319341d16 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
-@@ -286,6 +286,7 @@ struct common_params_sampling {
+@@ -287,6 +287,7 @@ struct common_params_sampling {
      // reasoning budget sampler parameters
      // these are populated by the server/CLI based on chat template params
      int32_t                   reasoning_budget_tokens   = -1;  // -1 = disabled, >= 0 = token budget
@@ -320,7 +320,7 @@ index de49dac9f..643bd8da0 100644
      std::vector<llama_token>  reasoning_budget_start;          // start tag token sequence
      std::vector<llama_tokens> reasoning_budget_end;            // end tag token sequences; the first tag is used as the forcing sequence
      std::vector<llama_token>  reasoning_budget_forced;         // forced sequence (message + first end tag)
-@@ -438,6 +439,7 @@ struct lr_opt {
+@@ -439,6 +440,7 @@ struct lr_opt {
  struct ggml_opt_optimizer_params common_opt_lr_pars(void * userdata);
  
  struct common_params {
@@ -328,7 +328,7 @@ index de49dac9f..643bd8da0 100644
      int32_t n_predict             =    -1; // max. number of new tokens to predict, -1 == no limit
      int32_t n_ctx                 =     0; // context size, 0 == context the model was trained with
      int32_t n_batch               =  2048; // logical batch size for prompt processing (must be >=32 to use BLAS)
-@@ -979,6 +981,11 @@ enum common_context_seq_rm_type {
+@@ -980,6 +982,11 @@ enum common_context_seq_rm_type {
  // note: clears the memory of the context
  common_context_seq_rm_type common_context_can_seq_rm(llama_context * ctx);
  
@@ -499,7 +499,7 @@ index 06dea1e1c..a8596ca7c 100644
      }
  
 diff --git a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
-index e16ac996a..0fe6e7f1c 100644
+index 3c6343fb2..cc2e421bc 100644
 --- a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
 +++ b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
 @@ -103,7 +103,7 @@ function(ggml_add_cpu_backend_variant_impl tag_name)
@@ -512,10 +512,10 @@ index e16ac996a..0fe6e7f1c 100644
              check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
              if (NOT "${GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E}" STREQUAL "")
 diff --git a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-index e8a5009b3..bffb7b515 100644
+index c1e9f919d..943f0e86b 100644
 --- a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
 +++ b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-@@ -3912,8 +3912,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
+@@ -5289,8 +5289,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
      GGML_UNUSED(dev);
  }
  
@@ -541,7 +541,7 @@ index e8a5009b3..bffb7b515 100644
      *total = *free;
  
      GGML_UNUSED(dev);
-@@ -4301,6 +4317,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+@@ -5632,6 +5648,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
          } catch (const std::exception & exc) {
              GGML_LOG_ERROR("ggml-hex: failed to create device/session %zu\n", i);
              devices[i].context = nullptr;
@@ -549,8 +549,8 @@ index e8a5009b3..bffb7b515 100644
 +            break;
          }
      }
- }
-@@ -4455,7 +4473,12 @@ static void ggml_hexagon_init(ggml_backend_reg * reg) {
+ 
+@@ -5973,7 +5991,12 @@ static void ggml_hexagon_init(ggml_backend_reg * reg) {
  #if defined(__ANDROID__)
      if (opt_arch < 75) {
          opt_ndev = 1;
@@ -785,7 +785,7 @@ index fb41a961d..6587883c7 100644
              if (cond.empty()) {
                  throw std::runtime_error("#elif without #if");
 diff --git a/src/llama.cpp/src/llama-arch.cpp b/src/llama.cpp/src/llama-arch.cpp
-index 025f9fb54..50ae40401 100644
+index eecf444fc..ae76283ed 100644
 --- a/src/llama.cpp/src/llama-arch.cpp
 +++ b/src/llama.cpp/src/llama-arch.cpp
 @@ -150,6 +150,7 @@ static const std::map<llm_arch, const char *> LLM_ARCH_NAMES = {
@@ -817,7 +817,7 @@ index 7159e23bf..6886bb8f2 100644
      LLM_ARCH_QWEN3TTS,
      LLM_ARCH_POCKETTTS,
 diff --git a/src/llama.cpp/src/llama-grammar.cpp b/src/llama.cpp/src/llama-grammar.cpp
-index c685346b6..c897c3f19 100644
+index f14215ac7..13d92ea0c 100644
 --- a/src/llama.cpp/src/llama-grammar.cpp
 +++ b/src/llama.cpp/src/llama-grammar.cpp
 @@ -96,7 +96,9 @@ static bool is_digit_char(char c) {
@@ -831,7 +831,7 @@ index c685346b6..c897c3f19 100644
  }
  
  static std::pair<uint32_t, const char *> parse_hex(const char * src, int size) {
-@@ -438,7 +440,19 @@ const char * llama_grammar_parser::parse_alternates(
+@@ -439,7 +441,19 @@ const char * llama_grammar_parser::parse_alternates(
          bool                is_nested) {
      llama_grammar_rule rule;
      const char * pos = parse_sequence(src, rule_name, rule, is_nested);
@@ -853,7 +853,7 @@ index c685346b6..c897c3f19 100644
          pos = parse_space(pos + 1, true);
          pos = parse_sequence(pos, rule_name, rule, is_nested);
 diff --git a/src/llama.cpp/src/llama-model.cpp b/src/llama.cpp/src/llama-model.cpp
-index de0d3c1a6..934ffc169 100644
+index c34700ff5..a9bc0018d 100644
 --- a/src/llama.cpp/src/llama-model.cpp
 +++ b/src/llama.cpp/src/llama-model.cpp
 @@ -225,6 +225,8 @@ static llama_model * llama_model_mapping(llm_arch arch, const llama_model_params
@@ -865,7 +865,7 @@ index de0d3c1a6..934ffc169 100644
          case LLM_ARCH_EXAONE:
              return new llama_model_exaone(params);
          case LLM_ARCH_EXAONE4:
-@@ -1898,7 +1900,8 @@ void llama_model::print_info() const {
+@@ -1982,7 +1984,8 @@ void llama_model::print_info() const {
                  arch == LLM_ARCH_QWEN35 ||
                  arch == LLM_ARCH_QWEN35MOE ||
                  arch == LLM_ARCH_NEMOTRON_H ||
@@ -875,7 +875,7 @@ index de0d3c1a6..934ffc169 100644
              LLAMA_LOG_INFO("%s: ssm_d_conv            = %u\n",     __func__, hparams.ssm_d_conv);
              LLAMA_LOG_INFO("%s: ssm_d_inner           = %u\n",     __func__, hparams.ssm_d_inner);
              LLAMA_LOG_INFO("%s: ssm_d_state           = %u\n",     __func__, hparams.ssm_d_state);
-@@ -2794,6 +2797,7 @@ llama_rope_type llama_model_rope_type(const llama_model * model) {
+@@ -2878,6 +2881,7 @@ llama_rope_type llama_model_rope_type(const llama_model * model) {
          case LLM_ARCH_STEP35:
          case LLM_ARCH_TALKIE:
          case LLM_ARCH_MELLUM:
@@ -1077,10 +1077,10 @@ index 000000000..165f04534
 +    return cur;
 +}
 diff --git a/src/llama.cpp/src/models/models.h b/src/llama.cpp/src/models/models.h
-index 157b05dc0..c3e53704f 100644
+index 969429e3b..bc6f9ff80 100644
 --- a/src/llama.cpp/src/models/models.h
 +++ b/src/llama.cpp/src/models/models.h
-@@ -1523,6 +1523,27 @@ struct llama_model_nemotron_h_moe : public llama_model_nemotron_h {
+@@ -1527,6 +1527,27 @@ struct llama_model_nemotron_h_moe : public llama_model_nemotron_h {
  };
  
  
@@ -1109,10 +1109,10 @@ index 157b05dc0..c3e53704f 100644
      llama_model_exaone(const struct llama_model_params & params) : llama_model_base(params) {}
      void load_arch_hparams(llama_model_loader & ml) override;
 diff --git a/src/llama.cpp/tools/mtmd/mtmd-helper.cpp b/src/llama.cpp/tools/mtmd/mtmd-helper.cpp
-index f719323c0..f581b07b9 100644
+index f1defb647..1fc23b478 100644
 --- a/src/llama.cpp/tools/mtmd/mtmd-helper.cpp
 +++ b/src/llama.cpp/tools/mtmd/mtmd-helper.cpp
-@@ -109,8 +109,9 @@ private:
+@@ -114,8 +114,9 @@ private:
      bool enabled_;
  };
  
@@ -1124,7 +1124,7 @@ index f719323c0..f581b07b9 100644
          mtmd_context * ctx,
          struct llama_context * lctx,
          const mtmd_input_chunk * chunk,
-@@ -118,6 +119,7 @@ int32_t mtmd_helper_decode_image_chunk(
+@@ -123,6 +124,7 @@ int32_t mtmd_helper_decode_image_chunk(
          llama_pos n_past,
          llama_seq_id seq_id,
          int32_t n_batch,
@@ -1132,7 +1132,7 @@ index f719323c0..f581b07b9 100644
          llama_pos * new_n_past,
          mtmd_helper_post_decode_callback callback,
          void * user_data) {
-@@ -157,6 +159,9 @@ int32_t mtmd_helper_decode_image_chunk(
+@@ -162,6 +164,9 @@ int32_t mtmd_helper_decode_image_chunk(
      } else {
          batch_embd.set_position_normal(n_past, seq_id);
      }
@@ -1142,7 +1142,7 @@ index f719323c0..f581b07b9 100644
  
      const bool use_non_causal = mtmd_decode_use_non_causal(ctx, chunk);
      const scope_non_causal non_causal(lctx, use_non_causal);
-@@ -194,6 +199,23 @@ int32_t mtmd_helper_decode_image_chunk(
+@@ -199,6 +204,23 @@ int32_t mtmd_helper_decode_image_chunk(
      return 0;
  }
  
@@ -1166,7 +1166,7 @@ index f719323c0..f581b07b9 100644
  int32_t mtmd_helper_eval_chunk_single(mtmd_context * ctx,
          struct llama_context * lctx,
          const mtmd_input_chunk * chunk,
-@@ -253,7 +275,9 @@ int32_t mtmd_helper_eval_chunk_single(mtmd_context * ctx,
+@@ -258,7 +280,9 @@ int32_t mtmd_helper_eval_chunk_single(mtmd_context * ctx,
          LOG_INF("%s slice encoded in %" PRId64 " ms\n", name, ggml_time_ms() - t0);
  
          float * embd = mtmd_get_output_embd(ctx);
