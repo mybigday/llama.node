@@ -274,7 +274,7 @@ index cb39e3458..e7a864a4d 100644
  std::vector<common_chat_msg> common_chat_msgs_parse_oaicompat(const common_json & messages);
  
 diff --git a/src/llama.cpp/common/common.cpp b/src/llama.cpp/common/common.cpp
-index 3d54bd600..4bfc346e8 100644
+index d162a3880..3f730e503 100644
 --- a/src/llama.cpp/common/common.cpp
 +++ b/src/llama.cpp/common/common.cpp
 @@ -1622,19 +1622,19 @@ done:
@@ -309,7 +309,7 @@ index 3d54bd600..4bfc346e8 100644
      mparams.main_gpu        = params.main_gpu;
      mparams.split_mode      = params.split_mode;
 diff --git a/src/llama.cpp/common/common.h b/src/llama.cpp/common/common.h
-index 51518f343..319341d16 100644
+index 63d0badd0..a148fe372 100644
 --- a/src/llama.cpp/common/common.h
 +++ b/src/llama.cpp/common/common.h
 @@ -287,6 +287,7 @@ struct common_params_sampling {
@@ -320,7 +320,7 @@ index 51518f343..319341d16 100644
      std::vector<llama_token>  reasoning_budget_start;          // start tag token sequence
      std::vector<llama_tokens> reasoning_budget_end;            // end tag token sequences; the first tag is used as the forcing sequence
      std::vector<llama_token>  reasoning_budget_forced;         // forced sequence (message + first end tag)
-@@ -439,6 +440,7 @@ struct lr_opt {
+@@ -446,6 +447,7 @@ struct lr_opt {
  struct ggml_opt_optimizer_params common_opt_lr_pars(void * userdata);
  
  struct common_params {
@@ -328,7 +328,7 @@ index 51518f343..319341d16 100644
      int32_t n_predict             =    -1; // max. number of new tokens to predict, -1 == no limit
      int32_t n_ctx                 =     0; // context size, 0 == context the model was trained with
      int32_t n_batch               =  2048; // logical batch size for prompt processing (must be >=32 to use BLAS)
-@@ -980,6 +982,11 @@ enum common_context_seq_rm_type {
+@@ -996,6 +998,11 @@ enum common_context_seq_rm_type {
  // note: clears the memory of the context
  common_context_seq_rm_type common_context_can_seq_rm(llama_context * ctx);
  
@@ -362,10 +362,10 @@ index bde679e4e..209efefbe 100644
  
  size_t string::length() const {
 diff --git a/src/llama.cpp/common/log.cpp b/src/llama.cpp/common/log.cpp
-index 2d1e74ad1..55d08afd0 100644
+index 42951190c..b3a72305e 100644
 --- a/src/llama.cpp/common/log.cpp
 +++ b/src/llama.cpp/common/log.cpp
-@@ -13,6 +13,12 @@
+@@ -14,6 +14,12 @@
  #include <vector>
  #include <algorithm>
  
@@ -378,7 +378,7 @@ index 2d1e74ad1..55d08afd0 100644
  #if defined(_WIN32)
  #    define WIN32_LEAN_AND_MEAN
  #    ifndef NOMINMAX
-@@ -138,7 +144,11 @@ struct common_log {
+@@ -164,7 +170,11 @@ struct common_log {
          head = 0;
          tail = 0;
  
@@ -390,7 +390,7 @@ index 2d1e74ad1..55d08afd0 100644
      }
  
      ~common_log() {
-@@ -208,6 +218,37 @@ public:
+@@ -235,6 +245,37 @@ public:
              return;
          }
  
@@ -428,7 +428,7 @@ index 2d1e74ad1..55d08afd0 100644
          auto & entry = queue[tail];
  
          {
-@@ -264,6 +305,9 @@ public:
+@@ -292,6 +333,9 @@ public:
  
          running = true;
  
@@ -438,7 +438,7 @@ index 2d1e74ad1..55d08afd0 100644
          thrd = std::thread([this]() {
              while (true) {
                  std::unique_lock<std::mutex> lock(mtx);
-@@ -286,6 +330,7 @@ public:
+@@ -314,6 +358,7 @@ public:
                  }
              }
          });
@@ -446,7 +446,7 @@ index 2d1e74ad1..55d08afd0 100644
      }
  
      void pause() {
-@@ -298,6 +343,10 @@ public:
+@@ -326,6 +371,10 @@ public:
  
              running = false;
  
@@ -499,10 +499,10 @@ index 06dea1e1c..a8596ca7c 100644
      }
  
 diff --git a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
-index 3c6343fb2..cc2e421bc 100644
+index 17540faa6..6bbed9b2f 100644
 --- a/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
 +++ b/src/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
-@@ -103,7 +103,7 @@ function(ggml_add_cpu_backend_variant_impl tag_name)
+@@ -105,7 +105,7 @@ function(ggml_add_cpu_backend_variant_impl tag_name)
              )
  
          if (MSVC AND NOT CMAKE_C_COMPILER_ID STREQUAL "Clang")
@@ -512,10 +512,10 @@ index 3c6343fb2..cc2e421bc 100644
              check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
              if (NOT "${GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E}" STREQUAL "")
 diff --git a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-index c1e9f919d..943f0e86b 100644
+index 104201daf..fe9a5fe9c 100644
 --- a/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
 +++ b/src/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-@@ -5289,8 +5289,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
+@@ -5701,8 +5701,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
      GGML_UNUSED(dev);
  }
  
@@ -541,16 +541,27 @@ index c1e9f919d..943f0e86b 100644
      *total = *free;
  
      GGML_UNUSED(dev);
-@@ -5632,6 +5648,8 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
-         } catch (const std::exception & exc) {
-             GGML_LOG_ERROR("ggml-hex: failed to create device/session %zu\n", i);
-             devices[i].context = nullptr;
+@@ -6043,9 +6059,16 @@ ggml_hexagon_registry::ggml_hexagon_registry(ggml_backend_reg_t reg) {
+ 
+     // Create devices
+     for (size_t i = 0; i < opt_ndev; i++) {
+-        devices[i].iface   = ggml_backend_hexagon_device_i;
+-        devices[i].reg     = reg;
+-        devices[i].context = new ggml_backend_hexagon_device_context(i, opt_device_configs[i], &devices[i]);
++        devices[i].iface = ggml_backend_hexagon_device_i;
++        devices[i].reg   = reg;
++        try {
++            devices[i].context = new ggml_backend_hexagon_device_context(i, opt_device_configs[i], &devices[i]);
++        } catch (const std::exception & exc) {
++            GGML_LOG_ERROR("ggml-hex: failed to create device/session %zu\n", i);
++            devices[i].context = nullptr;
 +            opt_ndev = i;
 +            break;
-         }
++        }
      }
  
-@@ -5973,7 +5991,12 @@ static void ggml_hexagon_init(ggml_backend_reg * reg) {
+ }
+@@ -6465,7 +6488,12 @@ static void ggml_hexagon_init(ggml_backend_reg * reg) {
  #if defined(__ANDROID__)
      if (opt_arch < 75) {
          opt_ndev = 1;
@@ -785,10 +796,10 @@ index fb41a961d..6587883c7 100644
              if (cond.empty()) {
                  throw std::runtime_error("#elif without #if");
 diff --git a/src/llama.cpp/src/llama-arch.cpp b/src/llama.cpp/src/llama-arch.cpp
-index eecf444fc..ae76283ed 100644
+index 15f651919..aca5061d1 100644
 --- a/src/llama.cpp/src/llama-arch.cpp
 +++ b/src/llama.cpp/src/llama-arch.cpp
-@@ -150,6 +150,7 @@ static const std::map<llm_arch, const char *> LLM_ARCH_NAMES = {
+@@ -153,6 +153,7 @@ static const std::map<llm_arch, const char *> LLM_ARCH_NAMES = {
      { LLM_ARCH_KIMI_K3,          "kimi-k3"          },
      { LLM_ARCH_TALKIE,           "talkie"           },
      { LLM_ARCH_MELLUM,           "mellum"           },
@@ -796,8 +807,8 @@ index eecf444fc..ae76283ed 100644
      { LLM_ARCH_NANBEIGE,         "nanbeige"         },
      { LLM_ARCH_QWEN3TTS,         "qwen3tts"         },
      { LLM_ARCH_POCKETTTS,        "pockettts"        },
-@@ -1011,6 +1012,7 @@ bool llm_arch_is_hybrid(const llm_arch & arch) {
-         case LLM_ARCH_QWEN35MOE:
+@@ -1083,6 +1084,7 @@ bool llm_arch_is_hybrid(const llm_arch & arch) {
+         case LLM_ARCH_QWEN4EXP:
          case LLM_ARCH_DEEPSEEK4:
          case LLM_ARCH_MINIMAX_01:
 +        case LLM_ARCH_BARBET:
@@ -805,10 +816,10 @@ index eecf444fc..ae76283ed 100644
          default:
              return false;
 diff --git a/src/llama.cpp/src/llama-arch.h b/src/llama.cpp/src/llama-arch.h
-index 7159e23bf..6886bb8f2 100644
+index f1d173a57..729d47ffa 100644
 --- a/src/llama.cpp/src/llama-arch.h
 +++ b/src/llama.cpp/src/llama-arch.h
-@@ -154,6 +154,7 @@ enum llm_arch {
+@@ -157,6 +157,7 @@ enum llm_arch {
      LLM_ARCH_EAGLE3,
      LLM_ARCH_MINIMAX_M3,
      LLM_ARCH_DFLASH,
@@ -817,7 +828,7 @@ index 7159e23bf..6886bb8f2 100644
      LLM_ARCH_QWEN3TTS,
      LLM_ARCH_POCKETTTS,
 diff --git a/src/llama.cpp/src/llama-grammar.cpp b/src/llama.cpp/src/llama-grammar.cpp
-index f14215ac7..13d92ea0c 100644
+index 6aa03c766..ff3fbc99e 100644
 --- a/src/llama.cpp/src/llama-grammar.cpp
 +++ b/src/llama.cpp/src/llama-grammar.cpp
 @@ -96,7 +96,9 @@ static bool is_digit_char(char c) {
@@ -853,10 +864,10 @@ index f14215ac7..13d92ea0c 100644
          pos = parse_space(pos + 1, true);
          pos = parse_sequence(pos, rule_name, rule, is_nested);
 diff --git a/src/llama.cpp/src/llama-model.cpp b/src/llama.cpp/src/llama-model.cpp
-index c34700ff5..a9bc0018d 100644
+index 0e0036781..3d1933533 100644
 --- a/src/llama.cpp/src/llama-model.cpp
 +++ b/src/llama.cpp/src/llama-model.cpp
-@@ -225,6 +225,8 @@ static llama_model * llama_model_mapping(llm_arch arch, const llama_model_params
+@@ -226,6 +226,8 @@ static llama_model * llama_model_mapping(llm_arch arch, const llama_model_params
              return new llama_model_nemotron_h(params);
          case LLM_ARCH_NEMOTRON_H_MOE:
              return new llama_model_nemotron_h_moe(params);
@@ -865,7 +876,7 @@ index c34700ff5..a9bc0018d 100644
          case LLM_ARCH_EXAONE:
              return new llama_model_exaone(params);
          case LLM_ARCH_EXAONE4:
-@@ -1982,7 +1984,8 @@ void llama_model::print_info() const {
+@@ -2025,7 +2027,8 @@ void llama_model::print_info() const {
                  arch == LLM_ARCH_QWEN35 ||
                  arch == LLM_ARCH_QWEN35MOE ||
                  arch == LLM_ARCH_NEMOTRON_H ||
@@ -875,8 +886,8 @@ index c34700ff5..a9bc0018d 100644
              LLAMA_LOG_INFO("%s: ssm_d_conv            = %u\n",     __func__, hparams.ssm_d_conv);
              LLAMA_LOG_INFO("%s: ssm_d_inner           = %u\n",     __func__, hparams.ssm_d_inner);
              LLAMA_LOG_INFO("%s: ssm_d_state           = %u\n",     __func__, hparams.ssm_d_state);
-@@ -2878,6 +2881,7 @@ llama_rope_type llama_model_rope_type(const llama_model * model) {
-         case LLM_ARCH_STEP35:
+@@ -3004,6 +3007,7 @@ llama_rope_type llama_model_rope_type(const llama_model * model) {
+         case LLM_ARCH_SPARK2_5:
          case LLM_ARCH_TALKIE:
          case LLM_ARCH_MELLUM:
 +        case LLM_ARCH_BARBET:
@@ -1077,10 +1088,10 @@ index 000000000..165f04534
 +    return cur;
 +}
 diff --git a/src/llama.cpp/src/models/models.h b/src/llama.cpp/src/models/models.h
-index 969429e3b..bc6f9ff80 100644
+index 87195fddd..30e556601 100644
 --- a/src/llama.cpp/src/models/models.h
 +++ b/src/llama.cpp/src/models/models.h
-@@ -1527,6 +1527,27 @@ struct llama_model_nemotron_h_moe : public llama_model_nemotron_h {
+@@ -1537,6 +1537,27 @@ struct llama_model_nemotron_h_moe : public llama_model_nemotron_h {
  };
  
  
@@ -1109,7 +1120,7 @@ index 969429e3b..bc6f9ff80 100644
      llama_model_exaone(const struct llama_model_params & params) : llama_model_base(params) {}
      void load_arch_hparams(llama_model_loader & ml) override;
 diff --git a/src/llama.cpp/tools/mtmd/mtmd-helper.cpp b/src/llama.cpp/tools/mtmd/mtmd-helper.cpp
-index f1defb647..1fc23b478 100644
+index dc2ab414e..aa1da2b8b 100644
 --- a/src/llama.cpp/tools/mtmd/mtmd-helper.cpp
 +++ b/src/llama.cpp/tools/mtmd/mtmd-helper.cpp
 @@ -114,8 +114,9 @@ private:

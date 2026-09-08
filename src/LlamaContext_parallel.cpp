@@ -941,23 +941,29 @@ Napi::Value LlamaContext::SubscribeParallelStatus(const Napi::CallbackInfo &info
     return env.Undefined();
   }
 
-  // Create thread-safe function for the callback
-  Napi::ThreadSafeFunction tsfn = Napi::ThreadSafeFunction::New(
-    env,
-    info[0].As<Napi::Function>(),
-    "ParallelStatusCallback",
-    0,
-    1
+  // Keep the callback handle alive only while the subscriber exists.
+  auto tsfn_holder = std::make_shared<ManagedThreadSafeFunction>(
+    Napi::ThreadSafeFunction::New(
+      env,
+      info[0].As<Napi::Function>(),
+      "ParallelStatusCallback",
+      0,
+      1
+    )
   );
 
   // Subscribe to status changes
   int32_t subscriberId = _rn_ctx->slot_manager->add_status_subscriber(
-    [tsfn](const llama_rn_parallel_status& status) {
+    [tsfn_holder](const llama_rn_parallel_status& status) {
       struct StatusData {
         llama_rn_parallel_status status;
       };
 
       auto callback = [](Napi::Env env, Napi::Function jsCallback, StatusData* data) {
+        if (env == nullptr || jsCallback.IsEmpty()) {
+          delete data;
+          return;
+        }
         Napi::Object result = Napi::Object::New(env);
         result.Set("n_parallel", Napi::Number::New(env, data->status.n_parallel));
         result.Set("active_slots", Napi::Number::New(env, data->status.active_slots));
@@ -984,7 +990,7 @@ Napi::Value LlamaContext::SubscribeParallelStatus(const Napi::CallbackInfo &info
       };
 
       auto* data = new StatusData{status};
-      auto callStatus = tsfn.BlockingCall(data, callback);
+      auto callStatus = tsfn_holder->tsfn.BlockingCall(data, callback);
       if (callStatus != napi_ok) {
         delete data;
       }

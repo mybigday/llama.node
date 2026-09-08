@@ -93,6 +93,19 @@ try {
         }
       }
 
+      if (file === "rn-mtmd.hpp") {
+        // b10829 adds explicit media initialization options.
+        for (const call of [
+          "mtmd_helper_bitmap_init_from_buf(mtmd_wrapper->mtmd_ctx, media_data.data(), media_data.size(), false)",
+          "mtmd_helper_bitmap_init_from_file(mtmd_wrapper->mtmd_ctx, media_path.c_str(), false)",
+        ]) {
+          if (!content.includes(call)) {
+            throw new Error(`Failed to apply llama.cpp MTMD compatibility rewrite: ${call}`);
+          }
+          content = content.replace(call, `${call.slice(0, -1)}, mtmd_helper_init_opt_default())`);
+        }
+      }
+
       // Write the processed content to destination
       fs.writeFileSync(destPath, content);
 

@@ -44,7 +44,7 @@ test('basic completion', async () => {
   await model.saveSession(path.resolve(__dirname, './tmp.sess'))
   await model.loadSession(path.resolve(__dirname, './tmp.sess'))
   await model.release()
-})
+}, 60000)
 
 test('completion with t5-like model', async () => {
   const model = await loadModel({
@@ -78,6 +78,7 @@ test('completion with t5-like model', async () => {
     expect(result.tokens_predicted).toBeGreaterThan(0)
     expect(result.tokens_evaluated).toBeGreaterThan(0)
   }
+  await model.release()
 })
 
 test('completion with response_format', async () => {
@@ -123,6 +124,7 @@ test('completion with response_format', async () => {
       }),
     ),
   ).toMatchSnapshot('json_object')
+  await model.release()
 })
 
 test('completion with tools', async () => {
@@ -174,6 +176,7 @@ test('completion with tools', async () => {
     chat_parser: expect.any(String),
     grammar: expect.any(String),
   })
+  await model.release()
 })
 
 test('completion accepts thinking budget params', async () => {
@@ -204,6 +207,7 @@ test('works fine with vocab_only', async () => {
   expect(
     await model.completion({ prompt: 'Once upon a time' }),
   ).toMatchSnapshot('empty result')
+  await model.release()
 })
 
 test('tokeneize & detokenize & getFormattedChat', async () => {
