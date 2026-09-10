@@ -64,6 +64,12 @@ LlamaCompletionWorker::~LlamaCompletionWorker() {
 
 
 void LlamaCompletionWorker::Execute() {
+  struct running_guard {
+    std::atomic<bool> &flag;
+    running_guard(std::atomic<bool> &f) : flag(f) { flag = true; }
+    ~running_guard() { flag = false; }
+  } guard(_running);
+
   try {
     // Check if vocab_only mode is enabled - if so, return empty result
     if (_params.vocab_only) {

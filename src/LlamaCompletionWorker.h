@@ -36,6 +36,8 @@ public:
 
   void SetStop() { _interrupted = true; }
 
+  bool IsRunning() const { return _running.load(); }
+
 protected:
   void Execute() override;
   void OnOK() override;
@@ -44,6 +46,7 @@ protected:
 private:
 
   rnllama::llama_rn_context* _rn_ctx;
+  std::atomic<bool> _running{false};
   common_params _params;
   std::vector<std::string> _stop_words;
   int32_t _chat_format;

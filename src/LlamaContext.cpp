@@ -8,6 +8,15 @@
 #include "TokenizeWorker.h"
 #include "DetokenizeWorker.h"
 #include "DecodeAudioTokenWorker.h"
+
+#include <chrono>
+#include <mutex>
+#include <set>
+#include <thread>
+
+// live contexts, so that everything can be released synchronously on process exit
+static std::mutex g_contexts_mutex;
+static std::set<LlamaContext *> g_contexts;
 #include "ggml.h"
 #include "gguf.h"
 #include "chat.h"
@@ -174,6 +183,10 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
            static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::Release>(
            "release", static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::ReleaseSync>(
+           "releaseSync", static_cast<napi_property_attributes>(napi_enumerable)),
+       StaticMethod<&LlamaContext::ReleaseAllSync>(
+           "releaseAllSync", static_cast<napi_property_attributes>(napi_enumerable)),
        StaticMethod<&LlamaContext::ModelInfo>(
            "loadModelInfo",
            static_cast<napi_property_attributes>(napi_enumerable)),
@@ -506,9 +519,19 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   }
 
   _info = common_params_get_system_info(params);
+
+  {
+    std::lock_guard<std::mutex> lock(g_contexts_mutex);
+    g_contexts.insert(this);
+  }
 }
 
 LlamaContext::~LlamaContext() {
+  {
+    std::lock_guard<std::mutex> lock(g_contexts_mutex);
+    g_contexts.erase(this);
+  }
+
   // Invalidate the context to prevent use-after-free in async callbacks
   if (_context_valid) {
     _context_valid->store(false);
@@ -1387,6 +1410,53 @@ Napi::Value LlamaContext::Release(const Napi::CallbackInfo &info) {
   auto *worker = new DisposeWorker(info, _rn_ctx, &_rn_ctx);
   worker->Queue();
   return worker->Promise();
+}
+
+void LlamaContext::releaseSync() {
+  // _wip is cleared by the worker thread when it finishes, so keep our own pointer
+  // the worker object itself is only deleted from the event loop, which is not running here
+  auto *wip = _wip;
+  if (wip != nullptr) {
+    wip->SetStop();
+
+    // the completion worker checks the stop flag once per token
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (wip->IsRunning() && std::chrono::steady_clock::now() < deadline) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+  }
+
+  if (_rn_ctx && _rn_ctx->slot_manager) {
+    _rn_ctx->slot_manager->stop_processing_loop();
+  }
+
+  if (_context_valid) {
+    _context_valid->store(false);
+  }
+
+  if (_rn_ctx) {
+    delete _rn_ctx;
+    _rn_ctx = nullptr;
+  }
+}
+
+// releaseSync(): void
+// Synchronous variant of release() for process exit handlers, where no event loop is available
+void LlamaContext::ReleaseSync(const Napi::CallbackInfo &info) {
+  releaseSync();
+}
+
+// LlamaContext.releaseAllSync(): void
+// Release every live context. Used on process exit so that no backend buffers outlive the process teardown
+void LlamaContext::ReleaseAllSync(const Napi::CallbackInfo &info) {
+  std::vector<LlamaContext *> contexts;
+  {
+    std::lock_guard<std::mutex> lock(g_contexts_mutex);
+    contexts.assign(g_contexts.begin(), g_contexts.end());
+  }
+  for (auto *ctx : contexts) {
+    ctx->releaseSync();
+  }
 }
 
 // Cleanup function for the logging system

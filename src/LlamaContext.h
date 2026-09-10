@@ -45,6 +45,8 @@ private:
   void RemoveLoraAdapters(const Napi::CallbackInfo &info);
   Napi::Value GetLoadedLoraAdapters(const Napi::CallbackInfo &info);
   Napi::Value Release(const Napi::CallbackInfo &info);
+  void ReleaseSync(const Napi::CallbackInfo &info);
+  static void ReleaseAllSync(const Napi::CallbackInfo &info);
 
   // Multimodal methods
   Napi::Value InitMultimodal(const Napi::CallbackInfo &info);
@@ -90,6 +92,8 @@ private:
 
   // Use rn-llama context instead of direct llama.cpp types
   llama_rn_context *_rn_ctx = nullptr;
+
+  void releaseSync();
 
   // Validity flag for async callbacks to prevent use-after-free
   // Shared pointer ensures callbacks can safely check if context is still alive

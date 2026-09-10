@@ -317,6 +317,14 @@ class LlamaContextWrapper {
     return this.ctx.release()
   }
 
+  /**
+   * Release the context synchronously. Use this in `process.on('exit')`
+   * handlers, where `release()` cannot be awaited.
+   */
+  releaseSync(): void {
+    this.ctx.releaseSync()
+  }
+
   applyLoraAdapters(adapters: { path: string; scaled: number }[]): void {
     return this.ctx.applyLoraAdapters(adapters)
   }
@@ -511,12 +519,29 @@ class LlamaContextWrapper {
   }
 }
 
+// Release every live context when the process exits, including process.exit()
+// and uncaught exceptions, where GC finalizers do not run. Backend buffers that
+// outlive the process teardown abort the process on some backends (Metal).
+const exitCleanupRegistered = new WeakSet<Module>()
+const registerExitCleanup = (mod: Module) => {
+  if (typeof process?.once !== 'function' || exitCleanupRegistered.has(mod)) return
+  exitCleanupRegistered.add(mod)
+  process.once('exit', () => {
+    try {
+      mod.LlamaContext.releaseAllSync()
+    } catch {
+      // nothing useful can be done this late
+    }
+  })
+}
+
 export const loadModel = async (
   options: LlamaModelOptionsExtended,
   onProgress?: (progress: number) => void,
 ): Promise<LlamaContextWrapper> => {
   const variant = options.lib_variant ?? 'default'
   mods[variant] ??= await loadModule(options.lib_variant)
+  registerExitCleanup(mods[variant])
   refreshNativeLogSetup()
 
   const { devices } = options

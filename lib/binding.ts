@@ -867,8 +867,18 @@ export interface LlamaContext {
    */
   bench(pp: number, tg: number, pl: number, nr: number): Promise<BenchResult>
 
+  /**
+   * Release the context synchronously. Intended for process exit handlers,
+   * where release() cannot be awaited.
+   */
+  releaseSync(): void
+
   // static
   loadModelInfo(path: string, skip: string[]): Promise<GGUFModelInfo>
+  /**
+   * Release every live context synchronously.
+   */
+  releaseAllSync(): void
   toggleNativeLog(
     enable: boolean,
     callback: (level: string, text: string) => void,
