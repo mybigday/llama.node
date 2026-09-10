@@ -9,7 +9,7 @@
     "copy-rn-llama-source": "node scripts/copy-rn-llama-source.js",
     "bootstrap": "npm run copy-rn-llama-source && npm install --omit=optional",
     "postinstall": "node scripts/check.js",
-    "pretest": "node scripts/download-test-models.js",
+    "pretest": "node scripts/download-test-models.js && npm run build-js",
     "test": "jest",
     "typecheck": "tsc --noEmit",
     "build": "npx cmake-js build",

@@ -12,6 +12,7 @@ const runChild = (body: string) => {
         n_gpu_layers: 99,
         n_ctx: 256,
       })
+      console.error('[exit-test] model loaded')
       ${body}
     })()
   `
@@ -19,6 +20,8 @@ const runChild = (body: string) => {
 }
 
 const expectCleanTeardown = (result: ReturnType<typeof runChild>, status: number) => {
+  // a child that failed before loading the model would otherwise look like a clean exit code
+  expect(result.stderr).toContain('[exit-test] model loaded')
   expect(result.signal).toBeNull()
   expect(result.stderr).not.toContain('GGML_ASSERT')
   expect(result.status).toBe(status)

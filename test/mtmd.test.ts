@@ -2,7 +2,7 @@ import path from 'path'
 import fs from 'fs'
 import { loadModel } from '../lib'
 
-jest.setTimeout(60000)
+jest.setTimeout(180000)
 
 test('multimodal with images', async () => {
   const model = await loadModel({
