@@ -123,7 +123,7 @@ Napi::Value LlamaContext::ModelInfo(const Napi::CallbackInfo &info) {
 // getBackendDevicesInfo(): string
 Napi::Value LlamaContext::GetBackendDevicesInfo(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
-  std::string devices_json = rnllama::get_backend_devices_info();
+  std::string devices_json = rnllama::get_backend_devices_info().dump();
   return Napi::String::New(env, devices_json);
 }
 
@@ -1601,7 +1601,21 @@ LlamaContext::GetFormattedAudioCompletion(const Napi::CallbackInfo &info) {
         .ThrowAsJavaScriptException();
   }
   auto text = info[1].ToString().Utf8Value();
-  auto speaker_json = info[0].IsString() ? info[0].ToString().Utf8Value() : "";
+  // Empty/non-string speaker means "no speaker" (null json); an empty object
+  // still counts as a provided speaker.
+  json speaker_json = nullptr;
+  if (info[0].IsString()) {
+    auto speaker_str = info[0].ToString().Utf8Value();
+    if (!speaker_str.empty()) {
+      try {
+        speaker_json = json::parse(speaker_str);
+      } catch (const std::exception &e) {
+        Napi::Error::New(env, std::string("Invalid speaker JSON: ") + e.what())
+            .ThrowAsJavaScriptException();
+        return env.Undefined();
+      }
+    }
+  }
   int speaker_id = info.Length() > 2 && info[2].IsNumber()
                        ? info[2].ToNumber().Int32Value()
                        : -1;
@@ -1865,7 +1879,7 @@ Napi::Value LlamaContext::Bench(const Napi::CallbackInfo &info) {
   int pl = info[2].ToNumber().Int32Value();
   int nr = info[3].ToNumber().Int32Value();
 
-  std::string result;
+  json result;
   try {
     result = _rn_ctx->completion->bench(pp, tg, pl, nr);
   } catch (const std::exception &e) {
@@ -1873,9 +1887,9 @@ Napi::Value LlamaContext::Bench(const Napi::CallbackInfo &info) {
     return env.Undefined();
   }
 
-  // Parse the JSON result and return as object
+  // Convert the JSON result to an object
   try {
-    auto parsed = json::parse(result);
+    const auto &parsed = result;
     Napi::Object benchResult = Napi::Object::New(env);
 
     benchResult.Set("nKvMax", Napi::Number::New(env, parsed["n_kv_max"].get<int>()));

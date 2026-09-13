@@ -80,32 +80,6 @@ try {
       content = content.replace(/lm_gguf/g, "gguf");
       content = content.replace(/LM_GGUF/g, "GGUF");
 
-      if (file === "rn-common.hpp") {
-        content = content.replace(
-          /ggml_metal_device_get\(0\)/g,
-          "ggml_metal_device_get(0, 1)",
-        );
-
-        if (!content.includes("ggml_metal_device_get(0, 1)")) {
-          throw new Error(
-            "Failed to apply llama.cpp Metal device compatibility rewrite to rn-common.hpp",
-          );
-        }
-      }
-
-      if (file === "rn-mtmd.hpp") {
-        // b10829 adds explicit media initialization options.
-        for (const call of [
-          "mtmd_helper_bitmap_init_from_buf(mtmd_wrapper->mtmd_ctx, media_data.data(), media_data.size(), false)",
-          "mtmd_helper_bitmap_init_from_file(mtmd_wrapper->mtmd_ctx, media_path.c_str(), false)",
-        ]) {
-          if (!content.includes(call)) {
-            throw new Error(`Failed to apply llama.cpp MTMD compatibility rewrite: ${call}`);
-          }
-          content = content.replace(call, `${call.slice(0, -1)}, mtmd_helper_init_opt_default())`);
-        }
-      }
-
       // Write the processed content to destination
       fs.writeFileSync(destPath, content);
 

@@ -1184,8 +1184,7 @@ json action_remove_lora_adapters() {
   return ok({{"lora_adapters", loaded_lora_adapters_json()}});
 }
 
-json bench_result_json(const std::string &raw) {
-  const auto parsed = json::parse(raw);
+json bench_result_json(const json &parsed) {
   if (!parsed.is_object() || parsed.empty()) {
     throw std::runtime_error("Benchmark failed");
   }
