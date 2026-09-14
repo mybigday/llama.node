@@ -1,5 +1,5 @@
-#include "rn-llama/rn-completion.h"
-#include "rn-llama/rn-llama.h"
+#include "rn-completion.h"
+#include "rn-llama.h"
 #include "json-schema-to-grammar.h"
 #include "common/speculative.h"
 
@@ -470,7 +470,7 @@ json model_info_json() {
   json jinja = json::object();
   jinja["default"] = g_ctx->validateModelChatTemplate(true, nullptr);
   const auto default_caps =
-      common_chat_templates_get_caps_for_variant(g_ctx->templates.get(), "");
+      common_chat_templates_get_caps(g_ctx->templates.get(), "");
   jinja["defaultCaps"] = {
       {"tools", default_caps.supports_tools},
       {"toolCalls", default_caps.supports_tool_calls},
@@ -483,7 +483,7 @@ json model_info_json() {
   jinja["toolUse"] = has_tool_use;
   if (has_tool_use) {
     const auto caps =
-        common_chat_templates_get_caps_for_variant(g_ctx->templates.get(),
+        common_chat_templates_get_caps(g_ctx->templates.get(),
                                                    "tool_use");
     jinja["toolUseCaps"] = {
         {"tools", caps.supports_tools},

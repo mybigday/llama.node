@@ -2,10 +2,10 @@
 
 #include "LlamaContext.h"
 #include "common.hpp"
-#include "rn-llama/rn-llama.h"
-#include "rn-llama/rn-completion.h"
-#include "rn-llama/rn-slot.h"
-#include "rn-llama/rn-slot-manager.h"
+#include "rn-llama.h"
+#include "rn-completion.h"
+#include "rn-slot.h"
+#include "rn-slot-manager.h"
 #include "common.h"
 #include "json-schema-to-grammar.h"
 #include <atomic>

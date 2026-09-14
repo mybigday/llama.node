@@ -6,8 +6,7 @@
   "main": "lib/index.js",
   "browser": "lib/browser.mjs",
   "scripts": {
-    "copy-rn-llama-source": "node scripts/copy-rn-llama-source.js",
-    "bootstrap": "npm run copy-rn-llama-source && npm install --omit=optional",
+    "bootstrap": "git submodule update --init src/llama.rn && npm install --omit=optional",
     "postinstall": "node scripts/check.js",
     "pretest": "node scripts/download-test-models.js && npm run build-js",
     "test": "jest",
@@ -62,8 +61,8 @@
     "scripts/llama.cpp.patch",
     "src/*.{cc,c,h,hpp}",
     "src/wasm/**/*",
-    "src/rn-llama/*",
-    "src/rn-llama/codec/**/*",
+    "src/llama.rn/cpp/*",
+    "src/llama.rn/vendor/codec.cpp/{include,src,common}/**/*",
     "src/DecodeAudioTokenWorker.cpp",
     "src/DetokenizeWorker.cpp",
     "src/DisposeWorker.cpp",
@@ -73,10 +72,17 @@
     "src/LoadSessionWorker.cpp",
     "src/SaveSessionWorker.cpp",
     "src/TokenizeWorker.cpp",
-    "src/llama.cpp/{common,src,include}/**/*.{h,hpp,cpp,cc,c}",
-    "src/llama.cpp/ggml/include/*.h",
-    "src/llama.cpp/ggml/src/ggml-cpu/**/*.{h,hpp,cpp,cc,c}",
-    "src/llama.cpp/ggml/src/ggml-webgpu/**/*.{h,hpp,cpp,cc,c,wgsl,py}",
+    "src/llama.rn/vendor/llama.cpp/CMakeLists.txt",
+    "src/llama.rn/vendor/llama.cpp/cmake/**/*",
+    "src/llama.rn/vendor/llama.cpp/{common,src,include,vendor}/**/*",
+    "src/llama.rn/vendor/llama.cpp/tools/mtmd/**/*",
+    "src/llama.rn/vendor/llama.cpp/ggml/CMakeLists.txt",
+    "src/llama.rn/vendor/llama.cpp/ggml/cmake/**/*",
+    "src/llama.rn/vendor/llama.cpp/ggml/include/*.h",
+    "src/llama.rn/vendor/llama.cpp/ggml/src/*.{h,hpp,cpp,cc,c}",
+    "src/llama.rn/vendor/llama.cpp/ggml/src/CMakeLists.txt",
+    "src/llama.rn/vendor/llama.cpp/ggml/src/ggml-cpu/**/*",
+    "src/llama.rn/vendor/llama.cpp/ggml/src/ggml-webgpu/**/*",
     "lib/*.mjs",
     "lib/*.js",
     "lib/*.ts",
@@ -131,8 +137,7 @@
       "**/*.test.ts"
     ],
     "testPathIgnorePatterns": [
-      "<rootDir>/src/llama.rn/",
-      "<rootDir>/src/llama.cpp/"
+      "<rootDir>/src/llama.rn/"
     ]
   },
   "prettier": {

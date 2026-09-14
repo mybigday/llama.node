@@ -64,7 +64,7 @@ console.log('Result:', text)
 ## Text-to-Speech (TTS) — Experimental
 
 TTS is backed by [codec.cpp](https://github.com/mybigday/codec.cpp) (vendored
-via the llama.rn submodule) and supports OuteTTS v0.x/v1.0, Soprano 1.1,
+by the llama.rn submodule under `src/llama.rn/vendor/codec.cpp`) and supports OuteTTS v0.x/v1.0, Soprano 1.1,
 NeuTTS Nano/Air, CSM 1B, Qwen3-TTS 0.6B, MOSS-TTSD, MOSS-TTS-Realtime,
 Chatterbox T3 (incl. multilingual), and BlueMagpie-TTS. The API mirrors
 llama.rn and may change without a major version bump.

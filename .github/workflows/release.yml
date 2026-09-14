@@ -45,7 +45,6 @@ jobs:
           pattern: bin-*
           merge-multiple: true
       - run: npm install -g npm@latest
-      - run: npm run copy-rn-llama-source
       - run: npm install --omit=optional
       - run: npm run build
       - name: Publish to NPM

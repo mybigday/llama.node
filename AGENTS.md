@@ -19,15 +19,23 @@ The codebase uses N-API to bridge Node.js and llama.cpp:
 
 - **src/addons.cc**: Entry point that registers the LlamaContext class
 - **src/LlamaContext.cpp/h**: Main context class exposing all llama.cpp functionality
-- **src/rn-llama/**: Shared implementation from llama.rn submodule (copied during build)
+- **src/llama.rn/cpp/**: Shared implementation from the llama.rn submodule, compiled in place
   - `rn-llama.cpp/h`: Core llama context wrapper
   - `rn-completion.cpp/h`: Completion logic
+  - `rn-slot.cpp/h`, `rn-slot-manager.cpp/h`: Parallel decoding / slot queueing
   - `rn-mtmd.hpp`: Multimodal (vision/audio) support
   - `rn-tts.cpp/h`: Text-to-speech functionality (experimental, codec.cpp-based)
-  - `codec/`: Vendored [codec.cpp](https://github.com/mybigday/codec.cpp) tree
-    (copied from llama.rn's `cpp/codec`) — vocoder/codec models and audio-LM
-    drivers for the TTS families (WavTokenizer, DAC, Mimi, NeuCodec, SNAC,
-    S3G, AudioVAE, ...)
+  - `jsi/`: React Native JSI glue, not built by llama.node
+- **src/llama.rn/vendor/**: Dependencies vendored by llama.rn in upstream layout
+  (no nested submodules; see `src/llama.rn/vendor/README.md`)
+  - `llama.cpp/`: llama.cpp pinned by `vendor/VERSIONS`, with llama.rn's patches
+    (`src/llama.rn/scripts/patches/llama.cpp/`, including the `barbet`
+    BlueMagpie-TTS architecture) already applied. It carries upstream's CMake
+    project files, all of `common/` and the CUDA/Vulkan/WebGPU backends so
+    llama.node can build it with `add_subdirectory()`
+  - `codec.cpp/`: [codec.cpp](https://github.com/mybigday/codec.cpp) —
+    vocoder/codec models and audio-LM drivers for the TTS families
+    (WavTokenizer, DAC, Mimi, NeuCodec, SNAC, S3G, AudioVAE, ...)
 
 ### Worker Pattern
 
@@ -63,32 +71,36 @@ The web package supports URL model loading by default, session save as `ArrayBuf
 
 ### Build System
 
-- **CMakeLists.txt**: Builds native addon, links llama.cpp and rn-llama sources
-- **src/llama.cpp/**: llama.cpp submodule (upstream library)
-- **src/llama.rn/**: llama.rn submodule (shared React Native implementation)
+- **CMakeLists.txt**: Builds native addon, links llama.cpp, codec.cpp and rn-llama sources
+- **src/llama.rn/**: llama.rn submodule (shared implementation + vendored llama.cpp/codec.cpp); the only submodule
 - **src/wasm/**: Emscripten-specific WASM build target
 - **scripts/build-wasm-package.js**: Builds WASM artifacts into `packages/node-llama-wasm/wasm/`
 - Platform-specific prebuilt packages: `@fugood/node-llama-{platform}-{arch}[-variant]`
 - Browser package: `@fugood/node-llama-wasm` (listed as an optional dependency of `@fugood/llama.node`)
 
-The build process applies patches and copies rn-llama sources with prefix transformations:
-- `lm_ggml` → `ggml`
-- `LM_GGML` → `GGML`
-- `lm_gguf` → `gguf`
-- `LM_GGUF` → `GGUF`
+There is no copy step and no symbol renaming: llama.rn dropped its `lm_ggml`
+prefixes, so `src/llama.rn/cpp/*` and `src/llama.rn/vendor/*` are compiled
+directly. Both CMake projects (`CMakeLists.txt`, `src/wasm/CMakeLists.txt`)
+`git apply` `scripts/llama.cpp.patch` onto `src/llama.rn/vendor/llama.cpp` at
+configure time. That patch holds only the llama.node-specific changes on top of
+llama.rn's already-patched tree (Windows `ws2_32` link, MSVC ARM flags, Vulkan
+shader-gen cross-compile, `std::stringstream`-free code paths and synchronous
+logging for the WASM build, Hexagon session memory on Linux, and `_` /
+multi-line alternates in GBNF for the rn-tts grammars). To change it, edit the
+vendored file in place and run `scripts/regenerate-patch.sh`. Changes that
+llama.rn also needs belong in llama.rn's `scripts/patches/llama.cpp/` instead.
 
-`scripts/llama.cpp.patch` also carries the `barbet` architecture (BlueMagpie-TTS
-backbone) ported from llama.rn's `scripts/patches/barbet-*` + vendored
-`models/barbet.cpp`; regenerate it with `scripts/regenerate-patch.sh` after
-editing the `src/llama.cpp` working tree.
+Bumping llama.cpp means bumping the llama.rn submodule (llama.rn pins llama.cpp
+in `vendor/VERSIONS`), then running `scripts/generate-version.sh` to refresh
+`lib/version.ts` and checking that `scripts/llama.cpp.patch` still applies.
 
 ## Common Development Commands
 
 ### Building
 
 ```bash
-# Bootstrap: copy rn-llama sources and install dependencies
-npm run copy-rn-llama-source && npm install --omit=optional
+# Bootstrap: init the llama.rn submodule and install dependencies
+npm run bootstrap
 
 # Build native addon (requires cmake-js)
 npm run build-native
@@ -251,8 +263,8 @@ On isolated pages with `SharedArrayBuffer`, CPU uses the pthread artifact and `n
 
 ### Common Issues
 
-1. **Build failures**: Ensure submodules are initialized (`git submodule update --init --recursive`)
-2. **Missing native module**: Run `npm run copy-rn-llama-source` then rebuild
+1. **Build failures**: Ensure the llama.rn submodule is initialized (`git submodule update --init src/llama.rn`)
+2. **`scripts/llama.cpp.patch` does not match**: the llama.rn submodule moved; re-apply the llama.node hunks onto `src/llama.rn/vendor/llama.cpp` and run `scripts/regenerate-patch.sh`
 3. **GPU not working**: Check `lib_variant` matches your hardware (vulkan/cuda)
 4. **Session load fails**: Vulkan doesn't support sessions; use default or cuda variant
 5. **Context shifting**: Disable with `ctx_shift: false` if using multimodal
@@ -272,7 +284,8 @@ CMAKE_BUILD_TYPE=Debug npm run build-native
 ### Useful File Locations
 
 - Native addon source: `src/*.cpp`, `src/*.h`
-- Shared rn-llama code: `src/rn-llama/` (generated, don't edit directly)
+- Shared rn-llama code: `src/llama.rn/cpp/` (submodule, change it in llama.rn)
+- Vendored llama.cpp / codec.cpp: `src/llama.rn/vendor/` (submodule; llama.node-only changes go through `scripts/llama.cpp.patch`)
 - TypeScript API: `lib/index.ts`, `lib/binding.ts`
 - Tests: `test/*.test.ts`
 - Build scripts: `scripts/*.js`
@@ -284,7 +297,7 @@ CMAKE_BUILD_TYPE=Debug npm run build-native
 ## Relationship with llama.rn
 
 This project shares core implementation with llama.rn to maintain API compatibility:
-- rn-llama sources are copied from llama.rn submodule during build
+- rn-llama sources and the vendored llama.cpp/codec.cpp are compiled straight from the llama.rn submodule
 - APIs should match llama.rn as closely as possible
 - Divergences only where platform differences require it (e.g., Node.js vs React Native)
 
