@@ -10,7 +10,16 @@ option(LLAMA_NODE_WASM_WEBGPU "Build llama.node WASM with ggml WebGPU backend" O
 option(LLAMA_NODE_WASM_THREADS "Build llama.node WASM with pthread support" OFF)
 set(LLAMA_NODE_WASM_PTHREAD_POOL_SIZE "8" CACHE STRING "Emscripten pthread worker pool size")
 
+# See the root CMakeLists.txt: llama.cpp/codec.cpp are vendored by the llama.rn
+# submodule; scripts/llama.cpp.patch adds the llama.node-specific changes.
+set(LLAMA_RN_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../llama.rn)
+set(LLAMA_CPP_DIR ${LLAMA_RN_DIR}/vendor/llama.cpp)
+set(CODEC_CPP_DIR ${LLAMA_RN_DIR}/vendor/codec.cpp)
 set(LLAMA_CPP_PATCH_FILE ${CMAKE_CURRENT_SOURCE_DIR}/../../scripts/llama.cpp.patch)
+
+if (NOT EXISTS ${LLAMA_CPP_DIR}/CMakeLists.txt)
+  message(FATAL_ERROR "src/llama.rn submodule is missing; run: git submodule update --init src/llama.rn")
+endif()
 
 execute_process(
   COMMAND git apply --check ${LLAMA_CPP_PATCH_FILE}
@@ -44,7 +53,7 @@ else()
   if (LLAMA_CPP_PATCH_REVERSE_CHECK_RESULT EQUAL 0)
     message(STATUS "scripts/llama.cpp.patch already applied")
   else()
-    message(FATAL_ERROR "scripts/llama.cpp.patch does not match the current src/llama.cpp checkout")
+    message(FATAL_ERROR "scripts/llama.cpp.patch does not match the current src/llama.rn/vendor/llama.cpp checkout")
   endif()
 endif()
 
@@ -100,34 +109,35 @@ add_link_options(
   -sEXPORTED_RUNTIME_METHODS=ccall,cwrap,FS,HEAPU8
 )
 
-add_subdirectory("../llama.cpp" "${CMAKE_BINARY_DIR}/llama.cpp")
-add_subdirectory("../llama.cpp/tools/mtmd" "${CMAKE_BINARY_DIR}/mtmd")
+add_subdirectory(${LLAMA_CPP_DIR} "${CMAKE_BINARY_DIR}/llama.cpp")
+add_subdirectory(${LLAMA_CPP_DIR}/tools/mtmd "${CMAKE_BINARY_DIR}/mtmd")
 
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/..
-  ${CMAKE_CURRENT_SOURCE_DIR}/../llama.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/../llama.cpp/common
-  ${CMAKE_CURRENT_SOURCE_DIR}/../llama.cpp/include
-  ${CMAKE_CURRENT_SOURCE_DIR}/../llama.cpp/src
-  ${CMAKE_CURRENT_SOURCE_DIR}/../llama.cpp/ggml/include
-  ${CMAKE_CURRENT_SOURCE_DIR}/../llama.cpp/ggml/src
-  ${CMAKE_CURRENT_SOURCE_DIR}/../llama.cpp/tools/mtmd
-  ${CMAKE_CURRENT_SOURCE_DIR}/../llama.cpp/vendor
-  ${CMAKE_CURRENT_SOURCE_DIR}/../rn-llama/codec/include
-  ${CMAKE_CURRENT_SOURCE_DIR}/../rn-llama/codec/common
+  ${LLAMA_RN_DIR}/cpp
+  ${LLAMA_CPP_DIR}
+  ${LLAMA_CPP_DIR}/common
+  ${LLAMA_CPP_DIR}/include
+  ${LLAMA_CPP_DIR}/src
+  ${LLAMA_CPP_DIR}/ggml/include
+  ${LLAMA_CPP_DIR}/ggml/src
+  ${LLAMA_CPP_DIR}/tools/mtmd
+  ${LLAMA_CPP_DIR}/vendor
+  ${CODEC_CPP_DIR}/include
+  ${CODEC_CPP_DIR}/common
 )
 
 file(
   GLOB RN_LLAMA_SOURCE_FILES
-    "../rn-llama/*.c"
-    "../rn-llama/*.cpp"
-    "../rn-llama/codec/src/*.cpp"
-    "../rn-llama/codec/src/batch/*.cpp"
-    "../rn-llama/codec/src/models/*.cpp"
-    "../rn-llama/codec/src/ops/*.cpp"
-    "../rn-llama/codec/src/runtime/*.cpp"
-    "../rn-llama/codec/src/lm/*.cpp"
-    "../rn-llama/codec/common/*.cpp"
+    "${LLAMA_RN_DIR}/cpp/*.c"
+    "${LLAMA_RN_DIR}/cpp/*.cpp"
+    "${CODEC_CPP_DIR}/src/*.cpp"
+    "${CODEC_CPP_DIR}/src/batch/*.cpp"
+    "${CODEC_CPP_DIR}/src/models/*.cpp"
+    "${CODEC_CPP_DIR}/src/ops/*.cpp"
+    "${CODEC_CPP_DIR}/src/runtime/*.cpp"
+    "${CODEC_CPP_DIR}/src/lm/*.cpp"
+    "${CODEC_CPP_DIR}/common/audio_lm.cpp"
 )
 
 add_executable(llama-node

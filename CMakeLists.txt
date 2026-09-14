@@ -6,7 +6,18 @@ project (index)
 
 set(CMAKE_CXX_STANDARD 17)
 
+# llama.cpp and codec.cpp come from the llama.rn submodule, which vendors them in
+# upstream layout (src/llama.rn/vendor/*) with llama.rn's own patches already
+# applied. scripts/llama.cpp.patch carries only the llama.node-specific changes
+# on top of that tree (Windows/Vulkan build fixes, WASM tweaks, TTS grammar).
+set(LLAMA_RN_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/llama.rn)
+set(LLAMA_CPP_DIR ${LLAMA_RN_DIR}/vendor/llama.cpp)
+set(CODEC_CPP_DIR ${LLAMA_RN_DIR}/vendor/codec.cpp)
 set(LLAMA_CPP_PATCH_FILE ${CMAKE_CURRENT_SOURCE_DIR}/scripts/llama.cpp.patch)
+
+if (NOT EXISTS ${LLAMA_CPP_DIR}/CMakeLists.txt)
+  message(FATAL_ERROR "src/llama.rn submodule is missing; run: git submodule update --init src/llama.rn")
+endif()
 
 execute_process(
   COMMAND git apply --check ${LLAMA_CPP_PATCH_FILE}
@@ -40,7 +51,7 @@ else()
   if (LLAMA_CPP_PATCH_REVERSE_CHECK_RESULT EQUAL 0)
     message(STATUS "scripts/llama.cpp.patch already applied")
   else()
-    message(FATAL_ERROR "scripts/llama.cpp.patch does not match the current src/llama.cpp checkout")
+    message(FATAL_ERROR "scripts/llama.cpp.patch does not match the current src/llama.rn/vendor/llama.cpp checkout")
   endif()
 endif()
 
@@ -184,19 +195,20 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
 
 add_definitions(-DGGML_MAX_NAME=80)
 
-add_subdirectory("src/llama.cpp")
-add_subdirectory("src/llama.cpp/tools/mtmd")
+add_subdirectory(${LLAMA_CPP_DIR} ${CMAKE_BINARY_DIR}/llama.cpp)
+add_subdirectory(${LLAMA_CPP_DIR}/tools/mtmd ${CMAKE_BINARY_DIR}/mtmd)
 
 include_directories(
   ${CMAKE_JS_INC}
-  "src/llama.cpp"
-  "src/llama.cpp/common"
-  "src/llama.cpp/src"
-  "src/llama.cpp/ggml/include"
-  "src/llama.cpp/ggml/src"
-  "src/tools/mtmd"
-  "src/rn-llama/codec/include"
-  "src/rn-llama/codec/common"
+  ${LLAMA_RN_DIR}/cpp
+  ${LLAMA_CPP_DIR}
+  ${LLAMA_CPP_DIR}/common
+  ${LLAMA_CPP_DIR}/src
+  ${LLAMA_CPP_DIR}/ggml/include
+  ${LLAMA_CPP_DIR}/ggml/src
+  ${LLAMA_CPP_DIR}/tools/mtmd
+  ${CODEC_CPP_DIR}/include
+  ${CODEC_CPP_DIR}/common
 )
 
 file(
@@ -224,18 +236,21 @@ file(
     "src/DetokenizeWorker.h"
     "src/DecodeAudioTokenWorker.cpp"
     "src/DecodeAudioTokenWorker.h"
-    "src/rn-llama/*.c"
-    "src/rn-llama/*.cpp"
-    "src/rn-llama/*.h"
-    "src/rn-llama/*.hpp"
-    # codec.cpp (vendored via llama.rn) — TTS vocoder/audio-LM backend
-    "src/rn-llama/codec/src/*.cpp"
-    "src/rn-llama/codec/src/batch/*.cpp"
-    "src/rn-llama/codec/src/models/*.cpp"
-    "src/rn-llama/codec/src/ops/*.cpp"
-    "src/rn-llama/codec/src/runtime/*.cpp"
-    "src/rn-llama/codec/src/lm/*.cpp"
-    "src/rn-llama/codec/common/*.cpp"
+    # llama.rn core (cpp/jsi is React Native glue and is not built here)
+    "${LLAMA_RN_DIR}/cpp/*.c"
+    "${LLAMA_RN_DIR}/cpp/*.cpp"
+    "${LLAMA_RN_DIR}/cpp/*.h"
+    "${LLAMA_RN_DIR}/cpp/*.hpp"
+    # codec.cpp (vendored via llama.rn) — TTS vocoder/audio-LM backend.
+    # common/tts_runner{,_flow}.cpp are codec.cpp's reference host loop and
+    # need examples/utils; rn-tts drives its own AR loop via codec_lm_*.
+    "${CODEC_CPP_DIR}/src/*.cpp"
+    "${CODEC_CPP_DIR}/src/batch/*.cpp"
+    "${CODEC_CPP_DIR}/src/models/*.cpp"
+    "${CODEC_CPP_DIR}/src/ops/*.cpp"
+    "${CODEC_CPP_DIR}/src/runtime/*.cpp"
+    "${CODEC_CPP_DIR}/src/lm/*.cpp"
+    "${CODEC_CPP_DIR}/common/audio_lm.cpp"
 )
 
 if (NOT MSVC AND CMAKE_SYSTEM_NAME STREQUAL "Windows")
