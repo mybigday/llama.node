@@ -763,7 +763,7 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
             response_format.Has("schema")
                 ? json_stringify(
                       response_format.Get("schema").As<Napi::Object>())
-                : "{}";
+                : R"({"type":"object"})";
       }
     }
     auto tools_str = !is_nil(params.Get("tools"))
@@ -952,7 +952,7 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
       json_schema_str =
           response_format.Has("schema")
               ? json_stringify(response_format.Get("schema").As<Napi::Object>())
-              : "{}";
+              : R"({"type":"object"})";
     }
   }
 

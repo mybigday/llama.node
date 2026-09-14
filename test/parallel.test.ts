@@ -120,6 +120,22 @@ describe('Parallel Decoding', () => {
       expect(req2.requestId).toBeGreaterThan(0)
     }, 5000)
 
+    test('should constrain json_object completion to an object', async () => {
+      const request = await context.parallel.completion({
+        prompt: 'My name is Merve and my favorite',
+        n_predict: 16,
+        seed: 0,
+        temperature: 0,
+        response_format: { type: 'json_object' },
+      })
+
+      const result = await request.promise
+      const value = JSON.parse(result.text)
+      expect(value).not.toBeNull()
+      expect(typeof value).toBe('object')
+      expect(Array.isArray(value)).toBe(false)
+    })
+
     test('should accept thinking budget params', async () => {
       const request = await context.parallel.completion({
         prompt: 'Hello',

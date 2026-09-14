@@ -179,6 +179,45 @@ test('completion with tools', async () => {
   await model.release()
 })
 
+test('formats FunctionGemma tool calls', async () => {
+  const model = await loadModel({
+    model: path.resolve(__dirname, './Qwen3-0.6B-Q6_K.gguf'),
+    vocab_only: true,
+  })
+  try {
+    // Minimal template that selects the specialized FunctionGemma parser.
+    const template =
+      '{# <start_function_call>call:name{}<end_function_call> #}' +
+      '{% for message in messages %}<start_of_turn>{{ message.role }}\n' +
+      '{{ message.content }}<end_of_turn>\n{% endfor %}' +
+      '{% if add_generation_prompt %}<start_of_turn>model\n{% endif %}'
+    const chat = model.getFormattedChat(
+      [{ role: 'user', content: 'What time is it?' }],
+      template,
+      {
+        tool_choice: 'required',
+        tools: [
+          {
+            type: 'function',
+            function: {
+              name: 'get_time',
+              description: 'Returns the current time.',
+              parameters: { type: 'object', properties: {} },
+            },
+          },
+        ],
+      },
+    ) as JinjaFormattedChatResult
+    expect(chat.grammar).toContain('tool-get-time ::=')
+    expect(JSON.parse(chat.chat_parser).rules).toEqual(
+      expect.objectContaining({ 'tool-get-time': expect.any(Number) }),
+    )
+    expect(chat.preserved_tokens).toContain('<start_function_call>')
+  } finally {
+    await model.release()
+  }
+})
+
 test('completion accepts thinking budget params', async () => {
   const model = await loadModel({
     model: path.resolve(__dirname, './tiny-random-llama.gguf'),

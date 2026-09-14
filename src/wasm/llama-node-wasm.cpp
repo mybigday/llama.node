@@ -609,7 +609,7 @@ std::string response_schema_string(const json &options) {
     if (format.contains("schema")) {
       return format.at("schema").dump();
     }
-    return "{}";
+    return R"({"type":"object"})";
   }
   return "";
 }

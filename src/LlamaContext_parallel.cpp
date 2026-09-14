@@ -186,7 +186,7 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
       json_schema_str =
           response_format.Has("schema")
               ? json_stringify(response_format.Get("schema").As<Napi::Object>())
-              : "{}";
+              : R"({"type":"object"})";
     }
   }
 
