@@ -12,6 +12,7 @@
 #include <chrono>
 #include <mutex>
 #include <set>
+#include <sstream>
 #include <thread>
 
 // live contexts, so that everything can be released synchronously on process exit
@@ -418,6 +419,59 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
     }
   }
 
+  // Parse split_mode: how to split the model across multiple GPUs
+  // (same as the llama.cpp `--split-mode` argument)
+  {
+    auto split_mode = get_option<std::string>(options, "split_mode", "");
+    if (split_mode == "none") {
+      params.split_mode = LLAMA_SPLIT_MODE_NONE;
+    } else if (split_mode == "layer") {
+      params.split_mode = LLAMA_SPLIT_MODE_LAYER;
+    } else if (split_mode == "row") {
+      params.split_mode = LLAMA_SPLIT_MODE_ROW;
+    } else if (split_mode == "tensor") {
+      params.split_mode = LLAMA_SPLIT_MODE_TENSOR;
+    } else if (!split_mode.empty()) {
+      Napi::TypeError::New(env, "split_mode must be one of: none, layer, row, tensor")
+          .ThrowAsJavaScriptException();
+      return;
+    }
+  }
+
+  // The GPU used for the whole model when split_mode is "none", and for
+  // scratch/small tensors otherwise (same as the llama.cpp `--main-gpu` argument)
+  params.main_gpu = get_option<int32_t>(options, "main_gpu", params.main_gpu);
+
+  // Parse tensor_split: array of proportions or a comma-separated string
+  // (same format as the llama.cpp `--tensor-split` argument, e.g. "3,1")
+  if (options.Has("tensor_split") && !is_nil(options.Get("tensor_split"))) {
+    std::vector<float> split;
+    auto value = options.Get("tensor_split");
+    if (value.IsArray()) {
+      auto array = value.As<Napi::Array>();
+      for (uint32_t i = 0; i < array.Length(); i++) {
+        split.push_back(array.Get(i).ToNumber().FloatValue());
+      }
+    } else if (value.IsString()) {
+      std::stringstream ss(value.ToString().Utf8Value());
+      std::string item;
+      while (std::getline(ss, item, ',')) {
+        if (!item.empty()) {
+          split.push_back(std::stof(item));
+        }
+      }
+    }
+    if (split.size() > llama_max_devices()) {
+      Napi::TypeError::New(env, string_format("tensor_split has %zu entries, but system only supports %zu devices",
+                                              split.size(), llama_max_devices()))
+          .ThrowAsJavaScriptException();
+      return;
+    }
+    for (size_t i = 0; i < llama_max_devices(); i++) {
+      params.tensor_split[i] = i < split.size() ? split[i] : 0.0f;
+    }
+  }
+
   std::vector<common_adapter_lora_info> lora;
   auto lora_path = get_option<std::string>(options, "lora", "");
   auto lora_scaled = get_option<float>(options, "lora_scaled", 1.0f);
@@ -495,6 +549,7 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
     delete _rn_ctx;
     _rn_ctx = nullptr;
     Napi::TypeError::New(env, "Failed to load model").ThrowAsJavaScriptException();
+    return;
   }
 
   // Collect used devices from the loaded model

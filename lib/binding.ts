@@ -100,6 +100,26 @@ export type LlamaModelOptions = {
    * Example: ['Metal', 'BLAS', 'CPU']
    */
   devices?: string[]
+  /**
+   * Fraction of the model to offload to each GPU, as a list of proportions
+   * (e.g. `[3, 1]`) or a comma-separated string (e.g. `'3,1'`).
+   * Same as the llama.cpp `--tensor-split` argument.
+   */
+  tensor_split?: number[] | string
+  /**
+   * How to split the model across multiple GPUs. Same as the llama.cpp `--split-mode` argument.
+   * - `none`: use one GPU only (see `main_gpu`)
+   * - `layer` (default): split layers and KV across GPUs (pipelined)
+   * - `row`: split weights across GPUs by rows (parallelized)
+   * - `tensor`: split weights and KV across GPUs (parallelized, experimental)
+   */
+  split_mode?: 'none' | 'layer' | 'row' | 'tensor'
+  /**
+   * The GPU used for the entire model when `split_mode` is `none`,
+   * otherwise the GPU used for scratch and small tensors.
+   * Same as the llama.cpp `--main-gpu` argument. Default: 0
+   */
+  main_gpu?: number
   use_mlock?: boolean
   use_mmap?: boolean
   vocab_only?: boolean
