@@ -40,7 +40,7 @@ index a7e37057..ac919abc 100644
  
  analyze_reasoning::analyze_reasoning(const common_chat_template & tmpl, bool supports_tools)
 diff --git a/src/llama.rn/vendor/llama.cpp/common/chat.cpp b/src/llama.rn/vendor/llama.cpp/common/chat.cpp
-index b3455dc1..c0ad7d26 100644
+index 44cd46c2..25af87d3 100644
 --- a/src/llama.rn/vendor/llama.cpp/common/chat.cpp
 +++ b/src/llama.rn/vendor/llama.cpp/common/chat.cpp
 @@ -35,11 +35,22 @@ using json = common_json;
@@ -189,7 +189,7 @@ index dc8cbbe3..7d86cf29 100644
              auto & entry = queue[tail];
              entry.is_end = true;
 diff --git a/src/llama.rn/vendor/llama.cpp/common/parsers/sources.cmake b/src/llama.rn/vendor/llama.cpp/common/parsers/sources.cmake
-index 9d7fb099..5add69fb 100644
+index 70af84e2..73aef6f1 100644
 --- a/src/llama.rn/vendor/llama.cpp/common/parsers/sources.cmake
 +++ b/src/llama.rn/vendor/llama.cpp/common/parsers/sources.cmake
 @@ -5,6 +5,7 @@ set(LLAMA_CHAT_PARSERS_SOURCES
@@ -214,10 +214,10 @@ index 1c7338ee..89018bd3 100644
              check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
              if (NOT "${GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E}" STREQUAL "")
 diff --git a/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp b/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-index 63cfad00..464eec05 100644
+index d3601577..3f233d64 100644
 --- a/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
 +++ b/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-@@ -6509,8 +6509,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
+@@ -7039,8 +7039,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
      GGML_UNUSED(dev);
  }
  
@@ -243,7 +243,7 @@ index 63cfad00..464eec05 100644
      *total = *free;
  
      GGML_UNUSED(dev);
-@@ -7462,7 +7478,12 @@ static void ggml_hexagon_init(ggml_backend_reg * reg) {
+@@ -8030,7 +8046,12 @@ static void ggml_hexagon_init(ggml_backend_reg * reg) {
  #if defined(__ANDROID__)
      if (opt_arch < 75) {
          opt_ndev = 1;
@@ -258,10 +258,10 @@ index 63cfad00..464eec05 100644
  #endif
  
 diff --git a/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt b/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
-index e733ad5c..2dd7d9bf 100644
+index af951a2b..78d2f50a 100644
 --- a/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
 +++ b/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
-@@ -149,7 +149,7 @@ if (Vulkan_FOUND)
+@@ -154,7 +154,7 @@ if (Vulkan_FOUND)
      endif()
  
      # Set up toolchain for host compilation whether cross-compiling or not
@@ -270,7 +270,7 @@ index e733ad5c..2dd7d9bf 100644
          if (GGML_VULKAN_SHADERS_GEN_TOOLCHAIN)
              set(HOST_CMAKE_TOOLCHAIN_FILE ${GGML_VULKAN_SHADERS_GEN_TOOLCHAIN})
          else()
-@@ -169,7 +169,7 @@ if (Vulkan_FOUND)
+@@ -174,7 +174,7 @@ if (Vulkan_FOUND)
  
      include(ExternalProject)
  
