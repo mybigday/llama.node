@@ -214,10 +214,10 @@ index 1c7338ee..89018bd3 100644
              check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
              if (NOT "${GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E}" STREQUAL "")
 diff --git a/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp b/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-index d3601577..3f233d64 100644
+index 2f81f85b..f904863c 100644
 --- a/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
 +++ b/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-@@ -7039,8 +7039,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
+@@ -7257,8 +7257,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
      GGML_UNUSED(dev);
  }
  
@@ -243,7 +243,7 @@ index d3601577..3f233d64 100644
      *total = *free;
  
      GGML_UNUSED(dev);
-@@ -8030,7 +8046,12 @@ static void ggml_hexagon_init(ggml_backend_reg * reg) {
+@@ -8254,7 +8270,12 @@ static void ggml_hexagon_init(ggml_backend_reg * reg) {
  #if defined(__ANDROID__)
      if (opt_arch < 75) {
          opt_ndev = 1;
@@ -258,10 +258,10 @@ index d3601577..3f233d64 100644
  #endif
  
 diff --git a/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt b/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
-index af951a2b..78d2f50a 100644
+index d7dec92a..69507c56 100644
 --- a/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
 +++ b/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
-@@ -154,7 +154,7 @@ if (Vulkan_FOUND)
+@@ -159,7 +159,7 @@ if (Vulkan_FOUND)
      endif()
  
      # Set up toolchain for host compilation whether cross-compiling or not
@@ -270,7 +270,7 @@ index af951a2b..78d2f50a 100644
          if (GGML_VULKAN_SHADERS_GEN_TOOLCHAIN)
              set(HOST_CMAKE_TOOLCHAIN_FILE ${GGML_VULKAN_SHADERS_GEN_TOOLCHAIN})
          else()
-@@ -174,7 +174,7 @@ if (Vulkan_FOUND)
+@@ -179,7 +179,7 @@ if (Vulkan_FOUND)
  
      include(ExternalProject)
  
@@ -478,7 +478,7 @@ index fb41a961..6587883c 100644
              if (cond.empty()) {
                  throw std::runtime_error("#elif without #if");
 diff --git a/src/llama.rn/vendor/llama.cpp/src/llama-grammar.cpp b/src/llama.rn/vendor/llama.cpp/src/llama-grammar.cpp
-index deffec8c..8d67bf20 100644
+index 0a8a61e7..ccdbba68 100644
 --- a/src/llama.rn/vendor/llama.cpp/src/llama-grammar.cpp
 +++ b/src/llama.rn/vendor/llama.cpp/src/llama-grammar.cpp
 @@ -96,7 +96,9 @@ static bool is_digit_char(char c) {
@@ -492,7 +492,7 @@ index deffec8c..8d67bf20 100644
  }
  
  static std::pair<uint32_t, const char *> parse_hex(const char * src, int size) {
-@@ -439,7 +441,19 @@ const char * llama_grammar_parser::parse_alternates(
+@@ -443,7 +445,19 @@ const char * llama_grammar_parser::parse_alternates(
          bool                is_nested) {
      llama_grammar_rule rule;
      const char * pos = parse_sequence(src, rule_name, rule, is_nested);
