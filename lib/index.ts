@@ -11,6 +11,9 @@ import type {
   EmbeddingResult,
   RerankParams,
   RerankResult,
+  DecisionQuestions,
+  DecisionRequest,
+  DecisionResult,
   CompletionResponseFormat,
   ModelInfo,
   JinjaFormattedChatResult,
@@ -303,6 +306,23 @@ class LlamaContextWrapper {
             ) => b.score - a.score,
           )
       })
+  }
+
+  /**
+   * Answer typed questions about a state with a decision model
+   * (see `getModelInfo().decision`), in the shape of the TypeSafe
+   * `/v1/systemone` API. Each answer is read from one forward pass, no token
+   * is generated. It runs on the sequence of `completion()`, whose cached
+   * prompt is dropped: the next completion evaluates its prompt from the start.
+   *
+   * Rejects if the request is invalid, if the model is not a decision
+   * model of a supported type, or if parallel mode is enabled (use
+   * `parallel.decide()` then).
+   */
+  decide<const Q extends DecisionQuestions>(
+    request: DecisionRequest<Q>,
+  ): Promise<DecisionResult<Q>> {
+    return this.ctx.decide(request) as Promise<DecisionResult<Q>>
   }
 
   saveSession(path: string): Promise<void> {

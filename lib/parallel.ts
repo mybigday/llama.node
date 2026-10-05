@@ -3,6 +3,9 @@ import type {
   LlamaContext,
   LlamaCompletionToken,
   RerankParams,
+  DecisionQuestions,
+  DecisionRequest,
+  DecisionResult,
   ParallelStatus,
   LlamaParallelCompletionOptions,
 } from './binding'
@@ -272,6 +275,49 @@ export class LlamaParallelAPI {
     return {
       requestId,
       promise,
+    }
+  }
+
+  /**
+   * Queue a decision request for parallel processing
+   * @param request The state and the typed questions, see `decide()`
+   * @returns Object with requestId, promise for the answers, and stop function.
+   *          The promise rejects if the request fails after it was queued or
+   *          is stopped.
+   */
+  async decide<const Q extends DecisionQuestions>(
+    request: DecisionRequest<Q>,
+  ): Promise<{
+    requestId: number
+    promise: Promise<DecisionResult<Q>>
+    stop: () => void
+  }> {
+    if (!this.enabled) {
+      throw new Error('Parallel mode is not enabled. Call enable() first.')
+    }
+
+    let resolveResult: (value: DecisionResult<Q>) => void
+    let rejectResult: (reason?: any) => void
+
+    const promise = new Promise<DecisionResult<Q>>((res, rej) => {
+      resolveResult = res
+      rejectResult = rej
+    })
+
+    // Queue the decision immediately (this is synchronous!)
+    const { requestId } = this.context.queueDecide(request, (error, result) => {
+      if (error) {
+        rejectResult(error)
+      } else {
+        resolveResult(result as DecisionResult<Q>)
+      }
+    })
+
+    return {
+      requestId,
+      promise,
+      // the native side rejects the promise once the request is dropped
+      stop: () => this.context.cancelRequest(requestId),
     }
   }
 

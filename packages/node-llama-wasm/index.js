@@ -951,6 +951,17 @@ export class LlamaParallelAPI {
     return { requestId, promise }
   }
 
+  async decide(request) {
+    const { requestId, promise } = this.enqueue('decision', () =>
+      this.context.decide(request),
+    )
+    return {
+      requestId,
+      promise,
+      stop: () => this.cancelRequest(requestId),
+    }
+  }
+
   cancelRequest(requestId) {
     const queuedIndex = this.queue.findIndex(
       (request) => request.requestId === requestId,
@@ -1232,6 +1243,18 @@ export class LlamaContextWrapper {
       }))
       .sort((a, b) => b.score - a.score)
   }
+  async decide(request) {
+    const staged = { ...request }
+    if (Array.isArray(request?.images)) {
+      staged.images = await writeMediaSources(
+        this.mod,
+        request.images,
+        this.downloadOptions,
+      )
+    }
+    return this.actionAsync('decide', staged)
+  }
+
 
   async saveSession() {
     const path = `/sessions/session-${nextFileId++}.bin`
@@ -1541,6 +1564,11 @@ class LlamaWorkerContextWrapper {
   async rerank(query, documents, params = {}) {
     await this.takeQueuedMutationError()
     return this.enqueueWorker('rerank', [query, documents, params])
+  }
+
+  async decide(request) {
+    await this.takeQueuedMutationError()
+    return this.enqueueWorker('decide', [request])
   }
 
   async saveSession() {

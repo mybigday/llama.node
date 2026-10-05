@@ -498,7 +498,7 @@ json model_info_json() {
       {"jinja", jinja},
   };
 
-  return {
+  json info = {
       {"desc", desc},
       {"nEmbd", llama_model_n_embd(g_ctx->model)},
       {"nParams", llama_model_n_params(g_ctx->model)},
@@ -510,6 +510,10 @@ json model_info_json() {
        g_ctx->validateModelChatTemplate(false, nullptr)},
       {"metadata", metadata},
   };
+  if (g_ctx->decision.is_decision_model()) {
+    info["decision"] = rnllama::from_common_json(g_ctx->decision.info());
+  }
+  return info;
 }
 
 common_params params_from_load_options(const json &options) {
@@ -735,6 +739,9 @@ json tool_calls_json(const std::vector<common_chat_tool_call> &calls) {
 
 json action_completion(const json &options) {
   require_context();
+  if (!g_ctx->canGenerateText()) {
+    throw std::runtime_error("This model only answers decisions, see decide()");
+  }
 
   std::vector<std::string> stop_words = string_array(options, "stop");
   std::vector<std::string> media_paths = string_array(options, "media_paths");
@@ -1138,6 +1145,12 @@ json action_rerank(const json &payload) {
   return ok({{"results", results}});
 }
 
+json action_decide(const json &payload) {
+  require_context();
+  // TypeSafe /v1/systemone request in, response out (see rn-decision.h)
+  return ok(g_ctx->decide(payload));
+}
+
 std::vector<common_adapter_lora_info> lora_adapters_from_json(
     const json &payload) {
   std::vector<common_adapter_lora_info> lora;
@@ -1305,6 +1318,9 @@ const char *llama_node_wasm_action(const char *action_c,
     }
     if (action == "rerank") {
       return set_result(action_rerank(payload));
+    }
+    if (action == "decide") {
+      return set_result(action_decide(payload));
     }
     if (action == "apply_lora_adapters") {
       return set_result(action_apply_lora_adapters(payload));

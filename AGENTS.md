@@ -10,6 +10,7 @@ llama.node is a Node.js binding for llama.cpp, designed to maintain API compatib
 - LoRA adapters for model fine-tuning
 - Session save/load for context persistence
 - Embeddings and reranking capabilities
+- Typed decision models (`decide()`): `choice` / `score` / `noul` answers with calibrated probabilities
 
 ## Architecture
 
@@ -46,6 +47,7 @@ All async operations use N-API AsyncWorker to avoid blocking the event loop:
 - **TokenizeWorker/DetokenizeWorker**: Token conversion
 - **EmbeddingWorker**: Generate embeddings
 - **RerankWorker**: Document reranking
+- **DecideWorker**: Typed decisions (`decide()`, TypeSafe `/v1/systemone` request/response)
 - **LoadSessionWorker/SaveSessionWorker**: Context state persistence
 - **DecodeAudioTokenWorker**: TTS audio token / continuous-latent decoding
 
@@ -251,8 +253,8 @@ On isolated pages with `SharedArrayBuffer`, CPU uses the pthread artifact and `n
 ## Testing Considerations
 
 - Test models are cached in `test/*.gguf` (downloaded on first test run)
-- Models used: tiny-random-llama, flan-t5-small, bge-small-en, Qwen3-0.6B, Soprano-1.1-80M (+ codec, smallest TTS pair)
-- Tests verify: completion, streaming, tokenization, embeddings, multimodal, TTS
+- Models used: tiny-random-llama, flan-t5-small, bge-small-en, Qwen3-0.6B, Soprano-1.1-80M (+ codec, smallest TTS pair), Julia-1 (typed decision model)
+- Tests verify: completion, streaming, tokenization, embeddings, multimodal, TTS, typed decisions
 - Use `vocab_only: true` for fast model info/tokenization tests without loading full model
 - Browser WASM test page: `test/web/llama-node-wasm.html`
 - Serve WASM tests with `npm run serve-wasm-test` and open `http://localhost:8088/test/web/llama-node-wasm.html`
