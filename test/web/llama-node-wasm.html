@@ -227,6 +227,11 @@
             id="model-url"
             value="https://huggingface.co/Durlabh/gemma-270m-q4-k-m-gguf/resolve/main/gemma3-270m-it-q4_k_m.gguf"
           />
+          <label for="decision-model-url">Decision model URL</label>
+          <input
+            id="decision-model-url"
+            value="https://huggingface.co/ggml-org/Julia-1-GGUF/resolve/main/Julia-1-Q8_0.gguf"
+          />
           <label class="toggle" for="use-gpu">
             <input id="use-gpu" type="checkbox" />
             <span>WebGPU</span>
@@ -253,6 +258,7 @@
             <li><span class="status" id="s-completion">wait</span><span>completion</span></li>
             <li><span class="status" id="s-state">wait</span><span>save buffer / load URL</span></li>
             <li><span class="status" id="s-tools">wait</span><span>tool_calls format / parse</span></li>
+            <li><span class="status" id="s-decide">wait</span><span>decide / parallel.decide</span></li>
           </ul>
         </section>
       </div>
@@ -295,7 +301,7 @@
       const runButton = $('run')
       const nativeLogToggle = $('native-log')
       const logEl = $('log')
-      const statusIds = ['load', 'ui', 'token', 'completion', 'state', 'tools']
+      const statusIds = ['load', 'ui', 'token', 'completion', 'state', 'tools', 'decide']
 
       const webGpuSupported = isWebGpuSupported()
       $('runtime').textContent = [
@@ -542,6 +548,64 @@
           setStatus('tools', 'pass')
           log('tool formatted chat', formatted)
           log('tool completion result', toolCompletion)
+
+          await context.release()
+          context = null
+
+          const decisionRequest = {
+            state: { utterance: 'one medium fries please', cart: [] },
+            questions: {
+              is_ordering: { type: 'noul', instructions: 'The customer is ordering' },
+              product: {
+                type: 'choice',
+                instructions: 'Which product is ordered?',
+                criteria: { 'fries-m': 'Fries M', burger: 'Burger', none: null },
+              },
+              mood: {
+                type: 'score',
+                instructions: 'How impatient is the customer?',
+                criteria: ['calm', 'neutral', 'impatient'],
+              },
+            },
+          }
+          context = await loadModel(
+            {
+              model: $('decision-model-url').value.trim(),
+              n_ctx: 2048,
+              n_gpu_layers: $('use-gpu').checked ? 99999 : 0,
+              use_mmap: false,
+            },
+            createLoadProgressLogger(),
+          )
+          const { decision } = context.getModelInfo()
+          assert(decision, 'model info has no decision field')
+          log('decision model', decision)
+          const decided = await context.decide(decisionRequest)
+          const { answers } = decided
+          assert(
+            Object.keys(answers).join() === 'is_ordering,product,mood',
+            'decide returned unexpected answers',
+          )
+          assert(answers.product.choice in answers.product.probabilities, 'choice is not an option')
+          const probabilitySum = Object.values(answers.product.probabilities).reduce(
+            (a, b) => a + b,
+            0,
+          )
+          assert(Math.abs(probabilitySum - 1) < 1e-4, 'choice probabilities do not sum to 1')
+          assert(answers.mood.legend['2'] === 'impatient', 'score legend is wrong')
+          assert(answers.is_ordering.noul >= 0 && answers.is_ordering.noul <= 1, 'noul out of range')
+          log('decide result', decided)
+
+          await context.parallel.enable({ n_parallel: 2 })
+          const queued = await context.parallel.decide(decisionRequest)
+          const parallelDecided = await queued.promise
+          assert(
+            JSON.stringify(parallelDecided.answers) === JSON.stringify(answers),
+            'parallel.decide differs from decide',
+          )
+          context.parallel.disable()
+          setStatus('decide', 'pass')
+          log('parallel decide result', parallelDecided)
         } catch (error) {
           const pending = statusIds.find((id) => $('s-' + id).textContent === 'run')
           if (pending) setStatus(pending, 'fail')

@@ -126,6 +126,13 @@ async function main() {
         'https://huggingface.co/ggml-org/SmolVLM-256M-Instruct-GGUF/resolve/main/mmproj-SmolVLM-256M-Instruct-Q8_0.gguf?download=true',
       ],
     },
+    // Typed decision model (decide()), the smallest one (~168MB)
+    {
+      path: path.join(testDir, 'Julia-1-Q8_0.gguf'),
+      urls: [
+        'https://huggingface.co/ggml-org/Julia-1-GGUF/resolve/main/Julia-1-Q8_0.gguf?download=true',
+      ],
+    },
     // Uncomment to test with audio
     // {
     //   path: path.join(testDir, 'Llama-3.2-1B-Instruct-Q4_K_M.gguf'),

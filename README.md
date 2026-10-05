@@ -61,6 +61,55 @@ const { text } = await context.completion(
 console.log('Result:', text)
 ```
 
+## Typed Decisions
+
+A typed decision model ([decision models in llama.cpp](https://huggingface.co/blog/ggml-org/decision-models-in-llamacpp),
+e.g. `ggml-org/Julia-1-GGUF`, `ggml-org/Laya-GGUF`, `ggml-org/Kev-0.8B-GGUF`)
+answers `choice` / `score` / `noul` questions about a state with calibrated
+probabilities, one forward pass per answer and no generated tokens. The request
+and the response follow the TypeSafe `/v1/systemone` API that llama-server serves.
+
+```js
+const context = await loadModel({ model: 'path/to/Julia-1-Q8_0.gguf' })
+console.log(context.getModelInfo().decision)
+// { type: 'laya', nOptionsMax: 255, imageInput: false, textGeneration: false }
+
+const { answers, usage } = await context.decide({
+  state: { utterance: 'a medium fries please', cart: [] },
+  questions: {
+    is_ordering: { type: 'noul', instructions: 'The customer is ordering' },
+    product: {
+      type: 'choice',
+      instructions: 'Which product?',
+      criteria: { 'fries-m': 'Fries M', none: null },
+    },
+    mood: {
+      type: 'score',
+      instructions: 'How impatient?',
+      criteria: ['calm', 'neutral', 'impatient'],
+    },
+  },
+})
+answers.product.choice // 'fries-m' | 'none', typed from the request
+answers.product.probabilities // { 'fries-m': 0.99, none: 0.01 }
+answers.mood.score // expected level index, 0..2
+answers.is_ordering.noul // probability of true
+```
+
+- `decide()` runs on the context's own sequence and drops the cached prompt of
+  `completion()`. With parallel mode enabled, use
+  `context.parallel.decide(request)` instead, which returns
+  `{ requestId, promise, stop }`.
+- Images go in `images` (file paths or data URLs), or as `image_url` parts of a
+  chat-message state, after `initMultimodal()`, for a model whose
+  `decision.imageInput` is true.
+- Models that only answer decisions (`decision.textGeneration: false`, such as
+  laya, kev and clef) refuse `completion()`.
+- A `system_one` model with a classification head (`decision.readout: 'rank_head'`)
+  needs `pooling_type: 'rank'` and `embedding: true` when it is loaded.
+
+See [`examples/decision.mjs`](examples/decision.mjs).
+
 ## Text-to-Speech (TTS) — Experimental
 
 TTS is backed by [codec.cpp](https://github.com/mybigday/codec.cpp) (vendored
@@ -151,8 +200,8 @@ uses `emscripten/emsdk:4.0.13` on amd64 hosts. Override with `EMSCRIPTEN_IMAGE`
 or `EMSCRIPTEN_PLATFORM` if you need a specific container image.
 
 `loadModel()` runs the WASM runtime in a dedicated Web Worker by default so
-model loading, tokenization, completion, state, embeddings, rerank, multimodal
-staging, and benchmarks do not block the browser UI thread. On isolated pages
+model loading, tokenization, completion, state, embeddings, rerank, decisions,
+multimodal staging, and benchmarks do not block the browser UI thread. On isolated pages
 with `SharedArrayBuffer`, the CPU path selects the pthread build and defaults
 `n_threads` to `min(4, navigator.hardwareConcurrency)`. Pass
 `wasm: { threads: false }` to force the single-thread artifact, or

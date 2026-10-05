@@ -39,6 +39,7 @@ private:
   Napi::Value Detokenize(const Napi::CallbackInfo &info);
   Napi::Value Embedding(const Napi::CallbackInfo &info);
   Napi::Value Rerank(const Napi::CallbackInfo &info);
+  Napi::Value Decide(const Napi::CallbackInfo &info);
   Napi::Value SaveSession(const Napi::CallbackInfo &info);
   Napi::Value LoadSession(const Napi::CallbackInfo &info);
   void ApplyLoraAdapters(const Napi::CallbackInfo &info);
@@ -74,6 +75,7 @@ private:
   Napi::Value QueueCompletion(const Napi::CallbackInfo &info);
   Napi::Value QueueEmbedding(const Napi::CallbackInfo &info);
   Napi::Value QueueRerank(const Napi::CallbackInfo &info);
+  Napi::Value QueueDecide(const Napi::CallbackInfo &info);
   void CancelRequest(const Napi::CallbackInfo &info);
   Napi::Value GetParallelStatus(const Napi::CallbackInfo &info);
   Napi::Value SubscribeParallelStatus(const Napi::CallbackInfo &info);

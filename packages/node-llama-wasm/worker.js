@@ -79,6 +79,8 @@ const callMethod = async (id, method, args) => {
       return requireContext().embedding(args[0], args[1])
     case 'rerank':
       return requireContext().rerank(args[0], args[1], args[2])
+    case 'decide':
+      return requireContext().decide(args[0])
     case 'saveSession':
       return requireContext().saveSession()
     case 'loadSession':

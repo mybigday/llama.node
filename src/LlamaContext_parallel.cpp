@@ -105,6 +105,12 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
     return env.Undefined();
   }
 
+  if (!_rn_ctx->canGenerateText()) {
+    Napi::Error::New(env, "This model only answers decisions, see decide()")
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
   auto options = info[0].As<Napi::Object>();
 
   // Parse all the completion parameters similar to Completion()
@@ -866,6 +872,98 @@ Napi::Value LlamaContext::QueueRerank(const Napi::CallbackInfo &info) {
       tsfn_holder->release();
     }
   );
+
+  Napi::Object result = Napi::Object::New(env);
+  result.Set("requestId", Napi::Number::New(env, requestId));
+  return result;
+}
+
+// QueueDecide(request: DecisionRequest, callback?: (error, result) => void): { requestId: number }
+Napi::Value LlamaContext::QueueDecide(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+
+  if (!_rn_ctx) {
+    Napi::TypeError::New(env, "Context is disposed").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  if (!_rn_ctx->parallel_mode_enabled) {
+    Napi::TypeError::New(env, "Parallel mode is not enabled. Call enableParallelMode() first.")
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  if (info.Length() < 1 || !info[0].IsObject() || info[0].IsArray()) {
+    Napi::TypeError::New(env, "Decision request object expected")
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  json request;
+  try {
+    request = json::parse(json_stringify(info[0]));
+  } catch (const std::exception &e) {
+    Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  // Create callback wrapper
+  std::shared_ptr<ManagedThreadSafeFunction> tsfn_holder;
+  bool hasCallback = info.Length() > 1 && info[1].IsFunction();
+
+  if (hasCallback) {
+    tsfn_holder = std::make_shared<ManagedThreadSafeFunction>(
+        Napi::ThreadSafeFunction::New(env,
+                                      info[1].As<Napi::Function>(),
+                                      "QueueDecideCallback",
+                                      0,
+                                      1));
+  }
+
+  int32_t requestId;
+  try {
+    // A request that cannot be answered throws here; a failure after it is
+    // queued (or a cancel) comes back as {"error": message}
+    requestId = _rn_ctx->slot_manager->queue_decision_request(
+      request,
+      [tsfn_holder, hasCallback](int32_t requestId, const json& result) {
+        if (!hasCallback) return;
+
+        struct DecideData {
+          bool is_error;
+          std::string payload;
+        };
+
+        auto callback = [](Napi::Env env, Napi::Function jsCallback, DecideData* data) {
+          if (data->is_error) {
+            jsCallback.Call({Napi::Error::New(env, data->payload).Value(), env.Undefined()});
+          } else {
+            jsCallback.Call({env.Null(), json_parse(env, data->payload)});
+          }
+          delete data;
+        };
+
+        DecideData* data;
+        if (result.is_object() && result.contains("error")) {
+          const auto &error = result.at("error");
+          data = new DecideData{true, error.is_string() ? error.get<std::string>() : error.dump()};
+        } else {
+          data = new DecideData{false, result.dump()};
+        }
+        auto status = tsfn_holder->tsfn.BlockingCall(data, callback);
+        if (status != napi_ok) {
+          delete data;
+        }
+        tsfn_holder->release();
+      }
+    );
+  } catch (const std::exception &e) {
+    if (tsfn_holder) {
+      tsfn_holder->release();
+    }
+    Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
 
   Napi::Object result = Napi::Object::New(env);
   result.Set("requestId", Napi::Number::New(env, requestId));

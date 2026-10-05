@@ -226,6 +226,8 @@ file(
     "src/EmbeddingWorker.h"
     "src/RerankWorker.cpp"
     "src/RerankWorker.h"
+    "src/DecideWorker.cpp"
+    "src/DecideWorker.h"
     "src/LoadSessionWorker.cpp"
     "src/LoadSessionWorker.h"
     "src/SaveSessionWorker.cpp"

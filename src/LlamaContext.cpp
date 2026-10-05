@@ -2,6 +2,7 @@
 #include "DisposeWorker.h"
 #include "EmbeddingWorker.h"
 #include "RerankWorker.h"
+#include "DecideWorker.h"
 #include "LlamaCompletionWorker.h"
 #include "LoadSessionWorker.h"
 #include "SaveSessionWorker.h"
@@ -158,6 +159,8 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
            "embedding", static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::Rerank>(
            "rerank", static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::Decide>(
+           "decide", static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::SaveSession>(
            "saveSession",
            static_cast<napi_property_attributes>(napi_enumerable)),
@@ -248,6 +251,9 @@ void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
            static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::QueueRerank>(
            "queueRerank",
+           static_cast<napi_property_attributes>(napi_enumerable)),
+       InstanceMethod<&LlamaContext::QueueDecide>(
+           "queueDecide",
            static_cast<napi_property_attributes>(napi_enumerable)),
        InstanceMethod<&LlamaContext::CancelRequest>(
            "cancelRequest",
@@ -764,6 +770,10 @@ Napi::Value LlamaContext::GetModelInfo(const Napi::CallbackInfo &info) {
   // Deprecated: use chatTemplates.llamaChat instead
   details.Set("isChatTemplateSupported",
               _rn_ctx->validateModelChatTemplate(false, nullptr));
+  if (_rn_ctx->decision.is_decision_model()) {
+    details.Set("decision",
+                json_parse(info.Env(), _rn_ctx->decision.info().dump()));
+  }
   return details;
 }
 
@@ -933,6 +943,11 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
   if (_wip != nullptr) {
     Napi::TypeError::New(env, "Another completion is in progress")
         .ThrowAsJavaScriptException();
+  }
+  if (_rn_ctx && !_rn_ctx->canGenerateText()) {
+    Napi::Error::New(env, "This model only answers decisions, see decide()")
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
   }
   auto options = info[0].As<Napi::Object>();
 
@@ -1352,6 +1367,31 @@ Napi::Value LlamaContext::Rerank(const Napi::CallbackInfo &info) {
   rerankParams.embd_normalize = get_option<int32_t>(options, "normalize", -1);
 
   auto *worker = new RerankWorker(info, _rn_ctx, query, documents, rerankParams);
+  worker->Queue();
+  return worker->Promise();
+}
+
+// decide(request: DecisionRequest): Promise<DecisionResult>
+Napi::Value LlamaContext::Decide(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (info.Length() < 1 || !info[0].IsObject() || info[0].IsArray()) {
+    Napi::TypeError::New(env, "Decision request object expected")
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+  if (!_rn_ctx) {
+    Napi::TypeError::New(env, "Context is disposed")
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+  // The decision runs on the completion's sequence, which starts over
+  if (_wip != nullptr) {
+    Napi::TypeError::New(env, "Another completion is in progress")
+        .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  auto *worker = new DecideWorker(info, _rn_ctx, json_stringify(info[0]));
   worker->Queue();
   return worker->Promise();
 }

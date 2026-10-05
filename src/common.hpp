@@ -31,6 +31,12 @@ static std::string json_stringify(const Napi::Value &value) {
   return stringify.Call(json, {value}).As<Napi::String>().ToString();
 }
 
+static Napi::Value json_parse(Napi::Env env, const std::string &text) {
+  Napi::Object json = env.Global().Get("JSON").As<Napi::Object>();
+  Napi::Function parse = json.Get("parse").As<Napi::Function>();
+  return parse.Call(json, {Napi::String::New(env, text)});
+}
+
 static void console_log(Napi::Env env, const std::string &message) {
   Napi::Function consoleLog = env.Global()
                                   .Get("console")
