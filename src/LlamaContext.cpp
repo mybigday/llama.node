@@ -50,6 +50,27 @@ static std::string format_string(const std::string &format, Args... args) {
 
 using json = nlohmann::ordered_json;
 
+// Applies CUDA pool options to the CUDA backends created on this thread while
+// in scope. No-op when the CUDA backend is not compiled in.
+class CudaPoolOptionsScope {
+public:
+  CudaPoolOptionsScope(bool use_vmm, size_t vmm_pool_size) {
+    auto *reg = ggml_backend_reg_by_name("CUDA");
+    if (reg) {
+      _set = (set_fn)ggml_backend_reg_get_proc_address(
+          reg, "ggml_backend_cuda_set_pool_options");
+    }
+    if (_set) _set(use_vmm, vmm_pool_size);
+  }
+  ~CudaPoolOptionsScope() {
+    if (_set) _set(true, 0);
+  }
+
+private:
+  typedef void (*set_fn)(bool, size_t);
+  set_fn _set = nullptr;
+};
+
 static void append_chat_template_grammar_trigger(
     llama_context *ctx, common_params_sampling &sampling,
     const common_grammar_trigger &trigger) {
@@ -548,7 +569,14 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
     params.load_progress_callback_user_data = this;
   }
 
-  if (!_rn_ctx->loadModel(params)) {
+  _cuda_use_vmm = get_option<bool>(options, "cuda_use_vmm", true);
+  _cuda_vmm_pool_size = (size_t)get_option<double>(options, "cuda_vmm_pool_size", 0);
+  bool model_loaded;
+  {
+    CudaPoolOptionsScope cuda_pool_scope(_cuda_use_vmm, _cuda_vmm_pool_size);
+    model_loaded = _rn_ctx->loadModel(params);
+  }
+  if (!model_loaded) {
     if (has_progress_callback) {
       _progress_tsfn.Release();
     }
@@ -1600,6 +1628,7 @@ Napi::Value LlamaContext::InitMultimodal(const Napi::CallbackInfo &info) {
 
   // Disable ctx_shift before initializing multimodal
   _rn_ctx->params.ctx_shift = false;
+  CudaPoolOptionsScope cuda_pool_scope(_cuda_use_vmm, _cuda_vmm_pool_size);
   bool result = _rn_ctx->initMultimodal(mmproj_path, use_gpu, image_min_tokens, image_max_tokens);
   if (!result) {
     Napi::Error::New(env, "Failed to initialize multimodal context")
@@ -1667,6 +1696,7 @@ Napi::Value LlamaContext::InitVocoder(const Napi::CallbackInfo &info) {
         .ThrowAsJavaScriptException();
     return Napi::Boolean::New(env, false);
   }
+  CudaPoolOptionsScope cuda_pool_scope(_cuda_use_vmm, _cuda_vmm_pool_size);
   bool result = _rn_ctx->initVocoder(vocoder_path, n_batch, use_gpu);
   if (!result) {
     Napi::Error::New(env, "Failed to initialize vocoder")

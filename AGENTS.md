@@ -218,6 +218,9 @@ Controlled via `n_gpu_layers` option:
 - macOS: Metal is default (when n_gpu_layers > 0)
 - Windows/Linux: Requires vulkan or cuda variant
 - Set `lib_variant` to 'vulkan' or 'cuda' when loading model
+- CUDA variants are split by CUDA major version (libcudart/libcublas are linked dynamically): `cuda` (CUDA 12; Linux arm64 targets Jetson Orin) and `cuda13` (Linux arm64: Jetson Thor, DGX Spark / GB10). `lib_variant: 'cuda'` tries `cuda13` first and keeps it only if it reports a CUDA device
+- NCCL is linked only on Linux x86_64 CUDA (multi-GPU `split_mode: 'tensor'`); arm64 builds turn it off (single-GPU devices, JetPack has no NCCL)
+- CUDA VMM pool is a per-context runtime option (`cuda_use_vmm`, `cuda_vmm_pool_size`), applied through `ggml_backend_cuda_set_pool_options` from `scripts/llama.cpp.patch`; `'auto'` turns VMM off on Jetson, where several contexts exhaust GPU virtual address space
 - Web: WebGPU is selected with `n_gpu_layers > 0` in `@fugood/node-llama-wasm`; it requires `navigator.gpu` and WebAssembly JSPI support
 
 ### Session Management
