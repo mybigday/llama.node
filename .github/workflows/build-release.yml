@@ -73,6 +73,13 @@ jobs:
             target: cuda
             package: node-llama-linux-arm64-cuda
             need-fix-git: 'true'
+          # Linux arm64 CUDA 13
+          - os: ubuntu-24.04-arm
+            arch: arm64
+            container: nvidia/cuda:13.0.3-devel-ubuntu24.04
+            target: cuda13
+            package: node-llama-linux-arm64-cuda13
+            need-fix-git: 'true'
           # Linux arm64 Vulkan
           - os: ubuntu-22.04-arm
             arch: arm64

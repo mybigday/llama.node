@@ -1,3 +1,4 @@
+import fs from 'fs'
 import path from 'path'
 import type { TTSCapabilities } from './tts'
 
@@ -120,6 +121,19 @@ export type LlamaModelOptions = {
    * Same as the llama.cpp `--main-gpu` argument. Default: 0
    */
   main_gpu?: number
+  /**
+   * CUDA only: use the virtual memory (VMM) pool for this context's CUDA
+   * backends (model, multimodal projector and vocoder).
+   * Each VMM pool reserves `cuda_vmm_pool_size` of GPU virtual address space,
+   * so several contexts can exhaust it on Jetson.
+   * `auto` (default) disables it on Jetson (Tegra) and enables it elsewhere.
+   */
+  cuda_use_vmm?: boolean | 'auto'
+  /**
+   * CUDA only: maximum size in bytes of each VMM pool (GPU virtual address
+   * space reserved per pool). Default: 32 GB
+   */
+  cuda_vmm_pool_size?: number
   use_mlock?: boolean
   use_mmap?: boolean
   vocab_only?: boolean
@@ -1101,7 +1115,23 @@ export interface Module {
   LlamaContext: LlamaContext
 }
 
-export type LibVariant = 'default' | 'vulkan' | 'cuda' | 'snapdragon'
+export type LibVariant =
+  | 'default'
+  | 'vulkan'
+  | 'cuda'
+  | 'cuda13'
+  | 'snapdragon'
+
+let tegra: boolean | undefined
+export const isTegra = (): boolean => {
+  if (tegra === undefined) {
+    tegra =
+      process.platform === 'linux' &&
+      process.arch === 'arm64' &&
+      fs.existsSync('/etc/nv_tegra_release')
+  }
+  return tegra
+}
 
 const getPlatformPackageName = (variant?: LibVariant): string => {
   const platform = process.platform
@@ -1118,6 +1148,43 @@ const loadPlatformPackage = async (
   } catch (error) {
     return null
   }
+}
+
+// 'cuda' prefers the CUDA 13 package (Jetson Thor, DGX Spark / GB10) when it is
+// installed, and falls back to the CUDA 12 one
+const getVariantCandidates = (variant?: LibVariant): LibVariant[] =>
+  variant === 'cuda' ? ['cuda13', 'cuda'] : [variant ?? 'default']
+
+// A CUDA package can load (its libcudart is present) while the driver is too
+// old to expose any device, so only accept it when a CUDA device shows up
+const hasCudaDevice = (module: Module): boolean => {
+  try {
+    const devices: BackendDeviceInfo[] = JSON.parse(
+      module.LlamaContext.getBackendDevicesInfo() as any,
+    )
+    return devices.some((d) => d.backend === 'CUDA')
+  } catch {
+    return false
+  }
+}
+
+const loadVariantPackage = async (
+  variant?: LibVariant,
+): Promise<Module | null> => {
+  const candidates = getVariantCandidates(variant)
+  for (const candidate of candidates) {
+    const module = await loadPlatformPackage(getPlatformPackageName(candidate))
+    if (!module) continue
+    if (
+      candidates.length > 1 &&
+      candidate.startsWith('cuda') &&
+      !hasCudaDevice(module)
+    ) {
+      continue
+    }
+    return module
+  }
+  return null
 }
 
 export const loadModule = async (variant?: LibVariant): Promise<Module> => {
@@ -1139,7 +1206,7 @@ export const loadModule = async (variant?: LibVariant): Promise<Module> => {
     if (!nDev) process.env.GGML_HEXAGON_NDEV = '16'
   }
 
-  let module = await loadPlatformPackage(packageName)
+  let module = await loadVariantPackage(variant)
   if (module) {
     return module
   }
@@ -1161,7 +1228,7 @@ export const isLibVariantAvailable = async (
   variant?: LibVariant,
 ): Promise<boolean> => {
   if (variant && variant !== 'default') {
-    const module = await loadPlatformPackage(getPlatformPackageName(variant))
+    const module = await loadVariantPackage(variant)
     return module != null
   }
 

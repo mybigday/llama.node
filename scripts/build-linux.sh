@@ -31,6 +31,8 @@ if [ $ARCH == "x86_64" ]; then
   fi
 
   # cuda
+  # NCCL stays on (ggml default): it speeds up split_mode 'tensor' on multi-GPU
+  # x86_64 hosts, at the cost of requiring libnccl.so.2 at load time.
   if [ $TARGET == "all" ] || [ $TARGET == "cuda" ]; then
     npx cmake-js rebuild -C --CDTO_PACKAGE=ON \
       --CDCLANG_USE_GOMP=ON \
@@ -58,7 +60,14 @@ else
       --CDVARIANT=vulkan
   fi
 
-  # cuda
+  # NCCL off for all arm64 CUDA builds: ggml only uses it for split_mode
+  # 'tensor' across GPUs in one process, while Jetson / DGX Spark / GB10 have a
+  # single GPU, and the CUDA devel image would make libnccl.so.2 a hard
+  # dependency that JetPack does not provide.
+  # VMM is a runtime option (cuda_use_vmm / cuda_vmm_pool_size), see
+  # scripts/llama.cpp.patch.
+
+  # cuda (CUDA 12: Jetson Orin / JetPack 6)
   if [ $TARGET == "all" ] || [ $TARGET == "cuda" ]; then
     npx cmake-js rebuild -C --CDTO_PACKAGE=ON \
       --CDCLANG_USE_GOMP=ON \
@@ -66,8 +75,22 @@ else
       --CDGGML_OPENMP=0 \
       --CDGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16 \
       --CDGGML_CUDA=1 \
+      --CDGGML_CUDA_NCCL=OFF \
       --CDVARIANT=cuda \
       --CDCMAKE_CUDA_ARCHITECTURES=87 # > Jetson Orin series
+  fi
+
+  # cuda13 (CUDA 13: Jetson Thor / JetPack 7, DGX Spark / GB10)
+  if [ $TARGET == "all" ] || [ $TARGET == "cuda13" ]; then
+    npx cmake-js rebuild -C --CDTO_PACKAGE=ON \
+      --CDCLANG_USE_GOMP=ON \
+      --CDGGML_NATIVE=OFF \
+      --CDGGML_OPENMP=0 \
+      --CDGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16 \
+      --CDGGML_CUDA=1 \
+      --CDGGML_CUDA_NCCL=OFF \
+      --CDVARIANT=cuda13 \
+      --CDCMAKE_CUDA_ARCHITECTURES="110-real;121a-real" # > Jetson Thor, GB10
   fi
 
   # snapdragon

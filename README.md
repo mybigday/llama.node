@@ -231,9 +231,15 @@ one request at a time until the native slot-manager path is ported to WASM.
 - [x] `default`: General usage, not support GPU except macOS (Metal)
 - [x] `vulkan`: Support GPU Vulkan (Windows/Linux), but some scenario might unstable
 - [x] `cuda`: Support GPU CUDA (Windows/Linux), but only for limited capability
-  > Linux: (x86_64: 8.9, arm64: 8.7)
+  > Linux: (x86_64: 8.9, arm64: 8.7 - Jetson Orin / JetPack 6)
   > Windows: x86_64 - 12.0
+  > On Linux arm64, `cuda` prefers the `cuda13` package when it is installed and finds a CUDA device
+- [x] `cuda13`: CUDA 13 on Linux arm64 (11.0 - Jetson Thor / JetPack 7, 12.1 - DGX Spark / GB10). Not installed automatically: `npm i @fugood/node-llama-linux-arm64-cuda13`
 - [x] `wasm`: Browser package with WebAssembly CPU and optional WebGPU
+
+CUDA variants link NCCL only on x86_64 Linux (for multi-GPU `split_mode: 'tensor'`), so that package needs `libnccl.so.2` installed.
+
+The CUDA VMM memory pool reserves `cuda_vmm_pool_size` (default 32 GB) of GPU virtual address space per context, which several contexts (LLM + vocoder + decision model) can exhaust on Jetson. Control it per `loadModel()` with `cuda_use_vmm` (`'auto'` by default: off on Jetson, on elsewhere) and `cuda_vmm_pool_size`.
 
 ## License
 

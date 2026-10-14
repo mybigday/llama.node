@@ -103,4 +103,9 @@ private:
 
   // Progress callback support for model loading
   Napi::ThreadSafeFunction _progress_tsfn;
+
+  // CUDA memory pool options, applied to every CUDA backend this context
+  // creates (model, multimodal projector, vocoder)
+  bool _cuda_use_vmm = true;
+  size_t _cuda_vmm_pool_size = 0; // 0 = ggml default (32 GB)
 };

@@ -1,4 +1,4 @@
-import { loadModule, LlamaModelOptions } from './binding'
+import { loadModule, isTegra, LlamaModelOptions } from './binding'
 import type {
   Module,
   LlamaContext,
@@ -590,6 +590,10 @@ export const loadModel = async (
     {
       ...options,
       devices: filteredDevs.length > 0 ? filteredDevs : undefined,
+      cuda_use_vmm:
+        options.cuda_use_vmm === undefined || options.cuda_use_vmm === 'auto'
+          ? !isTegra()
+          : options.cuda_use_vmm,
     },
     onProgress,
   )
