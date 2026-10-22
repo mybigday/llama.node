@@ -160,8 +160,8 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
   }
 
   if (!media_paths.empty() &&
-      speculative_has_type(params.speculative, COMMON_SPECULATIVE_TYPE_DRAFT_MTP)) {
-    Napi::Error::New(env, "MTP speculative decoding currently supports text-only queued completions")
+      speculative_is_draft_model(params.speculative)) {
+    Napi::Error::New(env, "speculative decoding currently supports text-only queued completions")
         .ThrowAsJavaScriptException();
     return env.Undefined();
   }
@@ -305,13 +305,13 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
         return env.Undefined();
       }
 
-      prompt = chatParams.prompt;
+      prompt = chatParams.prompt.str();
       jinja_chat_params = chatParams;
       has_jinja_chat_params = true;
 
       chat_format = chatParams.format;
       generation_prompt = chatParams.generation_prompt;
-      chat_parser = chatParams.parser;
+      chat_parser = chatParams.parser.empty() ? std::string() : chatParams.parser.save();
 
       for (const auto &token : chatParams.preserved_tokens) {
         auto ids =

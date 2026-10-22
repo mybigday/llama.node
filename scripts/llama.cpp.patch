@@ -40,10 +40,10 @@ index a7e37057..ac919abc 100644
  
  analyze_reasoning::analyze_reasoning(const common_chat_template & tmpl, bool supports_tools)
 diff --git a/src/llama.rn/vendor/llama.cpp/common/chat.cpp b/src/llama.rn/vendor/llama.cpp/common/chat.cpp
-index ea9dadb5..63f3a644 100644
+index aef9ff71..674c521f 100644
 --- a/src/llama.rn/vendor/llama.cpp/common/chat.cpp
 +++ b/src/llama.rn/vendor/llama.cpp/common/chat.cpp
-@@ -35,11 +35,22 @@ using json = common_json;
+@@ -36,11 +36,22 @@ using json = common_json;
  
  static std::string format_time(const std::chrono::system_clock::time_point & now, const std::string & format) {
      auto               time       = std::chrono::system_clock::to_time_t(now);
@@ -93,7 +93,7 @@ index bde679e4..209efefb 100644
  
  size_t string::length() const {
 diff --git a/src/llama.rn/vendor/llama.cpp/common/log.cpp b/src/llama.rn/vendor/llama.cpp/common/log.cpp
-index 94f4da21..c40aa00a 100644
+index fd332def..a077de6b 100644
 --- a/src/llama.rn/vendor/llama.cpp/common/log.cpp
 +++ b/src/llama.rn/vendor/llama.cpp/common/log.cpp
 @@ -18,6 +18,12 @@
@@ -109,7 +109,7 @@ index 94f4da21..c40aa00a 100644
  int common_log_verbosity_thold = LOG_DEFAULT_LLAMA;
  
  int common_log_get_verbosity_thold(void) {
-@@ -201,7 +207,11 @@ struct common_log {
+@@ -207,7 +213,11 @@ struct common_log {
          head = 0;
          tail = 0;
  
@@ -121,7 +121,7 @@ index 94f4da21..c40aa00a 100644
      }
  
      ~common_log() {
-@@ -271,6 +281,37 @@ public:
+@@ -281,6 +291,37 @@ public:
              return;
          }
  
@@ -159,7 +159,7 @@ index 94f4da21..c40aa00a 100644
          auto & entry = queue[tail];
  
          {
-@@ -365,6 +406,9 @@ public:
+@@ -375,6 +416,9 @@ public:
  
          running = true;
  
@@ -169,7 +169,7 @@ index 94f4da21..c40aa00a 100644
          thrd = std::thread([this]() {
              while (true) {
                  std::unique_lock<std::mutex> lock(mtx);
-@@ -387,6 +431,7 @@ public:
+@@ -397,6 +441,7 @@ public:
                  }
              }
          });
@@ -177,7 +177,7 @@ index 94f4da21..c40aa00a 100644
      }
  
      void pause() {
-@@ -399,6 +444,10 @@ public:
+@@ -409,6 +454,10 @@ public:
  
              running = false;
  
@@ -189,7 +189,7 @@ index 94f4da21..c40aa00a 100644
              auto & entry = queue[tail];
              entry.is_end = true;
 diff --git a/src/llama.rn/vendor/llama.cpp/common/parsers/sources.cmake b/src/llama.rn/vendor/llama.cpp/common/parsers/sources.cmake
-index 5815939d..5a46ced2 100644
+index 2174f451..4d1d3025 100644
 --- a/src/llama.rn/vendor/llama.cpp/common/parsers/sources.cmake
 +++ b/src/llama.rn/vendor/llama.cpp/common/parsers/sources.cmake
 @@ -5,6 +5,7 @@ set(LLAMA_CHAT_PARSERS_SOURCES
@@ -201,7 +201,7 @@ index 5815939d..5a46ced2 100644
      ${CMAKE_CURRENT_LIST_DIR}/gemma4.cpp
      ${CMAKE_CURRENT_LIST_DIR}/gigachat-v3.cpp
 diff --git a/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt b/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
-index 71f55b49..aebda98b 100644
+index d347757e..84e0b16a 100644
 --- a/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
 +++ b/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
 @@ -115,7 +115,7 @@ function(ggml_add_cpu_backend_variant_impl tag_name)
@@ -214,10 +214,10 @@ index 71f55b49..aebda98b 100644
              if (NOT GGML_ARM_MSVC)
                  check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
 diff --git a/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp b/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-index d1a33d95..90ab1167 100644
+index e35eb653..3c7b7469 100644
 --- a/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
 +++ b/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-@@ -7927,8 +7927,24 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
+@@ -7654,9 +7654,27 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
      GGML_UNUSED(dev);
  }
  
@@ -227,9 +227,12 @@ index d1a33d95..90ab1167 100644
 +#define GGML_HEXAGON_SESSION_MEMORY_MAX (3ULL * 1024 * 1024 * 1024 + 512ULL * 1024 * 1024)
 +
  static void ggml_backend_hexagon_device_get_memory(ggml_backend_dev_t dev, size_t * free, size_t * total) {
--    *free  = 0;
+-    *free  = opt_mbuf_total;
+-    *total = opt_mbuf_total;
 +    const char * str_mem = getenv("GGML_HEXAGON_SESSION_MEMORY");
-+    if (str_mem) {
++    if (opt_mbuf_total) {
++        *free = opt_mbuf_total;
++    } else if (str_mem) {
 +        *free = std::stoull(str_mem);
 +        if (*free < GGML_HEXAGON_SESSION_MEMORY_DEFAULT) {
 +            *free = GGML_HEXAGON_SESSION_MEMORY_DEFAULT;
@@ -240,10 +243,11 @@ index d1a33d95..90ab1167 100644
 +        *free = GGML_HEXAGON_SESSION_MEMORY_DEFAULT;
 +    }
 +
-     *total = *free;
++    *total = *free;
  
      GGML_UNUSED(dev);
-@@ -8950,7 +8966,12 @@ static void ggml_hexagon_init(ggml_backend_reg * reg) {
+ }
+@@ -8680,7 +8698,12 @@ static void ggml_hexagon_init(ggml_backend_reg * reg) {
  #if defined(__ANDROID__)
      if (opt_arch < 75) {
          opt_ndev = 1;

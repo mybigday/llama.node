@@ -1245,12 +1245,14 @@ export class LlamaContextWrapper {
   }
   async decide(request) {
     const staged = { ...request }
-    if (Array.isArray(request?.images)) {
-      staged.images = await writeMediaSources(
-        this.mod,
-        request.images,
-        this.downloadOptions,
-      )
+    for (const key of ['files', 'images']) {
+      if (Array.isArray(request?.[key])) {
+        staged[key] = await writeMediaSources(
+          this.mod,
+          request[key],
+          this.downloadOptions,
+        )
+      }
     }
     return this.actionAsync('decide', staged)
   }

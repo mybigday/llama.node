@@ -228,6 +228,22 @@ void apply_speculative_options_json(const json &options,
       params.speculative.draft.n_max <= 0) {
     throw std::invalid_argument("MTP requires spec_draft_n_max > 0");
   }
+
+  // A draft-simple pair with n_max <= 0 would silently run without speculation.
+  if (speculative_has_type(params.speculative,
+                           COMMON_SPECULATIVE_TYPE_DRAFT_SIMPLE) &&
+      params.speculative.draft.n_max <= 0) {
+    throw std::invalid_argument("draft-simple requires spec_draft_n_max > 0");
+  }
+
+  // Without a draft model the target itself would be used as its own draft.
+  if (speculative_has_type(params.speculative,
+                           COMMON_SPECULATIVE_TYPE_DRAFT_SIMPLE) &&
+      !params.speculative.has_dft()) {
+    throw std::invalid_argument(
+        "draft-simple requires a draft model (speculative.draft.model or "
+        "model_draft)");
+  }
 }
 
 bool is_thinking_forced_open(const common_chat_params &chat_params) {
@@ -785,10 +801,10 @@ json action_completion(const json &options) {
           format_jinja_chat(options.at("messages"), options, json_schema,
                             reasoning_format);
       has_jinja_chat_params = true;
-      params.prompt = jinja_chat_params.prompt;
+      params.prompt = jinja_chat_params.prompt.str();
       chat_format = static_cast<int32_t>(jinja_chat_params.format);
       generation_prompt = jinja_chat_params.generation_prompt;
-      chat_parser = jinja_chat_params.parser;
+      chat_parser = jinja_chat_params.parser.empty() ? std::string() : jinja_chat_params.parser.save();
 
       for (const auto &token : jinja_chat_params.preserved_tokens) {
         const auto ids = common_tokenize(g_ctx->ctx, token, false, true);
@@ -1102,7 +1118,7 @@ json action_formatted_chat(const json &payload) {
                           {"token", trigger.token}});
     }
     return ok({{"type", "jinja"},
-               {"prompt", chat_params.prompt},
+               {"prompt", chat_params.prompt.str()},
                {"chat_format", static_cast<int32_t>(chat_params.format)},
                {"grammar", chat_params.grammar},
                {"grammar_lazy", chat_params.grammar_lazy},
@@ -1115,7 +1131,7 @@ json action_formatted_chat(const json &payload) {
                                         : chat_params.thinking_end_tags.front()},
                {"preserved_tokens", chat_params.preserved_tokens},
                {"additional_stops", chat_params.additional_stops},
-               {"chat_parser", chat_params.parser}});
+               {"chat_parser", chat_params.parser.empty() ? std::string() : chat_params.parser.save()}});
   }
   return ok({{"type", "llama-chat"},
              {"prompt", g_ctx->getFormattedChat(messages.dump(),

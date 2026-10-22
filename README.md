@@ -72,7 +72,7 @@ and the response follow the TypeSafe `/v1/systemone` API that llama-server serve
 ```js
 const context = await loadModel({ model: 'path/to/Julia-1-Q8_0.gguf' })
 console.log(context.getModelInfo().decision)
-// { type: 'laya', nOptionsMax: 255, imageInput: false, textGeneration: false }
+// { type: 'laya', nOptionsMax: 255, imageInput: false, audioInput: false, textGeneration: false }
 
 const { answers, usage } = await context.decide({
   state: { utterance: 'a medium fries please', cart: [] },
@@ -100,9 +100,11 @@ answers.is_ordering.noul // probability of true
   `completion()`. With parallel mode enabled, use
   `context.parallel.decide(request)` instead, which returns
   `{ requestId, promise, stop }`.
-- Images go in `images` (file paths or data URLs), or as `image_url` parts of a
-  chat-message state, after `initMultimodal()`, for a model whose
-  `decision.imageInput` is true.
+- Media go in `files` (alias `images`; file paths or data URLs), or as
+  `image_url` / `input_audio` parts of a chat-message state, after
+  `initMultimodal()`, for a model whose `decision.imageInput` (images) or
+  `decision.audioInput` (one audio clip) is true. `lfm2-d1` and `lfm2-d1-omni`
+  also take a `null` state, to ask about the media only.
 - Models that only answer decisions (`decision.textGeneration: false`, such as
   laya, kev and clef) refuse `completion()`.
 - A `system_one` model with a classification head (`decision.readout: 'rank_head'`)
