@@ -13,7 +13,7 @@ $nativeArch = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchit
 
 $hexagonSdkVersion = $env:HEXAGON_SDK_VERSION
 if ($hexagonSdkVersion -eq $null) {
-  $hexagonSdkVersion = "6.4.0.2"
+  $hexagonSdkVersion = "6.7.0.0"
 }
 
 if ($arch -eq "native") {

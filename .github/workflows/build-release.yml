@@ -32,7 +32,7 @@ on:
         required: true
 
 env:
-  HEXAGON_SDK_VERSION: '6.4.0.2'
+  HEXAGON_SDK_VERSION: '6.7.0.0'
   OPENCL_VERSION: '2025.07.22'
   EMSCRIPTEN_IMAGE: 'emscripten/emsdk:4.0.13'
 

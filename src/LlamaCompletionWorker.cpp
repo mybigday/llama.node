@@ -108,8 +108,8 @@ void LlamaCompletionWorker::Execute() {
     completion->prefill_text = rnllama::utf8_sanitize(_prefill_text);
 
     if (!_media_paths.empty() &&
-        speculative_has_type(_params.speculative, COMMON_SPECULATIVE_TYPE_DRAFT_MTP)) {
-      SetError("MTP speculative decoding currently supports text-only completion in llama.node");
+        speculative_is_draft_model(_params.speculative)) {
+      SetError("speculative decoding currently supports text-only completion in llama.node");
       return;
     }
 

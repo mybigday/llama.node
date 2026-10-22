@@ -260,6 +260,28 @@ static void apply_speculative_options(const Napi::Object &options,
       params.speculative.draft.n_max <= 0) {
     throw std::invalid_argument("MTP requires spec_draft_n_max > 0");
   }
+
+  // A draft-simple pair with n_max <= 0 would silently run without speculation.
+  if (speculative_has_type(params.speculative,
+                           COMMON_SPECULATIVE_TYPE_DRAFT_SIMPLE) &&
+      params.speculative.draft.n_max <= 0) {
+    throw std::invalid_argument("draft-simple requires spec_draft_n_max > 0");
+  }
+
+  // Without a draft model the target itself would be used as its own draft.
+  if (speculative_has_type(params.speculative,
+                           COMMON_SPECULATIVE_TYPE_DRAFT_SIMPLE) &&
+      !params.speculative.has_dft()) {
+    throw std::invalid_argument(
+        "draft-simple requires a draft model (speculative.draft.model or "
+        "model_draft)");
+  }
+}
+
+static bool speculative_is_draft_model(
+    const common_params_speculative &speculative) {
+  return speculative_has_type(speculative, COMMON_SPECULATIVE_TYPE_DRAFT_MTP) ||
+         speculative_has_type(speculative, COMMON_SPECULATIVE_TYPE_DRAFT_SIMPLE);
 }
 
 static void reset_reasoning_budget(common_params_sampling &sampling) {

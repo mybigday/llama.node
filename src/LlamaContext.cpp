@@ -875,7 +875,7 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
     }
 
     Napi::Object result = Napi::Object::New(env);
-    result.Set("prompt", chatParams.prompt);
+    result.Set("prompt", chatParams.prompt.str());
     // chat_format: int
     result.Set("chat_format", static_cast<int>(chatParams.format));
     // grammar: string
@@ -916,7 +916,7 @@ Napi::Value LlamaContext::GetFormattedChat(const Napi::CallbackInfo &info) {
     }
     result.Set("additional_stops", additional_stops);
     // chat_parser: string (serialized PEG parser for chat output parsing)
-    result.Set("chat_parser", chatParams.parser);
+    result.Set("chat_parser", chatParams.parser.empty() ? std::string() : chatParams.parser.save());
 
     return result;
   } else {
@@ -1133,13 +1133,13 @@ Napi::Value LlamaContext::Completion(const Napi::CallbackInfo &info) {
         return env.Undefined();
       }
 
-      params.prompt = chatParams.prompt;
+      params.prompt = chatParams.prompt.str();
       jinja_chat_params = chatParams;
       has_jinja_chat_params = true;
 
       chat_format = chatParams.format;
       generation_prompt = chatParams.generation_prompt;
-      chat_parser = chatParams.parser;
+      chat_parser = chatParams.parser.empty() ? std::string() : chatParams.parser.save();
 
       for (const auto &token : chatParams.preserved_tokens) {
         auto ids =

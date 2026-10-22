@@ -45,6 +45,7 @@ describe('Decision', () => {
       type: 'laya',
       nOptionsMax: expect.any(Number),
       imageInput: false,
+      audioInput: false,
       textGeneration: false,
     })
   })

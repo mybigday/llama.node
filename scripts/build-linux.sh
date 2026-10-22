@@ -7,7 +7,7 @@ set -e
 ARCH=${ARCH:-$(uname -m)}
 TARGET=${TARGET:-"default"}
 
-HEXAGON_SDK_VERSION=${HEXAGON_SDK_VERSION:-"6.4.0.2"}
+HEXAGON_SDK_VERSION=${HEXAGON_SDK_VERSION:-"6.7.0.0"}
 
 while [[ "$#" -gt 0 ]]; do
   case $1 in
@@ -77,7 +77,11 @@ else
       exit 1
     fi
 
+    # The SDK env script rebuilds qaic with `make`, which fails on SDKs that
+    # ship only the prebuilt binary; don't let that abort the build
+    set +e
     source externals/Hexagon_SDK/Hexagon_SDK/$HEXAGON_SDK_VERSION/setup_sdk_env.source
+    set -e
 
     ARGS=(
       -a $ARCH \

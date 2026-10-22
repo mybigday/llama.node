@@ -165,7 +165,8 @@ test('completion with tools', async () => {
     expect.objectContaining({
       root: expect.any(Number),
       rules: expect.objectContaining({
-        'tool-calc': expect.any(Number),
+        // tool rules are named by index (llama.cpp #30088)
+        'tool-0': expect.any(Number),
         'tool-call': expect.any(Number),
         'tool-calls': expect.any(Number),
       }),
@@ -208,9 +209,11 @@ test('formats FunctionGemma tool calls', async () => {
         ],
       },
     ) as JinjaFormattedChatResult
-    expect(chat.grammar).toContain('tool-get-time ::=')
+    // tool rules are named by index (llama.cpp #30088)
+    expect(chat.grammar).toContain('tool-0 ::=')
+    expect(chat.grammar).toContain('"get_time"')
     expect(JSON.parse(chat.chat_parser).rules).toEqual(
-      expect.objectContaining({ 'tool-get-time': expect.any(Number) }),
+      expect.objectContaining({ 'tool-0': expect.any(Number) }),
     )
     expect(chat.preserved_tokens).toContain('<start_function_call>')
   } finally {
