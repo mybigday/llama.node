@@ -341,6 +341,7 @@ if (GGML_HEXAGON)
     COMMAND ${CMAKE_COMMAND} -E copy ${HTP_LIBS_DIR}/libggml-htp-v75.so ${PLATFORM_BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E copy ${HTP_LIBS_DIR}/libggml-htp-v79.so ${PLATFORM_BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E copy ${HTP_LIBS_DIR}/libggml-htp-v81.so ${PLATFORM_BINARY_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy ${HTP_LIBS_DIR}/libggml-htp-v85.so ${PLATFORM_BINARY_DIR}
     COMMENT "Copying HTP libraries to bin folder"
   )
 endif()

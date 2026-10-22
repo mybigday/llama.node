@@ -15,7 +15,7 @@ if ($openclVersion -eq $null) {
 
 $hexagonSdkVersion = $env:HEXAGON_SDK_VERSION
 if ($hexagonSdkVersion -eq $null) {
-  $hexagonSdkVersion = "6.4.0.2"
+  $hexagonSdkVersion = "6.7.0.0"
 }
 
 if ($arch -eq "native") {
@@ -68,9 +68,11 @@ if ($target -eq "snapdragon") {
   if (-Not (Test-Path $sdkPath)) {
     Write-Host "Downloading Hexagon SDK..."
     New-Item -ItemType Directory -Force -Path "externals" | Out-Null
-    Invoke-WebRequest -Uri "https://softwarecenter.qualcomm.com/api/download/software/sdks/Hexagon_SDK/Windows/$hexagonSdkVersion/Hexagon_SDK_WinNT.zip" -OutFile "externals/Hexagon_SDK_WinNT.zip"
+    # Qualcomm's download site stops at 6.4.x; newer SDKs are published by snapdragon-toolchain
+    Invoke-WebRequest -Uri "https://github.com/snapdragon-toolchain/hexagon-sdk/releases/download/v$hexagonSdkVersion/hexagon-sdk-v$hexagonSdkVersion-arm64-wos.tar.xz" -OutFile "externals/Hexagon_SDK_wos.tar.xz"
     Write-Host "Extracting Hexagon SDK..."
-    Expand-Archive -Path "externals/Hexagon_SDK_WinNT.zip" -DestinationPath "externals/Hexagon_SDK" -Force
+    New-Item -ItemType Directory -Force -Path "externals/Hexagon_SDK/Hexagon_SDK" | Out-Null
+    tar -xf "externals/Hexagon_SDK_wos.tar.xz" -C "externals/Hexagon_SDK/Hexagon_SDK"
   }
 
   . "externals/Hexagon_SDK/Hexagon_SDK/$hexagonSdkVersion/setup_sdk_env.ps1"

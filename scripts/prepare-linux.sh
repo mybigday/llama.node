@@ -16,7 +16,7 @@ ARCH=${ARCH:-$(uname -m)}
 TARGET=${TARGET:-"default"}
 
 OPENCL_VERSION=${OPENCL_VERSION:-"2024.10.24"}
-HEXAGON_SDK_VERSION=${HEXAGON_SDK_VERSION:-"6.4.0.2"}
+HEXAGON_SDK_VERSION=${HEXAGON_SDK_VERSION:-"6.7.0.0"}
 
 while [[ "$#" -gt 0 ]]; do
   case $1 in
@@ -57,9 +57,12 @@ if [ $TARGET == "snapdragon" ]; then
   if [ ! -d "externals/Hexagon_SDK" ]; then
     echo "Downloading Hexagon SDK..."
     mkdir -p externals
-    wget -O externals/Hexagon_SDK_lnx.zip https://softwarecenter.qualcomm.com/api/download/software/sdks/Hexagon_SDK/Linux/Debian/$HEXAGON_SDK_VERSION/Hexagon_SDK_lnx.zip
+    # Qualcomm's download site stops at 6.4.x; newer SDKs (tools 21.x, needed for
+    # llama.cpp's toolv21 / HTP v85 skels) are published by snapdragon-toolchain
+    wget -O externals/Hexagon_SDK_lnx.tar.xz https://github.com/snapdragon-toolchain/hexagon-sdk/releases/download/v$HEXAGON_SDK_VERSION/hexagon-sdk-v$HEXAGON_SDK_VERSION-amd64-lnx.tar.xz
     echo "Extracting Hexagon SDK..."
-    unzip -q externals/Hexagon_SDK_lnx.zip -d externals/Hexagon_SDK
+    mkdir -p externals/Hexagon_SDK/Hexagon_SDK
+    tar -xJf externals/Hexagon_SDK_lnx.tar.xz -C externals/Hexagon_SDK/Hexagon_SDK
   fi
   
   source externals/Hexagon_SDK/Hexagon_SDK/$HEXAGON_SDK_VERSION/setup_sdk_env.source

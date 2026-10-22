@@ -7,7 +7,7 @@ set -e
 ARCH=${ARCH:-$(uname -m)}
 TARGET=${TARGET:-"default"}
 
-HEXAGON_SDK_VERSION=${HEXAGON_SDK_VERSION:-"6.4.0.2"}
+HEXAGON_SDK_VERSION=${HEXAGON_SDK_VERSION:-"6.7.0.0"}
 
 while [[ "$#" -gt 0 ]]; do
   case $1 in
