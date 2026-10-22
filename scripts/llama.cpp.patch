@@ -481,6 +481,23 @@ index fb41a961..6587883c 100644
  
              if (cond.empty()) {
                  throw std::runtime_error("#elif without #if");
+diff --git a/src/llama.rn/vendor/llama.cpp/src/llama-context.cpp b/src/llama.rn/vendor/llama.cpp/src/llama-context.cpp
+index ca84fc40..1129c5ef 100644
+--- a/src/llama.rn/vendor/llama.cpp/src/llama-context.cpp
++++ b/src/llama.rn/vendor/llama.cpp/src/llama-context.cpp
+@@ -1339,8 +1339,10 @@ void llama_context::set_abort_callback(bool (*abort_callback)(void * data), void
+ void llama_context::set_embeddings(bool value) {
+     LLAMA_LOG_DEBUG("%s: value = %d\n", __func__, value);
+ 
+-    // a pooled context computes the logits only without embeddings, so the toggle changes the graph shape
+-    if (cparams.embeddings != value && cparams.pooling_type != LLAMA_POOLING_TYPE_NONE) {
++    // a pooled context computes the logits only without embeddings, so the toggle changes the graph shape;
++    // without pooling the shape is the same but t_embd is expanded before t_logits, so the leafs come in
++    // another order, which ggml_gallocr_needs_realloc() does not detect (it only compares the counts)
++    if (cparams.embeddings != value) {
+         sched_need_reserve = true;
+     }
+ 
 diff --git a/src/llama.rn/vendor/llama.cpp/src/llama-grammar.cpp b/src/llama.rn/vendor/llama.cpp/src/llama-grammar.cpp
 index 0a8a61e7..ccdbba68 100644
 --- a/src/llama.rn/vendor/llama.cpp/src/llama-grammar.cpp
