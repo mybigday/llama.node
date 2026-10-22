@@ -65,7 +65,11 @@ if [ $TARGET == "snapdragon" ]; then
     tar -xJf externals/Hexagon_SDK_lnx.tar.xz -C externals/Hexagon_SDK/Hexagon_SDK
   fi
   
+  # The SDK env script rebuilds qaic with `make`, which fails on SDKs that
+  # ship only the prebuilt binary; don't let that abort the build
+  set +e
   source externals/Hexagon_SDK/Hexagon_SDK/$HEXAGON_SDK_VERSION/setup_sdk_env.source
+  set -e
 else
   run_as_root apt-get install -qy lsb-release wget llvm clang lld cmake ninja-build libomp-dev ccache
 fi
