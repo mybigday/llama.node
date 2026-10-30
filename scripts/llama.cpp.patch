@@ -1,8 +1,8 @@
 diff --git a/src/llama.rn/vendor/llama.cpp/common/CMakeLists.txt b/src/llama.rn/vendor/llama.cpp/common/CMakeLists.txt
-index 2b307c59..59c0cf6a 100644
+index 8e3c88da..a15d65f5 100644
 --- a/src/llama.rn/vendor/llama.cpp/common/CMakeLists.txt
 +++ b/src/llama.rn/vendor/llama.cpp/common/CMakeLists.txt
-@@ -183,4 +183,10 @@ if (LLAMA_LLGUIDANCE)
+@@ -185,7 +185,13 @@ if (LLAMA_LLGUIDANCE)
      endif()
  endif()
  
@@ -14,6 +14,9 @@ index 2b307c59..59c0cf6a 100644
 +endif()
 +
 +target_link_libraries(${TARGET} PRIVATE ${LLAMA_COMMON_WIN_LIBS} PUBLIC llama Threads::Threads)
+ 
+ if (CMAKE_SYSTEM_NAME MATCHES "AIX")
+     # AIX's flock() function comes from libbsd.a
 diff --git a/src/llama.rn/vendor/llama.cpp/common/chat-diff-analyzer.cpp b/src/llama.rn/vendor/llama.cpp/common/chat-diff-analyzer.cpp
 index a7e37057..ac919abc 100644
 --- a/src/llama.rn/vendor/llama.cpp/common/chat-diff-analyzer.cpp
@@ -40,7 +43,7 @@ index a7e37057..ac919abc 100644
  
  analyze_reasoning::analyze_reasoning(const common_chat_template & tmpl, bool supports_tools)
 diff --git a/src/llama.rn/vendor/llama.cpp/common/chat.cpp b/src/llama.rn/vendor/llama.cpp/common/chat.cpp
-index aef9ff71..674c521f 100644
+index 5804c3d0..79cc56ab 100644
 --- a/src/llama.rn/vendor/llama.cpp/common/chat.cpp
 +++ b/src/llama.rn/vendor/llama.cpp/common/chat.cpp
 @@ -36,11 +36,22 @@ using json = common_json;
@@ -201,7 +204,7 @@ index 2174f451..4d1d3025 100644
      ${CMAKE_CURRENT_LIST_DIR}/gemma4.cpp
      ${CMAKE_CURRENT_LIST_DIR}/gigachat-v3.cpp
 diff --git a/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt b/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
-index d347757e..84e0b16a 100644
+index 8327c52e..c4db2024 100644
 --- a/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
 +++ b/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt
 @@ -115,7 +115,7 @@ function(ggml_add_cpu_backend_variant_impl tag_name)
@@ -214,10 +217,10 @@ index d347757e..84e0b16a 100644
              if (NOT GGML_ARM_MSVC)
                  check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
 diff --git a/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp b/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-index e35eb653..3c7b7469 100644
+index c3b4af50..01a565df 100644
 --- a/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
 +++ b/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-@@ -7654,9 +7654,27 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
+@@ -2950,9 +2950,27 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
      GGML_UNUSED(dev);
  }
  
@@ -247,7 +250,7 @@ index e35eb653..3c7b7469 100644
  
      GGML_UNUSED(dev);
  }
-@@ -8680,7 +8698,12 @@ static void ggml_hexagon_init(ggml_backend_reg * reg) {
+@@ -3707,7 +3725,12 @@ static void ggml_hexagon_init(ggml_backend_reg * reg) {
  #if defined(__ANDROID__)
      if (opt_arch < 75) {
          opt_ndev = 1;
@@ -481,28 +484,11 @@ index fb41a961..6587883c 100644
  
              if (cond.empty()) {
                  throw std::runtime_error("#elif without #if");
-diff --git a/src/llama.rn/vendor/llama.cpp/src/llama-context.cpp b/src/llama.rn/vendor/llama.cpp/src/llama-context.cpp
-index ca84fc40..1129c5ef 100644
---- a/src/llama.rn/vendor/llama.cpp/src/llama-context.cpp
-+++ b/src/llama.rn/vendor/llama.cpp/src/llama-context.cpp
-@@ -1339,8 +1339,10 @@ void llama_context::set_abort_callback(bool (*abort_callback)(void * data), void
- void llama_context::set_embeddings(bool value) {
-     LLAMA_LOG_DEBUG("%s: value = %d\n", __func__, value);
- 
--    // a pooled context computes the logits only without embeddings, so the toggle changes the graph shape
--    if (cparams.embeddings != value && cparams.pooling_type != LLAMA_POOLING_TYPE_NONE) {
-+    // a pooled context computes the logits only without embeddings, so the toggle changes the graph shape;
-+    // without pooling the shape is the same but t_embd is expanded before t_logits, so the leafs come in
-+    // another order, which ggml_gallocr_needs_realloc() does not detect (it only compares the counts)
-+    if (cparams.embeddings != value) {
-         sched_need_reserve = true;
-     }
- 
 diff --git a/src/llama.rn/vendor/llama.cpp/src/llama-grammar.cpp b/src/llama.rn/vendor/llama.cpp/src/llama-grammar.cpp
-index 0a8a61e7..ccdbba68 100644
+index 4e096a36..be0b7dfa 100644
 --- a/src/llama.rn/vendor/llama.cpp/src/llama-grammar.cpp
 +++ b/src/llama.rn/vendor/llama.cpp/src/llama-grammar.cpp
-@@ -96,7 +96,9 @@ static bool is_digit_char(char c) {
+@@ -98,7 +98,9 @@ static bool is_digit_char(char c) {
  }
  
  static bool is_word_char(char c) {
@@ -513,10 +499,10 @@ index 0a8a61e7..ccdbba68 100644
  }
  
  static std::pair<uint32_t, const char *> parse_hex(const char * src, int size) {
-@@ -443,7 +445,19 @@ const char * llama_grammar_parser::parse_alternates(
-         bool                is_nested) {
+@@ -446,7 +448,19 @@ const char * llama_grammar_parser::parse_alternates(
+         uint32_t            depth) {
      llama_grammar_rule rule;
-     const char * pos = parse_sequence(src, rule_name, rule, is_nested);
+     const char * pos = parse_sequence(src, rule_name, rule, is_nested, depth);
 -    while (*pos == '|') {
 +    while (true) {
 +        // Allow alternates to continue on following lines (used by the
@@ -533,4 +519,4 @@ index 0a8a61e7..ccdbba68 100644
 +        pos = next;
          rule.push_back({LLAMA_GRETYPE_ALT, 0});
          pos = parse_space(pos + 1, true);
-         pos = parse_sequence(pos, rule_name, rule, is_nested);
+         pos = parse_sequence(pos, rule_name, rule, is_nested, depth);
