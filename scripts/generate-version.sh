@@ -1,18 +1,18 @@
 #!/bin/bash
 
-# Regenerate lib/version.ts from the llama.cpp build pinned by llama.rn
-# (src/llama.rn/vendor/VERSIONS). Run after bumping the llama.rn submodule.
+# Regenerate lib/version.ts from the llama.cpp build pinned by llama.rn.
+# Run after bumping the llama.rn submodule.
+#
+# llama.cpp refs are no longer always bNNNN tags (e.g. v0.8.0), so take the
+# build number llama.rn's sync-vendor.sh counted from the pinned commit
+# (src/llama.rn/src/version.ts) instead of parsing vendor/VERSIONS.
 
 set -e
 
 cd "$(dirname "$0")/.."
 
-# shellcheck source=src/llama.rn/vendor/VERSIONS
-source src/llama.rn/vendor/VERSIONS
+cp src/llama.rn/src/version.ts lib/version.ts
 
-BUILD_NUMBER="${LLAMA_CPP_REF#b}"
-BUILD_COMMIT="${LLAMA_CPP_COMMIT:0:7}"
-
-echo "export const BUILD_NUMBER = '$BUILD_NUMBER'" > lib/version.ts
-echo "export const BUILD_COMMIT = '$BUILD_COMMIT'" >> lib/version.ts
+BUILD_NUMBER="$(sed -n "s/^export const BUILD_NUMBER = '\(.*\)'$/\1/p" lib/version.ts)"
+BUILD_COMMIT="$(sed -n "s/^export const BUILD_COMMIT = '\(.*\)'$/\1/p" lib/version.ts)"
 echo "lib/version.ts: build $BUILD_NUMBER ($BUILD_COMMIT)"
