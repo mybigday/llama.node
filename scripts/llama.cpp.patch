@@ -520,3 +520,28 @@ index 4e096a36..be0b7dfa 100644
          rule.push_back({LLAMA_GRETYPE_ALT, 0});
          pos = parse_space(pos + 1, true);
          pos = parse_sequence(pos, rule_name, rule, is_nested, depth);
+diff --git a/src/llama.rn/vendor/llama.cpp/src/models/clef.cpp b/src/llama.rn/vendor/llama.cpp/src/models/clef.cpp
+index cd2889b2..6f872091 100644
+--- a/src/llama.rn/vendor/llama.cpp/src/models/clef.cpp
++++ b/src/llama.rn/vendor/llama.cpp/src/models/clef.cpp
+@@ -2,6 +2,7 @@
+ 
+ #include "llama-ext.h"
+ 
++#include <algorithm>
+ #include <cmath>
+ 
+ void llama_model_clef::load_arch_hparams(llama_model_loader & ml) {
+diff --git a/src/llama.rn/vendor/llama.cpp/src/models/deepseek41.cpp b/src/llama.rn/vendor/llama.cpp/src/models/deepseek41.cpp
+index 97b2cbab..3204e5cc 100644
+--- a/src/llama.rn/vendor/llama.cpp/src/models/deepseek41.cpp
++++ b/src/llama.rn/vendor/llama.cpp/src/models/deepseek41.cpp
+@@ -551,7 +551,7 @@ ggml_tensor * llama_model_deepseek41::graph::build_attention41(
+             const int64_t n_tok = nt/n_stream;
+             GGML_ASSERT(ci.kq_mask->ne[1] == n_tok);
+             const int64_t chunk = fused_idx ? n_tok :
+-                std::max({ (n_tok + 63)/64, (INT64_C(1) << 26)/(n_idx_head*n_comp*n_stream), INT64_C(1) });
++                std::max<int64_t>({ (n_tok + 63)/64, (INT64_C(1) << 26)/(n_idx_head*n_comp*n_stream), INT64_C(1) });
+ 
+             const int32_t cand_src = hparams.dsv41_cand_src;
+             const bool    pick_blk = cand_src == il && cand_pin;              // level one: pick the candidate blocks
