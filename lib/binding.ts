@@ -1,5 +1,9 @@
 import path from 'path'
-import type { TTSCapabilities } from './tts'
+import type {
+  TTSCapabilities,
+  TTSCompletionParams,
+  TTSSpeakerInfo,
+} from './tts'
 
 export type NativeTTSCapabilities = TTSCapabilities
 
@@ -258,6 +262,11 @@ export type LlamaCompletionOptions = {
    * This text will be added to the beginning of the generated response.
    */
   prefill_text?: string
+  /**
+   * Sampling options default to the model GGUF's `general.sampling.*` values
+   * when it has them (TTS backbones carry their tuned sampling there), else
+   * to llama.node's defaults.
+   */
   temperature?: number
   top_k?: number
   top_p?: number
@@ -265,6 +274,7 @@ export type LlamaCompletionOptions = {
   mirostat?: number
   mirostat_tau?: number
   mirostat_eta?: number
+  /** Last n tokens to penalize. Default: `64`; `0` (or a negative value) disables it. */
   penalty_last_n?: number
   penalty_repeat?: number
   penalty_freq?: number
@@ -275,10 +285,16 @@ export type LlamaCompletionOptions = {
   dry_multiplier?: number
   dry_base?: number
   dry_allowed_length?: number
+  /** Tokens to scan for DRY repetitions. Default: `0`; `0` (or a negative value) disables it. */
   dry_penalty_last_n?: number
   dry_sequence_breakers?: string[]
   top_n_sigma?: number
   n_predict?: number
+  /**
+   * Minimum number of tokens to predict before the generation may end; counts like `n_predict`.
+   * Stop words still end it. Default: `-1`, no minimum.
+   */
+  n_min_predict?: number
   /**
    * Number of tokens from the start of the prompt to keep when the context is full:
    * an over-long prompt is truncated after them, and with `ctx_shift` on, a context shift
@@ -295,7 +311,17 @@ export type LlamaCompletionOptions = {
   grammar_triggers?: { type: number; value: string; token?: number }[]
   preserved_tokens?: string[]
   json_schema?: string
-  logit_bias?: number[][]
+  /**
+   * `[[token, bias | false], ...]` (`false`: never sampled), or a `Float32Array`
+   * of exactly `n_vocab` entries, one bias per token id (`0`: none,
+   * `-Infinity`: never sampled) — the form for large tables.
+   */
+  logit_bias?: Array<Array<number | false>> | Float32Array
+  /**
+   * Sampler order, as llama.cpp's `--samplers` (`"penalties;dry;top_k;top_p;min_p;temperature"`
+   * or an array of names). Default: the model's `general.sampling.sequence`, else llama.cpp's order.
+   */
+  samplers?: string | string[]
   ignore_eos?: boolean
   /**
    * Path(s) to media file(s) to process before generating text.
@@ -305,15 +331,18 @@ export type LlamaCompletionOptions = {
    */
   media_paths?: string | string[]
   /**
-   * Output token embeddings during generation (TTS continuous-latent /
-   * embedding-driven flows). Also allows an empty prompt.
+   * Output the backbone's hidden states during generation (TTS models that
+   * read them, see `getFormattedAudioCompletion().completionParams`). Also
+   * allows an empty prompt.
    */
   embedding?: boolean
   /**
-   * Native speaker registry id for voice-clone TTS injection (from
-   * createSpeaker). -1 or omitted means no speaker override.
+   * TTS voice from the native speaker registry (`LlamaSpeaker.id`) that fills
+   * the prompt's voice markers. -1 or omitted means none.
    */
   speakerId?: number
+  /** TTS builtin voice name of the codec (`builtinVoices`). */
+  voice?: string
   /**
    * Number of top token probabilities to return for each generated token.
    * When > 0, completion_probabilities will be included in streaming callbacks and final result.
@@ -400,11 +429,11 @@ export type LlamaCompletionResult = {
   truncated: boolean
   context_full: boolean
   interrupted: boolean
+  /** Text-to-speech: the generated codec codes, frame-major (for `decodeAudioTokens`). */
   audio_tokens?: Array<number>
-  /**
-   * Continuous-latent TTS flow (e.g. BlueMagpie): captured audio latents,
-   * frame-major [n_frames * embedding_dim]. Feed into decodeAudioEmbeddings.
-   */
+  /** Text-to-speech: the generated latents, frame-major (for `decodeAudioLatents`). */
+  audio_latents?: Array<number>
+  /** Hidden states captured with `embedding: true`, frame-major [n * embedding_dim]. */
   embeddings?: Float32Array
   embedding_dim?: number
   completion_probabilities?: CompletionProbability[]
@@ -932,13 +961,14 @@ export interface LlamaContext {
 
   /**
    * Load a vocoder / codec model (codec.cpp GGUF)
-   * @param options Object containing path, optional n_batch and use_gpu
-   * @returns boolean indicating if loading was successful
+   * @param options Object containing path, optional n_batch, use_gpu and kv_overrides
+   * @returns true when loaded (throws otherwise)
    */
   initVocoder(options: {
     path: string
     n_batch?: number
     use_gpu?: boolean
+    kv_overrides?: string[]
   }): boolean
 
   /**
@@ -963,38 +993,34 @@ export interface LlamaContext {
   getAudioSampleRate(): number
 
   /**
-   * Get the formatted prompt for audio completion
-   * @param speaker Speaker JSON string or null
-   * @param text Text to complete
-   * @param speakerId Native speaker registry id (voice clone), -1 = none
-   * @returns Formatted audio completion
+   * Arm a TTS request and get the completion params its format needs
+   * @param speaker Speaker JSON string (`{"codec_voice": name}`) or empty for the default voice
+   * @param text Text to speak
+   * @param speakerId Native speaker registry id, -1 = none
+   * @param instruct How to speak, for models with `canTakeInstruct`
    */
   getFormattedAudioCompletion(
     speaker: string | null,
     text: string,
     speakerId?: number,
+    instruct?: string,
   ): {
     prompt: string
     grammar?: string
     embedding: boolean
     flow: 'tokens' | 'continuous_embd' | ''
+    completionParams: TTSCompletionParams
   }
 
   /**
-   * Register a voice-clone speaker from raw reference PCM
+   * Clone a voice from raw reference PCM
    */
   createSpeaker(options: {
     pcm: Float32Array | number[]
     sample_rate: number
     ref_text?: string
     emotion?: number
-    bake?: boolean
-  }): { id: number; family: string; rows: number; baked: boolean }
-
-  /**
-   * Run the speaker-encode path for an existing (unbaked) speaker
-   */
-  bakeSpeaker(id: number): { rows: number; baked: boolean }
+  }): { id: number; family: string }
 
   /**
    * Remove a speaker from the native registry
@@ -1002,21 +1028,29 @@ export interface LlamaContext {
   releaseSpeaker(id: number): void
 
   /**
-   * Decode audio tokens to audio data
-   * @param tokens Tokens to decode
-   * @returns Promise resolving to decoded audio tokens
+   * Load a speaker from a speaker file into the native registry
+   */
+  loadSpeaker(path: string, name?: string): { id: number; family: string }
+
+  /**
+   * Write a registry speaker to a speaker file
+   */
+  saveSpeaker(id: number, path: string, name?: string): void
+
+  /**
+   * List the speakers stored in a speaker file
+   */
+  listSpeakers(path: string): TTSSpeakerInfo[]
+
+  /**
+   * Decode audio tokens (a TTS completion's `audio_tokens`) to PCM
    */
   decodeAudioTokens(tokens: number[] | Int32Array): Promise<Float32Array>
 
   /**
-   * Decode continuous audio latents (BlueMagpie flow) to audio data
-   * @param embeddings Frame-major latents [n_frames * embeddingDim]
-   * @param embeddingDim Latent dimension
+   * Decode audio latents (a TTS completion's `audio_latents`) to PCM
    */
-  decodeAudioEmbeddings(
-    embeddings: number[] | Float32Array,
-    embeddingDim: number,
-  ): Promise<Float32Array>
+  decodeAudioLatents(latents: number[] | Float32Array): Promise<Float32Array>
 
   // Parallel decoding methods
 

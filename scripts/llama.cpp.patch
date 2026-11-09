@@ -217,10 +217,10 @@ index 8327c52e..c4db2024 100644
              if (NOT GGML_ARM_MSVC)
                  check_cxx_compiler_flag(-mfp16-format=ieee GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E)
 diff --git a/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp b/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-index c3b4af50..01a565df 100644
+index b40aca6b..7be2f66c 100644
 --- a/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
 +++ b/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-hexagon/ggml-hexagon.cpp
-@@ -2950,9 +2950,27 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
+@@ -3013,9 +3013,27 @@ static const char * ggml_backend_hexagon_device_get_description(ggml_backend_dev
      GGML_UNUSED(dev);
  }
  
@@ -250,7 +250,7 @@ index c3b4af50..01a565df 100644
  
      GGML_UNUSED(dev);
  }
-@@ -3707,7 +3725,12 @@ static void ggml_hexagon_init(ggml_backend_reg * reg) {
+@@ -3772,7 +3790,12 @@ static void ggml_hexagon_init(ggml_backend_reg * reg) {
  #if defined(__ANDROID__)
      if (opt_arch < 75) {
          opt_ndev = 1;
@@ -265,10 +265,10 @@ index c3b4af50..01a565df 100644
  #endif
  
 diff --git a/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt b/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
-index d7dec92a..69507c56 100644
+index 682b90e1..464ea1f9 100644
 --- a/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
 +++ b/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
-@@ -159,7 +159,7 @@ if (Vulkan_FOUND)
+@@ -160,7 +160,7 @@ if (Vulkan_FOUND)
      endif()
  
      # Set up toolchain for host compilation whether cross-compiling or not
@@ -277,7 +277,7 @@ index d7dec92a..69507c56 100644
          if (GGML_VULKAN_SHADERS_GEN_TOOLCHAIN)
              set(HOST_CMAKE_TOOLCHAIN_FILE ${GGML_VULKAN_SHADERS_GEN_TOOLCHAIN})
          else()
-@@ -179,7 +179,7 @@ if (Vulkan_FOUND)
+@@ -180,7 +180,7 @@ if (Vulkan_FOUND)
  
      include(ExternalProject)
  
@@ -520,20 +520,8 @@ index 4e096a36..be0b7dfa 100644
          rule.push_back({LLAMA_GRETYPE_ALT, 0});
          pos = parse_space(pos + 1, true);
          pos = parse_sequence(pos, rule_name, rule, is_nested, depth);
-diff --git a/src/llama.rn/vendor/llama.cpp/src/models/clef.cpp b/src/llama.rn/vendor/llama.cpp/src/models/clef.cpp
-index cd2889b2..6f872091 100644
---- a/src/llama.rn/vendor/llama.cpp/src/models/clef.cpp
-+++ b/src/llama.rn/vendor/llama.cpp/src/models/clef.cpp
-@@ -2,6 +2,7 @@
- 
- #include "llama-ext.h"
- 
-+#include <algorithm>
- #include <cmath>
- 
- void llama_model_clef::load_arch_hparams(llama_model_loader & ml) {
 diff --git a/src/llama.rn/vendor/llama.cpp/src/models/deepseek41.cpp b/src/llama.rn/vendor/llama.cpp/src/models/deepseek41.cpp
-index 97b2cbab..3204e5cc 100644
+index 96de9041..ae4ba29f 100644
 --- a/src/llama.rn/vendor/llama.cpp/src/models/deepseek41.cpp
 +++ b/src/llama.rn/vendor/llama.cpp/src/models/deepseek41.cpp
 @@ -551,7 +551,7 @@ ggml_tensor * llama_model_deepseek41::graph::build_attention41(

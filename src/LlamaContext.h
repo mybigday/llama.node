@@ -1,5 +1,4 @@
 #include "common.hpp"
-#include "tools/mtmd/clip.h"
 #include "tools/mtmd/mtmd.h"
 #include "rn-llama.h"
 #include "rn-completion.h"
@@ -56,7 +55,6 @@ private:
   void ReleaseMultimodal(const Napi::CallbackInfo &info);
 
   // TTS methods
-  rnllama::tts_type getTTSType(Napi::Env env, nlohmann::json speaker = nullptr);
   Napi::Value InitVocoder(const Napi::CallbackInfo &info);
   void ReleaseVocoder(const Napi::CallbackInfo &info);
   Napi::Value IsVocoderEnabled(const Napi::CallbackInfo &info);
@@ -64,10 +62,12 @@ private:
   Napi::Value GetTTSCapabilities(const Napi::CallbackInfo &info);
   Napi::Value GetAudioSampleRate(const Napi::CallbackInfo &info);
   Napi::Value CreateSpeaker(const Napi::CallbackInfo &info);
-  Napi::Value BakeSpeaker(const Napi::CallbackInfo &info);
   void ReleaseSpeaker(const Napi::CallbackInfo &info);
+  Napi::Value LoadSpeaker(const Napi::CallbackInfo &info);
+  Napi::Value SaveSpeaker(const Napi::CallbackInfo &info);
+  Napi::Value ListSpeakers(const Napi::CallbackInfo &info);
   Napi::Value DecodeAudioTokens(const Napi::CallbackInfo &info);
-  Napi::Value DecodeAudioEmbeddings(const Napi::CallbackInfo &info);
+  Napi::Value DecodeAudioLatents(const Napi::CallbackInfo &info);
 
   // Parallel decoding methods
   Napi::Value EnableParallelMode(const Napi::CallbackInfo &info);

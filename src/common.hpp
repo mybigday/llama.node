@@ -5,10 +5,13 @@
 #include "common/sampling.h"
 #include "common/speculative.h"
 #include "llama.h"
+#include <cmath>
+#include <cstdlib>
 #include <memory>
 #include <napi.h>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 namespace rnllama {
@@ -362,4 +365,170 @@ static void apply_reasoning_budget(
     thinking_forced_open = is_thinking_forced_open(*chat_params);
   }
   sampling.reasoning_budget_activate_immediately = thinking_forced_open;
+}
+
+// A general.sampling.* value of the model's GGUF, when it has one.
+static bool model_sampling_meta(const llama_model *model,
+                                llama_model_meta_key key, std::string &out) {
+  char buf[256] = {0};
+  if (model == nullptr ||
+      llama_model_meta_val_str(model, llama_model_meta_key_str(key), buf,
+                               sizeof(buf)) <= 0) {
+    return false;
+  }
+  out = buf;
+  return true;
+}
+
+// A sampling option's default: the GGUF's general.sampling.* value when the
+// model has one (TTS backbones carry their tuned sampling there), else
+// llama.node's default.
+template <typename T>
+static T model_sampling_default(const llama_model *model,
+                                llama_model_meta_key key, T fallback) {
+  std::string v;
+  if (!model_sampling_meta(model, key, v)) {
+    return fallback;
+  }
+  char *end = nullptr;
+  if constexpr (std::is_integral<T>::value) {
+    const long parsed = strtol(v.c_str(), &end, 10);
+    return end && end != v.c_str() ? (T)parsed : fallback;
+  } else {
+    const float parsed = strtof(v.c_str(), &end);
+    return end && end != v.c_str() ? (T)parsed : fallback;
+  }
+}
+
+// Parse the sampling options shared by completion() and queueCompletion().
+// Throws std::invalid_argument on a malformed logit_bias.
+// `default_samplers`: the sampler order at load (the GGUF's
+// general.sampling.sequence, else llama.cpp's), used without `samplers`.
+static void apply_sampling_options(
+    const Napi::Object &options, const llama_model *model,
+    const std::vector<common_sampler_type> &default_samplers,
+    common_params_sampling &sampling) {
+  auto opt_f = [&](const char *name, llama_model_meta_key key, float def) {
+    return get_option<float>(options, name,
+                             model_sampling_default<float>(model, key, def));
+  };
+  auto opt_i = [&](const char *name, llama_model_meta_key key, int32_t def) {
+    return get_option<int32_t>(
+        options, name, model_sampling_default<int32_t>(model, key, def));
+  };
+
+  sampling.temp = opt_f("temperature", LLAMA_MODEL_META_KEY_SAMPLING_TEMP, 0.80f);
+  sampling.top_k = opt_i("top_k", LLAMA_MODEL_META_KEY_SAMPLING_TOP_K, 40);
+  sampling.top_p = opt_f("top_p", LLAMA_MODEL_META_KEY_SAMPLING_TOP_P, 0.95f);
+  sampling.min_p = opt_f("min_p", LLAMA_MODEL_META_KEY_SAMPLING_MIN_P, 0.05f);
+  sampling.mirostat =
+      opt_i("mirostat", LLAMA_MODEL_META_KEY_SAMPLING_MIROSTAT, 0);
+  sampling.mirostat_tau =
+      opt_f("mirostat_tau", LLAMA_MODEL_META_KEY_SAMPLING_MIROSTAT_TAU, 5.00f);
+  sampling.mirostat_eta =
+      opt_f("mirostat_eta", LLAMA_MODEL_META_KEY_SAMPLING_MIROSTAT_ETA, 0.10f);
+  sampling.penalty_last_n =
+      opt_i("penalty_last_n", LLAMA_MODEL_META_KEY_SAMPLING_PENALTY_LAST_N, 64);
+  sampling.penalty_repeat = opt_f(
+      "penalty_repeat", LLAMA_MODEL_META_KEY_SAMPLING_PENALTY_REPEAT, 1.00f);
+  sampling.penalty_freq =
+      opt_f("penalty_freq", LLAMA_MODEL_META_KEY_SAMPLING_PENALTY_FREQ, 0.00f);
+  sampling.penalty_present = opt_f(
+      "penalty_present", LLAMA_MODEL_META_KEY_SAMPLING_PENALTY_PRESENT, 0.00f);
+  sampling.typ_p = get_option<float>(options, "typical_p", 1.00f);
+  sampling.xtc_threshold = opt_f(
+      "xtc_threshold", LLAMA_MODEL_META_KEY_SAMPLING_XTC_THRESHOLD, 0.00f);
+  sampling.xtc_probability = opt_f(
+      "xtc_probability", LLAMA_MODEL_META_KEY_SAMPLING_XTC_PROBABILITY, 0.10f);
+  sampling.dry_multiplier = opt_f(
+      "dry_multiplier", LLAMA_MODEL_META_KEY_SAMPLING_DRY_MULTIPLIER, 1.75f);
+  sampling.dry_base =
+      opt_f("dry_base", LLAMA_MODEL_META_KEY_SAMPLING_DRY_BASE, 2.0f);
+  sampling.dry_allowed_length = opt_i(
+      "dry_allowed_length", LLAMA_MODEL_META_KEY_SAMPLING_DRY_ALLOWED_LENGTH,
+      -1);
+  // 0 (or a negative value) disables DRY, as in llama.cpp since #26524.
+  sampling.dry_penalty_last_n = opt_i(
+      "dry_penalty_last_n", LLAMA_MODEL_META_KEY_SAMPLING_DRY_PENALTY_LAST_N,
+      0);
+  sampling.top_n_sigma = get_option<float>(options, "top_n_sigma", -1.0f);
+  sampling.ignore_eos = get_option<bool>(options, "ignore_eos", false);
+  sampling.seed = get_option<int32_t>(options, "seed", LLAMA_DEFAULT_SEED);
+  sampling.n_probs = get_option<int32_t>(options, "n_probs", 0);
+
+  if (options.Has("dry_sequence_breakers") &&
+      options.Get("dry_sequence_breakers").IsArray()) {
+    auto breakers = options.Get("dry_sequence_breakers").As<Napi::Array>();
+    sampling.dry_sequence_breakers.clear();
+    for (size_t i = 0; i < breakers.Length(); i++) {
+      sampling.dry_sequence_breakers.push_back(
+          breakers.Get(i).ToString().Utf8Value());
+    }
+  }
+
+  // Sampler order: "penalties;top_k;..." or an array of names.
+  sampling.samplers = default_samplers;
+  {
+    std::vector<std::string> names;
+    auto value = options.Has("samplers") ? options.Get("samplers")
+                                         : options.Env().Undefined();
+    if (value.IsString()) {
+      const std::string s = value.ToString().Utf8Value();
+      size_t start = 0;
+      while (start <= s.size()) {
+        size_t end = s.find(';', start);
+        if (end == std::string::npos) end = s.size();
+        if (end > start) names.push_back(s.substr(start, end - start));
+        start = end + 1;
+      }
+    } else if (value.IsArray()) {
+      auto arr = value.As<Napi::Array>();
+      for (size_t i = 0; i < arr.Length(); i++) {
+        if (arr.Get(i).IsString()) {
+          names.push_back(arr.Get(i).ToString().Utf8Value());
+        }
+      }
+    }
+    if (!names.empty()) {
+      sampling.samplers = common_sampler_types_from_names(names);
+    }
+  }
+
+  // logit_bias: [[token, bias | false], ...], or a Float32Array of one bias
+  // per vocabulary token (0: none, -Infinity: never sampled).
+  sampling.logit_bias.clear();
+  if (options.Has("logit_bias")) {
+    auto value = options.Get("logit_bias");
+    if (value.IsTypedArray() &&
+        value.As<Napi::TypedArray>().TypedArrayType() == napi_float32_array) {
+      auto table = value.As<Napi::Float32Array>();
+      const int n_vocab =
+          model ? llama_vocab_n_tokens(llama_model_get_vocab(model)) : 0;
+      if ((int)table.ElementLength() != n_vocab) {
+        throw std::invalid_argument(
+            "logit_bias: a Float32Array needs one entry per vocabulary token (" +
+            std::to_string(n_vocab) + "), got " +
+            std::to_string(table.ElementLength()));
+      }
+      const float *data = table.Data();
+      for (int t = 0; t < n_vocab; ++t) {
+        if (data[t] != 0.0f) sampling.logit_bias.push_back({t, data[t]});
+      }
+    } else if (value.IsArray()) {
+      auto arr = value.As<Napi::Array>();
+      for (size_t i = 0; i < arr.Length(); i++) {
+        auto item = arr.Get(i);
+        if (!item.IsArray()) continue;
+        auto pair = item.As<Napi::Array>();
+        if (pair.Length() != 2 || !pair.Get(0u).IsNumber()) continue;
+        const llama_token token = pair.Get(0u).ToNumber().Int32Value();
+        auto bias = pair.Get(1u);
+        if (bias.IsNumber()) {
+          sampling.logit_bias.push_back({token, bias.ToNumber().FloatValue()});
+        } else if (bias.IsBoolean() && !bias.ToBoolean().Value()) {
+          sampling.logit_bias.push_back({token, -INFINITY});
+        }
+      }
+    }
+  }
 }

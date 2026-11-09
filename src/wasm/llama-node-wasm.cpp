@@ -722,8 +722,30 @@ void apply_sampling_options(common_params &params, const json &options) {
     }
   }
 
+  // Sampler order: "penalties;top_k;..." or an array of names; the model's
+  // order at load (general.sampling.sequence, else llama.cpp's) when absent.
+  params.sampling.samplers = g_ctx->default_samplers;
+  if (options.contains("samplers")) {
+    std::vector<std::string> names;
+    const auto &samplers = options.at("samplers");
+    if (samplers.is_string()) {
+      names = string_split<std::string>(samplers.get<std::string>(), ';');
+    } else if (samplers.is_array()) {
+      for (const auto &name : samplers) {
+        if (name.is_string()) names.push_back(name.get<std::string>());
+      }
+    }
+    names.erase(std::remove(names.begin(), names.end(), std::string()),
+                names.end());
+    if (!names.empty()) {
+      params.sampling.samplers = common_sampler_types_from_names(names);
+    }
+  }
+  // Steps before the generation may end (-1: none).
+  g_ctx->n_min_predict = opt<int32_t>(options, "n_min_predict", -1);
+
+  params.sampling.logit_bias.clear();
   if (options.contains("logit_bias") && options.at("logit_bias").is_array()) {
-    params.sampling.logit_bias.clear();
     for (const auto &item : options.at("logit_bias")) {
       if (item.is_array() && item.size() == 2) {
         params.sampling.logit_bias.push_back(

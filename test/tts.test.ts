@@ -26,6 +26,8 @@ testIf(
     const caps = model.getTTSCapabilities()
     expect(caps.family).toBe('soprano')
     expect(typeof caps.type).toBe('number')
+    expect(Array.isArray(caps.builtinVoices)).toBe(true)
+    expect(typeof caps.needsVoice).toBe('boolean')
 
     const sampleRate = model.getAudioSampleRate()
     expect(sampleRate).toBeGreaterThan(0)
@@ -33,24 +35,22 @@ testIf(
     const text = 'Hello, my name is John Doe.'
     const formatted = await model.getFormattedAudioCompletion({ prompt: text })
     expect(formatted.prompt).toBeTruthy()
-    expect(formatted.flow).toBe('tokens')
+    expect(formatted.completionParams.prompt).toBe(formatted.prompt)
 
+    await expect(
+      model.getFormattedAudioCompletion({ prompt: text, speaker: 'no-such-voice' }),
+    ).rejects.toThrow(/Unknown voice/)
+
+    // completionParams carries the prompt, grammar / logit_bias mask,
+    // embedding and n_min_predict; sampling defaults to the GGUF's.
     const result = await model.completion({
-      prompt: formatted.prompt,
-      grammar: formatted.grammar,
-      embedding: formatted.embedding,
-      temperature: 0.7,
-      top_p: 0.9,
+      ...formatted.completionParams,
       n_predict: 512,
-      stop: ['<|im_end|>', '<|SPEECH_GENERATION_END|>'],
     })
 
     let audio: Float32Array
-    if (result.embeddings?.length && result.embedding_dim) {
-      audio = await model.decodeAudioEmbeddings(
-        result.embeddings,
-        result.embedding_dim,
-      )
+    if (result.audio_latents?.length) {
+      audio = await model.decodeAudioLatents(result.audio_latents)
     } else {
       expect(result.audio_tokens?.length).toBeGreaterThan(0)
       audio = await model.decodeAudioTokens(result.audio_tokens!)

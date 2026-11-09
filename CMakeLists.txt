@@ -209,6 +209,7 @@ include_directories(
   ${LLAMA_CPP_DIR}/tools/mtmd
   ${CODEC_CPP_DIR}/include
   ${CODEC_CPP_DIR}/common
+  ${CODEC_CPP_DIR}/src
 )
 
 file(
@@ -243,16 +244,22 @@ file(
     "${LLAMA_RN_DIR}/cpp/*.cpp"
     "${LLAMA_RN_DIR}/cpp/*.h"
     "${LLAMA_RN_DIR}/cpp/*.hpp"
-    # codec.cpp (vendored via llama.rn) — TTS vocoder/audio-LM backend.
-    # common/tts_runner{,_flow}.cpp are codec.cpp's reference host loop and
-    # need examples/utils; rn-tts drives its own AR loop via codec_lm_*.
+    # codec.cpp (vendored via llama.rn) — TTS vocoder/audio-LM backend:
+    # codec_audio_lm (include/codec_audio_lm.h) and the families behind it.
+    # tts_runner*.cpp / tts_c.cpp are codec.cpp's own host over its bundled
+    # llama.cpp; rn-tts is llama.rn's.
     "${CODEC_CPP_DIR}/src/*.cpp"
     "${CODEC_CPP_DIR}/src/batch/*.cpp"
+    "${CODEC_CPP_DIR}/src/blocks/*.cpp"
     "${CODEC_CPP_DIR}/src/models/*.cpp"
     "${CODEC_CPP_DIR}/src/ops/*.cpp"
     "${CODEC_CPP_DIR}/src/runtime/*.cpp"
     "${CODEC_CPP_DIR}/src/lm/*.cpp"
     "${CODEC_CPP_DIR}/common/audio_lm.cpp"
+    "${CODEC_CPP_DIR}/common/audio_lm_c.cpp"
+    "${CODEC_CPP_DIR}/common/audio_lm_family*.cpp"
+    "${CODEC_CPP_DIR}/common/tts_segment.cpp"
+    "${CODEC_CPP_DIR}/common/kitten_text.cpp"
 )
 
 if (NOT MSVC AND CMAKE_SYSTEM_NAME STREQUAL "Windows")

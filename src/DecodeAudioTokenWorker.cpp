@@ -7,10 +7,9 @@ DecodeAudioTokenWorker::DecodeAudioTokenWorker(const Napi::CallbackInfo &info,
 
 DecodeAudioTokenWorker::DecodeAudioTokenWorker(const Napi::CallbackInfo &info,
                                                rnllama::llama_rn_context* rn_ctx,
-                                               std::vector<float> embeddings, int embedding_dim)
+                                               std::vector<float> latents)
     : AsyncWorker(info.Env()), Deferred(info.Env()), _rn_ctx(rn_ctx),
-      _embeddings(std::move(embeddings)), _embedding_dim(embedding_dim),
-      _is_embeddings(true) {}
+      _latents(std::move(latents)), _is_latents(true) {}
 
 void DecodeAudioTokenWorker::Execute() {
   try {
@@ -19,20 +18,12 @@ void DecodeAudioTokenWorker::Execute() {
       return;
     }
 
-    if (_is_embeddings) {
-      _result = _rn_ctx->tts_wrapper->decodeAudioEmbeddings(_rn_ctx, _embeddings,
-                                                            _embedding_dim);
+    if (_is_latents) {
+      _result = _rn_ctx->tts_wrapper->decodeAudioLatents(_rn_ctx, _latents);
       return;
     }
-
-    // Convert to llama_token vector - rn-tts handles token adjustment internally
-    std::vector<llama_token> llama_tokens;
-    for (const auto& token : _tokens) {
-      llama_tokens.push_back(token);
-    }
-
-    // Use the rn-tts API instead of directly accessing the worker
-    _result = _rn_ctx->tts_wrapper->decodeAudioTokens(_rn_ctx, llama_tokens);
+    _result = _rn_ctx->tts_wrapper->decodeAudioTokens(
+        _rn_ctx, std::vector<llama_token>(_tokens.begin(), _tokens.end()));
   } catch (const std::exception &e) {
     SetError(e.what());
   }
