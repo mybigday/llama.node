@@ -40,7 +40,10 @@ LlamaCompletionWorker::LlamaCompletionWorker(
     const std::string &chat_parser,
     const std::vector<std::string> &media_paths,
     bool has_vocoder,
-    const std::string &prefill_text)
+    const std::string &prefill_text,
+    int32_t n_min_predict,
+    int32_t tts_speaker_id,
+    const std::string &tts_voice)
     : AsyncWorker(info.Env()), Deferred(info.Env()), _rn_ctx(rn_ctx),
       _params(params), _stop_words(stop_words), _chat_format(chat_format),
       _generation_prompt(generation_prompt),
@@ -48,7 +51,10 @@ LlamaCompletionWorker::LlamaCompletionWorker(
       _chat_parser(chat_parser),
       _media_paths(media_paths),
       _prefill_text(prefill_text),
-      _has_vocoder(has_vocoder) {
+      _has_vocoder(has_vocoder),
+      _n_min_predict(n_min_predict),
+      _tts_speaker_id(tts_speaker_id),
+      _tts_voice(tts_voice) {
   if (!callback.IsEmpty()) {
     _tsfn = Napi::ThreadSafeFunction::New(info.Env(), callback,
                                           "LlamaCompletionCallback", 0, 1);
@@ -103,6 +109,10 @@ void LlamaCompletionWorker::Execute() {
     _rn_ctx->params.n_batch = _params.n_batch;
     _rn_ctx->params.ctx_shift = _params.ctx_shift;
     _rn_ctx->params.embedding = _params.embedding;
+    _rn_ctx->params.n_keep = _params.n_keep;
+    _rn_ctx->n_min_predict = _n_min_predict;
+    _rn_ctx->tts_speaker_id = _tts_speaker_id;
+    _rn_ctx->tts_voice = _tts_voice;
 
     // Set prefill text
     completion->prefill_text = rnllama::utf8_sanitize(_prefill_text);
@@ -285,11 +295,15 @@ void LlamaCompletionWorker::Execute() {
     _result.stopping_word = completion->stopping_word;
     _result.stopped_limited = completion->stopped_limit;
 
-    // Get audio tokens if TTS is enabled
+    // A completion with a vocoder: what it generated, codec codes or latents
+    // (the decoder input).
     if (_has_vocoder && _rn_ctx->tts_wrapper != nullptr) {
-      _result.audio_tokens = _rn_ctx->tts_wrapper->audio_tokens;
+      auto *tts = _rn_ctx->tts_wrapper;
+      tts->collectGeneration();
+      _result.audio_tokens = tts->audio_tokens;
+      _result.audio_latents = tts->audio_latents;
     }
-    // Continuous-latent TTS flow (BlueMagpie) / embedding capture
+    // Hidden states captured with `embedding: true`
     if (!completion->embeddings.empty()) {
       _result.embeddings = completion->embeddings;
       _result.embedding_dim = completion->embedding_dim;
@@ -299,6 +313,10 @@ void LlamaCompletionWorker::Execute() {
     completion->endCompletion();
 
   } catch (const std::exception &e) {
+    // Any throw after the prompt is loaded (a draft context that can't be
+    // allocated, a TTS step on a bad request, ...) must end the completion,
+    // or is_predicting stays set.
+    _rn_ctx->completion->endCompletion();
     SetError(e.what());
     return;
   }
@@ -386,8 +404,15 @@ void LlamaCompletionWorker::OnOK() {
     result.Set("audio_tokens", audio_tokens);
   }
 
-  // Continuous-latent TTS flow: surface captured embeddings for
-  // decodeAudioEmbeddings
+  if (_has_vocoder && !_result.audio_latents.empty()) {
+    auto audio_latents = Napi::Array::New(env, _result.audio_latents.size());
+    for (size_t i = 0; i < _result.audio_latents.size(); i++) {
+      audio_latents.Set(i, Napi::Number::New(env, _result.audio_latents[i]));
+    }
+    result.Set("audio_latents", audio_latents);
+  }
+
+  // Hidden states captured with `embedding: true`
   if (!_result.embeddings.empty()) {
     auto embeddings = Napi::Float32Array::New(env, _result.embeddings.size());
     memcpy(embeddings.Data(), _result.embeddings.data(),

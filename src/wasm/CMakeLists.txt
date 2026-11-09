@@ -125,6 +125,7 @@ include_directories(
   ${LLAMA_CPP_DIR}/vendor
   ${CODEC_CPP_DIR}/include
   ${CODEC_CPP_DIR}/common
+  ${CODEC_CPP_DIR}/src
 )
 
 file(
@@ -133,11 +134,16 @@ file(
     "${LLAMA_RN_DIR}/cpp/*.cpp"
     "${CODEC_CPP_DIR}/src/*.cpp"
     "${CODEC_CPP_DIR}/src/batch/*.cpp"
+    "${CODEC_CPP_DIR}/src/blocks/*.cpp"
     "${CODEC_CPP_DIR}/src/models/*.cpp"
     "${CODEC_CPP_DIR}/src/ops/*.cpp"
     "${CODEC_CPP_DIR}/src/runtime/*.cpp"
     "${CODEC_CPP_DIR}/src/lm/*.cpp"
     "${CODEC_CPP_DIR}/common/audio_lm.cpp"
+    "${CODEC_CPP_DIR}/common/audio_lm_c.cpp"
+    "${CODEC_CPP_DIR}/common/audio_lm_family*.cpp"
+    "${CODEC_CPP_DIR}/common/tts_segment.cpp"
+    "${CODEC_CPP_DIR}/common/kitten_text.cpp"
 )
 
 add_executable(llama-node

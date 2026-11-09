@@ -1,8 +1,8 @@
 // Shared TTS runner used by the per-model example scripts.
 // Mirrors llama.rn's canonical flow:
 //   loadModel → initVocoder → getTTSCapabilities → getFormattedAudioCompletion
-//   → completion({ prompt, grammar, embedding }) → decodeAudioTokens /
-//   decodeAudioEmbeddings → WAV file.
+//   → completion({ ...completionParams, speaker }) → decodeAudioTokens /
+//   decodeAudioLatents → WAV file.
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -58,6 +58,7 @@ export const runTTS = async (modelKey, options = {}) => {
     n_batch: 4096,
     n_gpu_layers: 99,
     ctx_shift: false,
+    ...def.contextParams,
     ...options.contextParams,
   })
 
@@ -67,50 +68,42 @@ export const runTTS = async (modelKey, options = {}) => {
   const caps = context.getTTSCapabilities()
   console.log('TTS capabilities:', caps)
 
-  // Fresh KV every generation — embedding-driven prefills can't reuse cache.
-  context.clearCache(false)
-
-  const formatted = await context.getFormattedAudioCompletion({
-    prompt: text,
-    speaker: options.speaker,
-    phonemizer: options.phonemizer,
-  })
-  console.log(`Flow: ${formatted.flow || 'tokens'}`)
-
-  // NeuTTS prefers flat sampling; OuteTTS 0.x needs top_k=4 (llama.cpp's tts
-  // example default — wider sampling garbles the 500M model's audio codes);
-  // everything else works well at 0.7/0.9 (matches the llama.rn example).
-  const isLegacyOuteTTS =
-    caps.promptKind === 'outetts_legacy' || caps.promptKind === 'outetts_v0_3'
-  let sampling = { temperature: 0.7, top_p: 0.9 }
-  if (caps.family === 'neutts') {
-    sampling = { temperature: 1.0, top_k: 50, top_p: 1.0 }
-  } else if (isLegacyOuteTTS) {
-    sampling = { temperature: 0.7, top_p: 0.9, top_k: 4 }
+  // A voice cloned from a reference clip (models with canSpeakerFromAudio),
+  // else a builtin voice name, else the model's default voice.
+  let speaker = options.speaker
+  if (options.refAudio) {
+    speaker = context.createSpeaker(options.refAudio)
   }
 
+  const { completionParams } = await context.getFormattedAudioCompletion({
+    prompt: text,
+    speaker,
+    phonemizer: options.phonemizer,
+    instruct: options.instruct,
+  })
+
+  // completionParams holds what the model's format needs (prompt, grammar /
+  // logit_bias mask, embedding, n_min_predict); sampling defaults to the
+  // backbone GGUF's general.sampling.*.
   console.log('Generating audio...')
   const startTime = Date.now()
   const result = await context.completion({
-    prompt: formatted.prompt,
-    grammar: formatted.grammar,
-    embedding: formatted.embedding,
-    ...sampling,
+    ...completionParams,
+    speaker,
     n_predict: options.n_predict || 4096,
-    stop: ['<|im_end|>', '<|SPEECH_GENERATION_END|>'],
     ...options.completionParams,
   })
 
   const sampleRate = context.getAudioSampleRate()
   let audio
-  if (result.embeddings?.length && result.embedding_dim) {
-    console.log(`Decoding ${result.embeddings.length / result.embedding_dim} latent frames...`)
-    audio = await context.decodeAudioEmbeddings(result.embeddings, result.embedding_dim)
+  if (result.audio_latents?.length) {
+    console.log(`Decoding ${result.audio_latents.length} latent values...`)
+    audio = await context.decodeAudioLatents(result.audio_latents)
   } else if (result.audio_tokens?.length) {
     console.log(`Decoding ${result.audio_tokens.length} audio tokens...`)
     audio = await context.decodeAudioTokens(result.audio_tokens)
   } else {
-    throw new Error('No audio produced (no audio_tokens or embeddings in result)')
+    throw new Error('No audio produced (no audio_tokens or audio_latents in result)')
   }
 
   const outPath =
@@ -121,6 +114,7 @@ export const runTTS = async (modelKey, options = {}) => {
     `\n✓ Wrote ${outPath} (${seconds}s @ ${sampleRate}Hz, generated in ${((Date.now() - startTime) / 1000).toFixed(1)}s)`,
   )
 
+  if (speaker && typeof speaker === 'object') speaker.release()
   context.releaseVocoder()
   await context.release()
 }

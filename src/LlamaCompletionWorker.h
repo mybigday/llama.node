@@ -26,7 +26,10 @@ public:
                         const std::string &chat_parser = "",
                         const std::vector<std::string> &media_paths = {},
                         bool has_vocoder = false,
-                        const std::string &prefill_text = "");
+                        const std::string &prefill_text = "",
+                        int32_t n_min_predict = -1,
+                        int32_t tts_speaker_id = -1,
+                        const std::string &tts_voice = "");
 
   ~LlamaCompletionWorker();
 
@@ -60,6 +63,9 @@ private:
   bool _interrupted = false;
   Napi::ThreadSafeFunction _tsfn;
   bool _has_vocoder;
+  int32_t _n_min_predict;
+  int32_t _tts_speaker_id;
+  std::string _tts_voice;
   size_t _sent_token_probs_index = 0;
   struct {
     size_t tokens_evaluated = 0;
@@ -74,6 +80,7 @@ private:
     std::string stopping_word;
     bool stopped_limited = false;
     std::vector<llama_token> audio_tokens;
+    std::vector<float> audio_latents;
     std::vector<float> embeddings;
     int embedding_dim = 0;
   } _result;

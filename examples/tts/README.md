@@ -22,8 +22,8 @@ node examples/tts/download-models.mjs all
 
 | Script | Model | Size (model + codec) | Notes |
 |---|---|---|---|
-| `outetts-0.3.mjs` | OuteTTS 0.3 500M + WavTokenizer | 454MB + 170MB | |
-| `outetts-1.0.mjs` | OuteTTS 1.0 0.6B + DAC | 454MB + 296MB | |
+| `outetts-0.3.mjs` | OuteTTS 0.3 500M + WavTokenizer | 403MB + 178MB | Builtin voices in the codec |
+| `outetts-1.0.mjs` | OuteTTS 1.0 0.6B + DAC | 402MB + 148MB | |
 | `soprano.mjs` | Soprano-1.1 80M | 160MB + 121MB | Smallest pair (used in CI tests) |
 | `neutts-nano.mjs` | NeuTTS Nano + NeuCodec | 210MB + 342MB | Needs `npm i phonemize --no-save` |
 | `csm.mjs` | CSM-1B (Sesame) + Mimi | 770MB + 803MB | |
@@ -31,23 +31,48 @@ node examples/tts/download-models.mjs all
 | `moss-tts-realtime.mjs` | MOSS-TTS-Realtime + MOSS-Audio | 1.8GB + 1.8GB | Streaming interleave |
 | `moss-ttsd.mjs` | MOSS-TTSD v0.5 + XY-Tokenizer | 1.8GB + 1.1GB | `[S1]`/`[S2]` dialogue format |
 | `chatterbox.mjs` | Chatterbox Multilingual T3 + S3G | 289MB + 178MB | 23 languages, voice cloning |
+| `chatterbox-turbo.mjs` | Chatterbox Turbo T3 + MeanFlow S3G | 259MB + 217MB | Voice cloning |
+| `breezyvoice.mjs` | BreezyVoice (CosyVoice v1) + flow/HiFT | 161MB + 316MB | Instruct, voice cloning |
 | `bluemagpie.mjs` | BlueMagpie-TTS Barbet-1B + AudioVAE | 661MB + 1.04GB | Continuous-latent flow |
 
 NeuTTS Air is also in the catalog (`neutts-air`) — download it and pass the key
 to `run-tts.mjs`-based scripts the same way as `neutts-nano`.
 
+## Flow
+
+`getFormattedAudioCompletion()` returns `completionParams` — the prompt, the
+grammar / `logit_bias` token mask, `embedding` and the model's minimum length
+(`n_min_predict`). Pass them to `completion()` as-is; sampling defaults to the
+backbone GGUF's `general.sampling.*`. The result carries `audio_tokens` (codec
+codes, for `decodeAudioTokens`) or `audio_latents` (for `decodeAudioLatents`).
+
+```js
+const { completionParams } = await context.getFormattedAudioCompletion({ prompt })
+const result = await context.completion({ ...completionParams, n_predict: 4096 })
+const audio = result.audio_latents?.length
+  ? await context.decodeAudioLatents(result.audio_latents)
+  : await context.decodeAudioTokens(result.audio_tokens)
+```
+
+Builtin voices of the codec are listed in `getTTSCapabilities().builtinVoices`;
+pass a voice's `name` as `speaker` (or set `TTS_VOICE` for the NeuTTS scripts).
+
 ## Voice cloning
 
-Families with a speaker encoder (Chatterbox, Qwen3-TTS, CSM, ...) accept a
-reference clip:
+Families with `canSpeakerFromAudio` (Chatterbox, Qwen3-TTS Base, CosyVoice,
+...) accept a reference clip:
 
 ```js
 const speaker = context.createSpeaker({
-  refAudio: pcmFloat32,          // mono float32 PCM
+  refAudio: pcmFloat32,          // mono float32 PCM, any sample rate
   refAudioSampleRate: 24000,
-  refText: 'Transcript of the reference clip.',
+  refText: 'Transcript of the reference clip.', // when caps.usesRefText
 })
-const formatted = await context.getFormattedAudioCompletion({ prompt, speaker })
-const result = await context.completion({ ...formatted, speaker })
+const { completionParams } = await context.getFormattedAudioCompletion({ prompt, speaker })
+const result = await context.completion({ ...completionParams, speaker })
+
+// Keep the voice for later: write it to a speaker file and load it back.
+await context.saveSpeaker(speaker, 'my-voice.gguf')
+const reloaded = await context.loadSpeaker('my-voice.gguf')
 speaker.release()
 ```

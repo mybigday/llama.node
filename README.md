@@ -118,8 +118,9 @@ See [`examples/decision.mjs`](examples/decision.mjs).
 TTS is backed by [codec.cpp](https://github.com/mybigday/codec.cpp) (vendored
 by the llama.rn submodule under `src/llama.rn/vendor/codec.cpp`) and supports OuteTTS v0.x/v1.0, Soprano 1.1,
 NeuTTS Nano/Air, CSM 1B, Qwen3-TTS 0.6B, MOSS-TTSD, MOSS-TTS-Realtime,
-Chatterbox T3 (incl. multilingual), and BlueMagpie-TTS. The API mirrors
-llama.rn and may change without a major version bump.
+Chatterbox T3 (incl. multilingual and Turbo), CosyVoice / BreezyVoice and
+BlueMagpie-TTS. TTS runs as a regular completion; the API mirrors llama.rn and
+may change without a major version bump.
 
 ```js
 import { loadModel } from '@fugood/llama.node'
@@ -131,31 +132,27 @@ const context = await loadModel({
 })
 context.initVocoder({ path: 'path/to/codec.gguf', n_batch: 4096 })
 
-const caps = context.getTTSCapabilities() // { family, requiresPhonemes, ... }
-const { prompt, grammar, embedding } = await context.getFormattedAudioCompletion({
+const caps = context.getTTSCapabilities() // { family, builtinVoices, needsVoice, ... }
+const { completionParams } = await context.getFormattedAudioCompletion({
   prompt: 'Hello from llama.node!',
-  // speaker: 'default' | SpeakerPayload | LlamaSpeaker (voice clone)
-  // phonemizer: (text, language) => ipaText, // required for NeuTTS
+  // speaker: builtin voice name (caps.builtinVoices) | LlamaSpeaker
+  // phonemizer: (text, language) => ipaText, // for caps.requiresPhonemes (NeuTTS)
+  // instruct: 'Speak cheerfully', // for caps.canTakeInstruct
 })
 
-const result = await context.completion({
-  prompt,
-  grammar,
-  embedding,
-  temperature: 0.7,
-  top_p: 0.9,
-  n_predict: 4096,
-  stop: ['<|im_end|>', '<|SPEECH_GENERATION_END|>'],
-})
+// completionParams: prompt, grammar / logit_bias mask, embedding, n_min_predict.
+// Sampling defaults to the backbone GGUF's general.sampling.*.
+const result = await context.completion({ ...completionParams, n_predict: 4096 })
 
 const sampleRate = context.getAudioSampleRate()
-const audio = result.embeddings?.length // continuous-latent flow (BlueMagpie)
-  ? await context.decodeAudioEmbeddings(result.embeddings, result.embedding_dim)
-  : await context.decodeAudioTokens(result.audio_tokens) // token flow
+const audio = result.audio_latents?.length // latent models (Soprano, BlueMagpie)
+  ? await context.decodeAudioLatents(result.audio_latents)
+  : await context.decodeAudioTokens(result.audio_tokens) // codec codes
 
-// Voice cloning (models with speaker encoders, e.g. Chatterbox / Qwen3-TTS):
+// Voice cloning (caps.canSpeakerFromAudio):
 // const speaker = context.createSpeaker({ refAudio: pcmFloat32, refAudioSampleRate: 24000, refText: '...' })
-// ...pass `speaker` to getFormattedAudioCompletion / completion, then speaker.release()
+// ...pass `speaker` to getFormattedAudioCompletion and completion, then speaker.release()
+// Speaker files: context.saveSpeaker(speaker, path) / context.loadSpeaker(path) / context.listSpeakers(path)
 
 context.releaseVocoder()
 ```

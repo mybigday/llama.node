@@ -26,6 +26,7 @@ const phonemizer = (text, language) =>
 
 await runTTS('neutts-nano', {
   phonemizer,
-  // Built-in reference voices: 'default' (jo), 'dave', 'jo'
-  speaker: 'default',
+  // A builtin voice of the codec (getTTSCapabilities().builtinVoices), or
+  // the model's default voice when unset.
+  speaker: process.env.TTS_VOICE,
 })

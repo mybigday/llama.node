@@ -372,65 +372,16 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
 
   // ALL Sampling parameters
   params.n_predict = get_option<int32_t>(options, "n_predict", -1);
-  params.sampling.temp = get_option<float>(options, "temperature", 0.80f);
-  params.sampling.top_k = get_option<int32_t>(options, "top_k", 40);
-  params.sampling.top_p = get_option<float>(options, "top_p", 0.95f);
-  params.sampling.min_p = get_option<float>(options, "min_p", 0.05f);
-  params.sampling.mirostat = get_option<int32_t>(options, "mirostat", 0.00f);
-  params.sampling.mirostat_tau =
-      get_option<float>(options, "mirostat_tau", 5.00f);
-  params.sampling.mirostat_eta =
-      get_option<float>(options, "mirostat_eta", 0.10f);
-  params.sampling.penalty_last_n =
-      get_option<int32_t>(options, "penalty_last_n", 64);
-  params.sampling.penalty_repeat =
-      get_option<float>(options, "penalty_repeat", 1.00f);
-  params.sampling.penalty_freq =
-      get_option<float>(options, "penalty_freq", 0.00f);
-  params.sampling.penalty_present =
-      get_option<float>(options, "penalty_present", 0.00f);
-  params.sampling.typ_p = get_option<float>(options, "typical_p", 1.00f);
-  params.sampling.xtc_threshold =
-      get_option<float>(options, "xtc_threshold", 0.00f);
-  params.sampling.xtc_probability =
-      get_option<float>(options, "xtc_probability", 0.10f);
-  params.sampling.dry_multiplier =
-      get_option<float>(options, "dry_multiplier", 1.75f);
-  params.sampling.dry_base = get_option<float>(options, "dry_base", 2);
-  params.sampling.dry_allowed_length =
-      get_option<float>(options, "dry_allowed_length", -1);
-  params.sampling.dry_penalty_last_n =
-      get_option<float>(options, "dry_penalty_last_n", 0);
-  params.sampling.top_n_sigma =
-      get_option<float>(options, "top_n_sigma", -1.0f);
-  params.sampling.ignore_eos = get_option<bool>(options, "ignore_eos", false);
   params.n_keep = get_option<int32_t>(options, "n_keep", 0);
-  params.sampling.seed =
-      get_option<int32_t>(options, "seed", LLAMA_DEFAULT_SEED);
-  params.sampling.n_probs = get_option<int32_t>(options, "n_probs", 0);
-
-  // DRY sequence breakers
-  if (options.Has("dry_sequence_breakers") && options.Get("dry_sequence_breakers").IsArray()) {
-    auto dry_array = options.Get("dry_sequence_breakers").As<Napi::Array>();
-    params.sampling.dry_sequence_breakers.clear();
-    for (size_t i = 0; i < dry_array.Length(); i++) {
-      params.sampling.dry_sequence_breakers.push_back(dry_array.Get(i).ToString().Utf8Value());
-    }
+  try {
+    apply_sampling_options(options, _rn_ctx->model, _rn_ctx->default_samplers,
+                           params.sampling);
+  } catch (const std::exception &e) {
+    Napi::TypeError::New(env, e.what()).ThrowAsJavaScriptException();
+    return env.Undefined();
   }
-
-  // Logit bias
-  if (options.Has("logit_bias") && options.Get("logit_bias").IsArray()) {
-    auto logit_bias_array = options.Get("logit_bias").As<Napi::Array>();
-    params.sampling.logit_bias.clear();
-    for (size_t i = 0; i < logit_bias_array.Length(); i++) {
-      auto bias_pair = logit_bias_array.Get(i).As<Napi::Array>();
-      if (bias_pair.Length() == 2) {
-        llama_token token = bias_pair.Get(static_cast<uint32_t>(0)).ToNumber().Int32Value();
-        float bias = bias_pair.Get(static_cast<uint32_t>(1)).ToNumber().FloatValue();
-        params.sampling.logit_bias[token].bias = bias;
-      }
-    }
-  }
+  const int32_t n_min_predict =
+      get_option<int32_t>(options, "n_min_predict", -1);
 
   // Stop words assignment to params
   params.antiprompt = stop_words;
@@ -459,6 +410,8 @@ Napi::Value LlamaContext::QueueCompletion(const Napi::CallbackInfo &info) {
   auto slot_manager = _rn_ctx->slot_manager;
 
   // Queue the request
+  // queue_request takes n_min_predict from the context, like llama.rn.
+  _rn_ctx->n_min_predict = n_min_predict;
   int32_t requestId = _rn_ctx->slot_manager->queue_request(
     params,
     tokenize_result.tokens,
