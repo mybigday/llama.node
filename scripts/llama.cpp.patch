@@ -43,7 +43,7 @@ index a7e37057..ac919abc 100644
  
  analyze_reasoning::analyze_reasoning(const common_chat_template & tmpl, bool supports_tools)
 diff --git a/src/llama.rn/vendor/llama.cpp/common/chat.cpp b/src/llama.rn/vendor/llama.cpp/common/chat.cpp
-index 5804c3d0..79cc56ab 100644
+index 17e2a7f1..83d8a6ff 100644
 --- a/src/llama.rn/vendor/llama.cpp/common/chat.cpp
 +++ b/src/llama.rn/vendor/llama.cpp/common/chat.cpp
 @@ -36,11 +36,22 @@ using json = common_json;
