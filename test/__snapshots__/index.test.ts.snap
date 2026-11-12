@@ -184,8 +184,11 @@ exports[`loadModelInfo 1`] = `
   "llama.vocab_size": "128256",
   "tokenizer.ggml.bos_token_id": "128000",
   "tokenizer.ggml.eos_token_id": "128001",
+  "tokenizer.ggml.merges.length": 280147,
   "tokenizer.ggml.model": "gpt2",
   "tokenizer.ggml.pre": "llama-bpe",
+  "tokenizer.ggml.token_type.length": 128256,
+  "tokenizer.ggml.tokens.length": 128256,
   "version": 3,
 }
 `;

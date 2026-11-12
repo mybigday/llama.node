@@ -71,13 +71,9 @@ static void append_chat_template_grammar_trigger(
   sampling.grammar_triggers.push_back(trigger);
 }
 
-// loadModelInfo(path: string): object
+// loadModelInfo(path: string, skip?: string[]): object
 Napi::Value LlamaContext::ModelInfo(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
-  struct gguf_init_params params = {
-      /*.no_alloc = */ false,
-      /*.ctx      = */ NULL,
-  };
   std::string path = info[0].ToString().Utf8Value();
 
   // Convert Napi::Array to vector<string>
@@ -89,35 +85,38 @@ Napi::Value LlamaContext::ModelInfo(const Napi::CallbackInfo &info) {
     }
   }
 
-  struct gguf_context *ctx = gguf_init_from_file(path.c_str(), params);
+  // `skip` goes to the reader so the (large) text of skipped arrays is never
+  // built; their element counts come back in `arr_lengths` instead.
+  rnllama::gguf_file_info gguf;
+  if (!rnllama::read_gguf_file_info(path, gguf, skip)) {
+    Napi::Error::New(env, "Failed to load model info").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  auto is_skipped = [&](const char *key) {
+    return std::find(skip.begin(), skip.end(), key) != skip.end();
+  };
 
   Napi::Object metadata = Napi::Object::New(env);
-  if (std::find(skip.begin(), skip.end(), "version") == skip.end()) {
-    metadata.Set("version", Napi::Number::New(env, gguf_get_version(ctx)));
+  if (!is_skipped("version")) {
+    metadata.Set("version", Napi::Number::New(env, gguf.version));
   }
-  if (std::find(skip.begin(), skip.end(), "alignment") == skip.end()) {
-    metadata.Set("alignment", Napi::Number::New(env, gguf_get_alignment(ctx)));
+  if (!is_skipped("alignment")) {
+    metadata.Set("alignment", Napi::Number::New(env, gguf.alignment));
   }
-  if (std::find(skip.begin(), skip.end(), "data_offset") == skip.end()) {
-    metadata.Set("data_offset",
-                 Napi::Number::New(env, gguf_get_data_offset(ctx)));
-  }
-
-  // kv
-  {
-    const int n_kv = gguf_get_n_kv(ctx);
-
-    for (int i = 0; i < n_kv; ++i) {
-      const char *key = gguf_get_key(ctx, i);
-      if (std::find(skip.begin(), skip.end(), key) != skip.end()) {
-        continue;
-      }
-      const std::string value = gguf_kv_to_str(ctx, i);
-      metadata.Set(key, Napi::String::New(env, value.c_str()));
-    }
+  if (!is_skipped("data_offset")) {
+    metadata.Set("data_offset", Napi::Number::New(env, gguf.data_offset));
   }
 
-  gguf_free(ctx);
+  for (const auto &[key, value] : gguf.kv) {
+    metadata.Set(key, Napi::String::New(env, value));
+  }
+
+  // A skipped array key is reported by its length (e.g.
+  // `tokenizer.ggml.tokens.length`), so callers can still tell vocab size.
+  for (const auto &[key, length] : gguf.arr_lengths) {
+    metadata.Set(key + ".length", Napi::Number::New(env, length));
+  }
 
   return metadata;
 }
