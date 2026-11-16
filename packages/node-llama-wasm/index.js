@@ -696,6 +696,60 @@ const prepareVideoSources = async (mediaPaths) => {
   return prepared
 }
 
+const isVideoFramePack = (source) =>
+  source instanceof Uint8Array &&
+  source.length >= VIDEO_PACK_HEADER_SIZE &&
+  VIDEO_PACK_MAGIC.split('').every((c, i) => source[i] === c.charCodeAt(0))
+
+// The `video_url` parts of a decide() state made of chat messages, with their
+// source replaced by `map(source)`. The runtime takes these parts out of the
+// state itself, so they are prepared in place.
+const mapDecisionVideoParts = async (state, map) => {
+  const messages = Array.isArray(state)
+    ? state
+    : Array.isArray(state?.messages)
+      ? state.messages
+      : null
+  if (!messages) return state
+
+  let changed = false
+  const mapped = []
+  for (const message of messages) {
+    if (!Array.isArray(message?.content)) {
+      mapped.push(message)
+      continue
+    }
+    const content = []
+    for (const part of message.content) {
+      const source = part?.type === 'video_url' ? part.video_url?.url : null
+      const next = source ? await map(source) : source
+      if (next !== source) changed = true
+      content.push(
+        next !== source ? { ...part, video_url: { ...part.video_url, url: next } } : part,
+      )
+    }
+    mapped.push({ ...message, content })
+  }
+  if (!changed) return state
+  return Array.isArray(state) ? mapped : { ...state, messages: mapped }
+}
+
+// Replace the videos of a decide() request (`files` / `images` and the
+// `video_url` parts of the state) by their frame packs. Must run on the page.
+const prepareDecisionVideos = async (request) => {
+  if (!request || typeof request !== 'object') return request
+  const prepared = { ...request }
+  for (const key of ['files', 'images']) {
+    if (Array.isArray(request[key])) {
+      prepared[key] = await prepareVideoSources(request[key])
+    }
+  }
+  prepared.state = await mapDecisionVideoParts(request.state, (source) =>
+    isVideoFramePack(source) ? source : extractVideoFramePack(source),
+  )
+  return prepared
+}
+
 const writeMediaSources = async (
   mod,
   mediaPaths = [],
@@ -1419,15 +1473,29 @@ export class LlamaContextWrapper {
       .sort((a, b) => b.score - a.score)
   }
   async decide(request) {
-    const staged = { ...request }
+    const staged = await prepareDecisionVideos(request)
     for (const key of ['files', 'images']) {
-      if (Array.isArray(request?.[key])) {
+      if (Array.isArray(staged?.[key])) {
         staged[key] = await writeMediaSources(
           this.mod,
-          request[key],
+          staged[key],
           this.downloadOptions,
         )
       }
+    }
+    if (staged?.state) {
+      // the frame packs of the state's videos become files of the runtime
+      staged.state = await mapDecisionVideoParts(staged.state, (source) =>
+        typeof source === 'string'
+          ? source
+          : writeVirtualSource(
+              this.mod,
+              source,
+              '/media',
+              `media-${nextFileId++}`,
+              this.downloadOptions,
+            ),
+      )
     }
     return this.actionAsync('decide', staged)
   }
@@ -1763,7 +1831,7 @@ class LlamaWorkerContextWrapper {
 
   async decide(request) {
     await this.takeQueuedMutationError()
-    return this.enqueueWorker('decide', [request])
+    return this.enqueueWorker('decide', [await prepareDecisionVideos(request)])
   }
 
   async saveSession() {

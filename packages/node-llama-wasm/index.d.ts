@@ -467,7 +467,10 @@ export type DecisionRequest<
    * For a `system_one` model the state may also be a list of content parts
    * (`{ type: 'text', text }`, `{ type: 'image_url', image_url: { url } }`):
    * the text is joined and each image stays where it is.
-   * `video_url` parts are not supported by `decide()` in the browser yet.
+   * `lfm3-d1` and `lfm3-d1-omni` also take `video_url` parts (a URL or a
+   * `Blob`), or a video in `files`, and see the frames of the video without
+   * its soundtrack. The browser decodes it on the page, so `decide()` must
+   * then be called from the page, not from a Worker.
    * `lfm2-d1`, `lfm2-d1-omni`, `lfm3-d1`, `lfm3-d1-omni` and `vllm-d3` take
    * `null`, to ask about the media only. For `openbmb-minicpm-ocr-jev` the
    * state is the OCR text and `files` must be exactly 2 images.
