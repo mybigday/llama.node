@@ -262,6 +262,20 @@ file(
     "${CODEC_CPP_DIR}/common/kitten_text.cpp"
 )
 
+# Video decoding for mtmd (`video_url`, see llama.rn cpp/rn-video.h): on macOS
+# llama.rn's AVFoundation decoder (Objective-C++, no ARC), so no ffmpeg is
+# needed. Elsewhere rn-video.h gives no decoder and mtmd runs the ffmpeg /
+# ffprobe binaries found in PATH (MTMD_VIDEO).
+set(VIDEO_LIBS "")
+if (APPLE)
+  list(APPEND SOURCE_FILES "${LLAMA_RN_DIR}/ios/rnllama/rn-video.mm")
+  set_source_files_properties("${LLAMA_RN_DIR}/ios/rnllama/rn-video.mm"
+    PROPERTIES COMPILE_FLAGS "-fno-objc-arc")
+  set(VIDEO_LIBS
+    "-framework AVFoundation" "-framework CoreMedia" "-framework CoreVideo"
+    "-framework Accelerate" "-framework Foundation")
+endif()
+
 if (NOT MSVC AND CMAKE_SYSTEM_NAME STREQUAL "Windows")
   file(GLOB WIN_DYNAMIC_LOAD_SRC "src/win_dynamic_load.c")
 
@@ -292,7 +306,7 @@ if (WIN32)
   target_compile_definitions(${PROJECT_NAME} PRIVATE _USE_MATH_DEFINES)
 endif()
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
-target_link_libraries(${PROJECT_NAME} ${CMAKE_JS_LIB} llama ggml llama-common mtmd ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(${PROJECT_NAME} ${CMAKE_JS_LIB} llama ggml llama-common mtmd ${VIDEO_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
 add_custom_target(copy_assets ALL DEPENDS ${PROJECT_NAME})
 

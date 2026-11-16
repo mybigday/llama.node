@@ -28,6 +28,21 @@ export const formatMediaChat = (messages: ChatMessage[] | undefined): {
               type: 'text',
               text: MTMD_DEFAULT_MEDIA_MARKER,
             }
+          } else if (part.type === 'video_url') {
+            // Decoded by AVFoundation; Linux and Windows have no decoder yet
+            if (process.platform !== 'darwin') {
+              throw new Error(
+                'video_url is not supported on Linux and Windows yet',
+              )
+            }
+            const url = part.video_url?.url
+            // A marker with no path is paired with the next file.
+            if (!url) throw new Error('video_url url is required')
+            mediaPaths.push(url.replace(/^file:\/\//, ''))
+            return {
+              type: 'text',
+              text: MTMD_DEFAULT_MEDIA_MARKER,
+            }
           } else if (part.type === 'input_audio') {
             const { input_audio: audio } = part
             if (!audio) throw new Error('input_audio is required')

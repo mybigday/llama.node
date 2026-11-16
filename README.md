@@ -105,7 +105,9 @@ answers.is_ordering.noul // probability of true
   `initMultimodal()`, for a model whose `decision.imageInput` (images) or
   `decision.audioInput` (one audio clip) is true. `lfm2-d1`, `lfm2-d1-omni`,
   `lfm3-d1`, `lfm3-d1-omni` and `vllm-d3` also take a `null` state, to ask
-  about the media only. `video_url` parts are not supported yet.
+  about the media only. `lfm3-d1` and `lfm3-d1-omni` also take `video_url`
+  parts, and see the frames of the video without its soundtrack. Video is
+  decoded on macOS only: not supported on Linux and Windows yet.
 - Models that only answer decisions (`decision.textGeneration: false`, such as
   laya, kev and clef) refuse `completion()`.
 - A `system_one` model with a classification head (`decision.readout: 'rank_head'`)

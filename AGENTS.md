@@ -191,6 +191,10 @@ Images and audio are handled via the MTMD (multimodal) wrapper:
 - Messages with image_url or input_audio content parts are transformed
 - Media paths are replaced with `<__media__>` markers
 - The MTMD system processes media before text generation
+- `video_url` parts are decoded through mtmd's `mtmd_helper_video_decoder` hook:
+  - macOS: llama.rn's AVFoundation decoder (`src/llama.rn/ios/rnllama/rn-video.mm`, built by `CMakeLists.txt`)
+  - Web: the page samples frames with `HTMLVideoElement` (`packages/node-llama-wasm/index.js`) into a frame pack read by `src/wasm/video-frames.cpp`, which is linked as mtmd's built-in decoder
+  - Linux / Windows: not supported yet (`lib/utils.ts` rejects `video_url`)
 
 ### Chat Templating
 

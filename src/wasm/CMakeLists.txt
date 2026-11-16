@@ -112,6 +112,11 @@ add_link_options(
 add_subdirectory(${LLAMA_CPP_DIR} "${CMAKE_BINARY_DIR}/llama.cpp")
 add_subdirectory(${LLAMA_CPP_DIR}/tools/mtmd "${CMAKE_BINARY_DIR}/mtmd")
 
+# MTMD_VIDEO stays OFF above so the ffmpeg-subprocess decoder is not built, but
+# mtmd is compiled with the define: its built-in video decoder is then
+# video-frames.cpp, which reads the frames the page decoded (`video_url`).
+target_compile_definitions(mtmd PRIVATE MTMD_VIDEO)
+
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/..
   ${LLAMA_RN_DIR}/cpp
@@ -148,6 +153,7 @@ file(
 
 add_executable(llama-node
   "llama-node-wasm.cpp"
+  "video-frames.cpp"
   ${RN_LLAMA_SOURCE_FILES}
 )
 

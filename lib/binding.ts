@@ -18,6 +18,15 @@ export type MessagePart = {
     data?: string
     url?: string
   }
+  /**
+   * A video file (path, `file://` URL or base64 `data:video/` URL), decoded
+   * by AVFoundation. macOS only: not supported on Linux and Windows yet. The
+   * model sees its frames, sampled as the model expects, or at 4 fps for a
+   * model without video support of its own.
+   */
+  video_url?: {
+    url?: string
+  }
 } & Record<string, any>
 
 export type ChatMessage = {
@@ -642,8 +651,9 @@ export type DecisionRequest<Q extends DecisionQuestions = DecisionQuestions> = {
    * For a `system_one` model the state may also be a list of content parts
    * (`{ type: 'text', text }`, `{ type: 'image_url', image_url: { url } }`):
    * the text is joined and each image stays where it is.
-   * `video_url` parts are not supported yet (`lfm3-d1` and `lfm3-d1-omni`
-   * reject them).
+   * `lfm3-d1` and `lfm3-d1-omni` also take `video_url` parts, and see the
+   * frames of the video without its soundtrack (macOS only, not supported on
+   * Linux and Windows yet).
    * `lfm2-d1`, `lfm2-d1-omni`, `lfm3-d1`, `lfm3-d1-omni` and `vllm-d3` take
    * `null`, to ask about the media only. For `openbmb-minicpm-ocr-jev` the
    * state is the OCR text and `files` must be exactly 2 images.

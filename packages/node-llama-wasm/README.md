@@ -17,6 +17,11 @@ by `@fugood/llama.node`, with browser-specific I/O:
 - `initMultimodal()` accepts an mmproj URL, `Blob`, `ArrayBuffer`, typed array,
   or preloaded MEMFS path. Image/audio URL media in `messages` or `media_paths`
   is staged into the virtual filesystem before inference.
+- `video_url` parts (URL, `data:video/` URL or `Blob`) are decoded by the
+  browser on the page (`HTMLVideoElement`), so call `completion()` / `tokenize()`
+  from the page. Any format the browser plays works; a cross-origin video must
+  allow CORS. Frames are sampled at 4 fps and the model picks from them; the
+  soundtrack is not used, and `decide()` does not take video yet.
 - WebGPU can be opted into with `n_gpu_layers` when the WASM binary is built with `GGML_WEBGPU=ON`,
   `navigator.gpu` is available, and the browser exposes WebAssembly JSPI
   (`WebAssembly.promising` and `WebAssembly.Suspending`).

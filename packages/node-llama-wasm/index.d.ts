@@ -5,6 +5,14 @@ export type MessagePart = {
   text?: string
   image_url?: { url?: string }
   input_audio?: { format: string; data?: string; url?: string }
+  /**
+   * A video: a URL (it must allow CORS when cross-origin), a `data:video/`
+   * URL or a `Blob`. The browser decodes it on the page, so `completion()` /
+   * `tokenize()` must be called from the page, not from a Worker. Frames are
+   * sampled at 4 fps (less for a video longer than 64 seconds) and the model
+   * picks from them; the soundtrack is not used.
+   */
+  video_url?: { url?: string | Blob }
 } & Record<string, any>
 
 export type ChatMessage = {
@@ -459,8 +467,7 @@ export type DecisionRequest<
    * For a `system_one` model the state may also be a list of content parts
    * (`{ type: 'text', text }`, `{ type: 'image_url', image_url: { url } }`):
    * the text is joined and each image stays where it is.
-   * `video_url` parts are not supported yet (`lfm3-d1` and `lfm3-d1-omni`
-   * reject them).
+   * `video_url` parts are not supported by `decide()` in the browser yet.
    * `lfm2-d1`, `lfm2-d1-omni`, `lfm3-d1`, `lfm3-d1-omni` and `vllm-d3` take
    * `null`, to ask about the media only. For `openbmb-minicpm-ocr-jev` the
    * state is the OCR text and `files` must be exactly 2 images.
