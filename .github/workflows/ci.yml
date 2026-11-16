@@ -3,7 +3,8 @@ on: push
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Pinned: apt.llvm.org has no LLVM 18 repository for Ubuntu 26.04 (ubuntu-latest)
+    runs-on: ubuntu-24.04
 
     steps:
     - uses: actions/checkout@v4

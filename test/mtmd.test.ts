@@ -173,3 +173,74 @@ const modelPath = path.resolve(__dirname, './Llama-3.2-1B-Instruct-Q4_K_M.gguf')
     await model.release()
   },
 )
+
+// Decoded by AVFoundation: macOS only for now
+const videoPath = path.resolve(
+  __dirname,
+  '../src/llama.rn/tests/fixtures/video.mp4',
+)
+const hasVideoDecoder = process.platform === 'darwin'
+
+;(hasVideoDecoder ? test : test.skip)('multimodal with video', async () => {
+  const model = await loadModel({
+    model: path.resolve(__dirname, './SmolVLM-256M-Instruct-Q8_0.gguf'),
+    n_gpu_layers: 0,
+    n_ctx: 4096,
+  })
+  await model.initMultimodal({
+    path: path.resolve(__dirname, './mmproj-SmolVLM-256M-Instruct-Q8_0.gguf'),
+    use_gpu: false,
+  })
+
+  const messages = (url: string) => [
+    {
+      role: 'user',
+      content: [
+        { type: 'text', text: 'What happens in this video?' },
+        { type: 'video_url', video_url: { url } },
+      ],
+    },
+  ]
+
+  const formatted = model.getFormattedChat(
+    messages(`file://${videoPath}`),
+    undefined,
+    { jinja: false },
+  )
+  expect(formatted.has_media).toBe(true)
+  expect(formatted.media_paths).toEqual([videoPath])
+
+  // A 2 second clip sampled at 4 fps: several frames, each its own media chunk
+  const tokenized = await model.tokenize(formatted.prompt, {
+    media_paths: formatted.media_paths,
+  })
+  expect(tokenized.has_media).toBe(true)
+  expect(tokenized.chunk_pos_media!.length).toBeGreaterThan(1)
+
+  const result = await model.completion({
+    ...formatted,
+    temperature: 0,
+    n_predict: 16,
+    seed: 0,
+  })
+  expect(result.text.length).toBeGreaterThan(0)
+  expect(result.tokens_evaluated).toBeGreaterThanOrEqual(tokenized.tokens.length)
+
+  // The same video as a base64 data URL yields the same prompt
+  const dataUrl = `data:video/mp4;base64,${fs
+    .readFileSync(videoPath)
+    .toString('base64')}`
+  const fromData = await model.tokenize(formatted.prompt, {
+    media_paths: [dataUrl],
+  })
+  expect(fromData.tokens.length).toBe(tokenized.tokens.length)
+
+  expect(() =>
+    model.getFormattedChat([
+      { role: 'user', content: [{ type: 'video_url', video_url: {} }] },
+    ]),
+  ).toThrow('video_url url is required')
+
+  await model.releaseMultimodal()
+  await model.release()
+})

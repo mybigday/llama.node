@@ -531,12 +531,232 @@ const stageDraftModelOptions = async (mod, options, downloadOptions = {}) => {
   return staged
 }
 
+// Video. The browser decodes it, on the page only (HTMLVideoElement), so the
+// frames are sampled here and staged as a "frame pack" that the WASM build
+// reads as a video (src/wasm/video-frames.cpp): mtmd then picks the frames and
+// the frame size the model expects from it.
+const VIDEO_PACK_MAGIC = 'LNVFRM01'
+const VIDEO_PACK_HEADER_SIZE = 24
+const VIDEO_SAMPLE_FPS = 4 // mtmd's default rate; models with their own rate take fewer
+const VIDEO_MAX_FRAMES = 256 // longer videos are sampled at a lower rate
+const VIDEO_MAX_SIDE = 768
+const VIDEO_MAX_PACK_BYTES = 192 * 1024 * 1024
+
+// URLs given as `video_url` parts: a URL does not have to look like a video
+const videoUrlSources = new Set()
+
+// MP4 / MOV (an `ftyp` box) or WebM / Matroska (EBML)
+const isVideoBytes = (bytes) =>
+  bytes.length >= 12 &&
+  ((bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) ||
+    (bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3))
+
+// A URL is told by `video_url`, its `data:` type or its extension; a Blob or
+// buffer by its type or its content.
+const isVideoSource = async (source) => {
+  if (typeof source === 'string') {
+    return (
+      videoUrlSources.has(source) ||
+      /^data:video\//.test(source) ||
+      /\.(mp4|m4v|mov|webm|mkv|ogv)$/i.test(source.split(/[?#]/)[0])
+    )
+  }
+  if (typeof Blob !== 'undefined' && source instanceof Blob) {
+    return (
+      source.type.startsWith('video/') ||
+      isVideoBytes(new Uint8Array(await source.slice(0, 12).arrayBuffer()))
+    )
+  }
+  if (isArrayBufferLike(source)) return isVideoBytes(await toUint8Array(source))
+  return false
+}
+
+const waitForVideoEvent = (video, name) =>
+  new Promise((resolve, reject) => {
+    const cleanup = () => {
+      video.removeEventListener(name, onEvent)
+      video.removeEventListener('error', onError)
+    }
+    const onEvent = () => {
+      cleanup()
+      resolve()
+    }
+    const onError = () => {
+      cleanup()
+      reject(
+        new Error(
+          `Failed to decode video: ${video.error?.message || 'unsupported or unreachable source'}`,
+        ),
+      )
+    }
+    video.addEventListener(name, onEvent)
+    video.addEventListener('error', onError)
+  })
+
+const extractVideoFramePack = async (source) => {
+  if (typeof document === 'undefined') {
+    throw new Error(
+      'video_url needs a page to decode the video (HTMLVideoElement), it is not available in a Worker',
+    )
+  }
+  const objectUrl =
+    typeof source === 'string'
+      ? null
+      : URL.createObjectURL(
+          source instanceof Blob ? source : new Blob([await toUint8Array(source)]),
+        )
+  const video = document.createElement('video')
+  video.muted = true
+  video.playsInline = true
+  video.preload = 'auto'
+  video.crossOrigin = 'anonymous' // the frames are read back from a canvas
+  try {
+    const loaded = waitForVideoEvent(video, 'loadeddata')
+    video.src = objectUrl || source
+    await loaded
+
+    const { duration, videoWidth, videoHeight } = video
+    if (!Number.isFinite(duration) || duration <= 0 || !videoWidth || !videoHeight) {
+      throw new Error('Failed to decode video: unknown duration or size')
+    }
+
+    let fps = VIDEO_SAMPLE_FPS
+    let nFrames = Math.max(1, Math.round(duration * fps))
+    if (nFrames > VIDEO_MAX_FRAMES) {
+      nFrames = VIDEO_MAX_FRAMES
+      fps = nFrames / duration
+    }
+    let scale = Math.min(1, VIDEO_MAX_SIDE / Math.max(videoWidth, videoHeight))
+    const packBytes = nFrames * videoWidth * videoHeight * 3 * scale * scale
+    if (packBytes > VIDEO_MAX_PACK_BYTES) {
+      scale *= Math.sqrt(VIDEO_MAX_PACK_BYTES / packBytes)
+    }
+    const width = Math.max(1, Math.round(videoWidth * scale))
+    const height = Math.max(1, Math.round(videoHeight * scale))
+
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const context = canvas.getContext('2d', { willReadFrequently: true })
+
+    const frameSize = width * height * 3
+    const pack = new Uint8Array(VIDEO_PACK_HEADER_SIZE + nFrames * frameSize)
+    const header = new DataView(pack.buffer)
+    for (let i = 0; i < VIDEO_PACK_MAGIC.length; i++) {
+      pack[i] = VIDEO_PACK_MAGIC.charCodeAt(i)
+    }
+    header.setUint32(8, width, true)
+    header.setUint32(12, height, true)
+    header.setFloat32(16, fps, true)
+    header.setUint32(20, nFrames, true)
+
+    for (let i = 0; i < nFrames; i++) {
+      // the frame shown at i / fps; the last one must stay inside the video
+      const time = Math.min(i / fps, Math.max(0, duration - 0.001))
+      if (i > 0 || video.currentTime !== time) {
+        const seeked = waitForVideoEvent(video, 'seeked')
+        video.currentTime = time
+        await seeked
+      }
+      context.drawImage(video, 0, 0, width, height)
+      let rgba
+      try {
+        rgba = context.getImageData(0, 0, width, height).data
+      } catch (error) {
+        throw new Error(
+          `Failed to read video frames (a cross-origin video must allow CORS): ${error?.message || error}`,
+        )
+      }
+      let offset = VIDEO_PACK_HEADER_SIZE + i * frameSize
+      for (let p = 0; p < rgba.length; p += 4) {
+        pack[offset++] = rgba[p]
+        pack[offset++] = rgba[p + 1]
+        pack[offset++] = rgba[p + 2]
+      }
+    }
+    return pack
+  } finally {
+    video.removeAttribute('src')
+    video.load()
+    if (objectUrl) URL.revokeObjectURL(objectUrl)
+  }
+}
+
+// Replace the videos of a media list by their frame packs. Must run on the
+// page: the Worker runtime gets the packs, not the videos.
+const prepareVideoSources = async (mediaPaths) => {
+  if (!mediaPaths) return mediaPaths
+  const sources = Array.isArray(mediaPaths) ? mediaPaths : [mediaPaths]
+  const isVideo = await Promise.all(sources.map(isVideoSource))
+  if (!isVideo.some(Boolean)) return mediaPaths
+  const prepared = []
+  for (let i = 0; i < sources.length; i++) {
+    prepared.push(isVideo[i] ? await extractVideoFramePack(sources[i]) : sources[i])
+  }
+  return prepared
+}
+
+const isVideoFramePack = (source) =>
+  source instanceof Uint8Array &&
+  source.length >= VIDEO_PACK_HEADER_SIZE &&
+  VIDEO_PACK_MAGIC.split('').every((c, i) => source[i] === c.charCodeAt(0))
+
+// The `video_url` parts of a decide() state made of chat messages, with their
+// source replaced by `map(source)`. The runtime takes these parts out of the
+// state itself, so they are prepared in place.
+const mapDecisionVideoParts = async (state, map) => {
+  const messages = Array.isArray(state)
+    ? state
+    : Array.isArray(state?.messages)
+      ? state.messages
+      : null
+  if (!messages) return state
+
+  let changed = false
+  const mapped = []
+  for (const message of messages) {
+    if (!Array.isArray(message?.content)) {
+      mapped.push(message)
+      continue
+    }
+    const content = []
+    for (const part of message.content) {
+      const source = part?.type === 'video_url' ? part.video_url?.url : null
+      const next = source ? await map(source) : source
+      if (next !== source) changed = true
+      content.push(
+        next !== source ? { ...part, video_url: { ...part.video_url, url: next } } : part,
+      )
+    }
+    mapped.push({ ...message, content })
+  }
+  if (!changed) return state
+  return Array.isArray(state) ? mapped : { ...state, messages: mapped }
+}
+
+// Replace the videos of a decide() request (`files` / `images` and the
+// `video_url` parts of the state) by their frame packs. Must run on the page.
+const prepareDecisionVideos = async (request) => {
+  if (!request || typeof request !== 'object') return request
+  const prepared = { ...request }
+  for (const key of ['files', 'images']) {
+    if (Array.isArray(request[key])) {
+      prepared[key] = await prepareVideoSources(request[key])
+    }
+  }
+  prepared.state = await mapDecisionVideoParts(request.state, (source) =>
+    isVideoFramePack(source) ? source : extractVideoFramePack(source),
+  )
+  return prepared
+}
+
 const writeMediaSources = async (
   mod,
   mediaPaths = [],
   downloadOptions = {},
 ) => {
-  const sources = Array.isArray(mediaPaths) ? mediaPaths : [mediaPaths]
+  const prepared = await prepareVideoSources(mediaPaths)
+  const sources = Array.isArray(prepared) ? prepared : [prepared]
   const paths = []
   for (const source of sources.filter(Boolean)) {
     paths.push(
@@ -565,6 +785,15 @@ const formatMediaChat = (messages) => {
         if (part?.type === 'image_url') {
           const path = part.image_url?.url || part.url || ''
           if (path) mediaPaths.push(path)
+          return { type: 'text', text: MTMD_DEFAULT_MEDIA_MARKER }
+        }
+
+        if (part?.type === 'video_url') {
+          const source = part.video_url?.url
+          // A marker with no source is paired with the next file.
+          if (!source) throw new Error('video_url url is required')
+          if (typeof source === 'string') videoUrlSources.add(source)
+          mediaPaths.push(source)
           return { type: 'text', text: MTMD_DEFAULT_MEDIA_MARKER }
         }
 
@@ -1244,15 +1473,29 @@ export class LlamaContextWrapper {
       .sort((a, b) => b.score - a.score)
   }
   async decide(request) {
-    const staged = { ...request }
+    const staged = await prepareDecisionVideos(request)
     for (const key of ['files', 'images']) {
-      if (Array.isArray(request?.[key])) {
+      if (Array.isArray(staged?.[key])) {
         staged[key] = await writeMediaSources(
           this.mod,
-          request[key],
+          staged[key],
           this.downloadOptions,
         )
       }
+    }
+    if (staged?.state) {
+      // the frame packs of the state's videos become files of the runtime
+      staged.state = await mapDecisionVideoParts(staged.state, (source) =>
+        typeof source === 'string'
+          ? source
+          : writeVirtualSource(
+              this.mod,
+              source,
+              '/media',
+              `media-${nextFileId++}`,
+              this.downloadOptions,
+            ),
+      )
     }
     return this.actionAsync('decide', staged)
   }
@@ -1379,7 +1622,11 @@ const messageText = (message) => {
   return message.content
     .map((part) => {
       if (typeof part?.text === 'string') return part.text
-      if (part?.type === 'image_url' || part?.type === 'input_audio') {
+      if (
+        part?.type === 'image_url' ||
+        part?.type === 'video_url' ||
+        part?.type === 'input_audio'
+      ) {
         return MTMD_DEFAULT_MEDIA_MARKER
       }
       return ''
@@ -1543,6 +1790,9 @@ class LlamaWorkerContextWrapper {
       completionOptions.jinja =
         forcePureContent ? hasChatTemplate : this.isJinjaSupported()
     }
+    completionOptions.media_paths = await prepareVideoSources(
+      completionOptions.media_paths,
+    )
     return this.enqueueWorker('completion', [completionOptions], {
       onToken: callback,
     })
@@ -1554,7 +1804,10 @@ class LlamaWorkerContextWrapper {
 
   async tokenize(text, params = {}) {
     await this.takeQueuedMutationError()
-    const result = await this.enqueueWorker('tokenize', [text, params])
+    const result = await this.enqueueWorker('tokenize', [
+      text,
+      { ...params, media_paths: await prepareVideoSources(params.media_paths) },
+    ])
     return {
       ...result,
       tokens: Int32Array.from(result.tokens || []),
@@ -1578,7 +1831,7 @@ class LlamaWorkerContextWrapper {
 
   async decide(request) {
     await this.takeQueuedMutationError()
-    return this.enqueueWorker('decide', [request])
+    return this.enqueueWorker('decide', [await prepareDecisionVideos(request)])
   }
 
   async saveSession() {

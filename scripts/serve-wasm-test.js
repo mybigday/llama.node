@@ -11,6 +11,7 @@ const contentTypes = {
   '.mjs': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.wasm': 'application/wasm',
+  '.mp4': 'video/mp4',
 }
 
 const server = http.createServer((req, res) => {
