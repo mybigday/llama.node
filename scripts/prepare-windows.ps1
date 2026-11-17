@@ -33,7 +33,8 @@ if (($arch -eq "all" -or $arch -eq "x64") -and ($target -eq "all" -or $target -e
   }
 }
 
-if (-Not (Get-Command ccache -ErrorAction SilentlyContinue)) {
+# CI runners start from an empty cache, where ccache only costs install time
+if (-Not $env:CI -and -Not (Get-Command ccache -ErrorAction SilentlyContinue)) {
   choco install ccache -y
 }
 

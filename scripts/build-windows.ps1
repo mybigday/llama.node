@@ -1,7 +1,12 @@
 param (
   [string]$arch = "native",
   [string]$target = "default",
-  [string]$toolchain = "clang-cl"
+  [string]$toolchain = "clang-cl",
+  # CUDA only, see cmake/cuda-shards.cmake:
+  #   -cudaShard 2/6        compile that slice of the CUDA kernels into build/cuda-objects and stop
+  #   -cudaObjects <dir>    use the kernel objects in <dir> instead of compiling them
+  [string]$cudaShard = $env:CUDA_SHARD,
+  [string]$cudaObjects = $env:CUDA_OBJECTS
 )
 
 $ErrorActionPreference='Stop'
@@ -85,7 +90,16 @@ if ($target -eq "all" -or $target -eq "vulkan") {
 # CUDA
 
 if ($target -eq "all" -or $target -eq "cuda") {
-  npx cmake-js rebuild -C -a $arch $cmakeArgs `
+  $cudaArgs = New-Object System.Collections.ArrayList
+  if ($cudaShard) {
+    $cudaArgs.add("--CDLLAMA_NODE_CUDA_SHARD=$cudaShard")
+    $cudaArgs.add("--target")
+    $cudaArgs.add("cuda-objects")
+  } elseif ($cudaObjects) {
+    $cudaArgs.add("--CDLLAMA_NODE_CUDA_OBJECTS_DIR=$(Resolve-Path $cudaObjects)")
+  }
+
+  npx cmake-js rebuild -C -a $arch $cmakeArgs $cudaArgs `
     --CDVARIANT=cuda `
     --CDGGML_CUDA=1 `
     --CDGGML_CUDA_F16=1 `

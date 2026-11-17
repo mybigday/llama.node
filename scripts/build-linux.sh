@@ -9,14 +9,29 @@ TARGET=${TARGET:-"default"}
 
 HEXAGON_SDK_VERSION=${HEXAGON_SDK_VERSION:-"6.7.0.0"}
 
+# CUDA only, see cmake/cuda-shards.cmake:
+#   --cuda-shard 2/6       compile that slice of the CUDA kernels into build/cuda-objects and stop
+#   --cuda-objects <dir>   use the kernel objects in <dir> instead of compiling them
+CUDA_SHARD=${CUDA_SHARD:-""}
+CUDA_OBJECTS=${CUDA_OBJECTS:-""}
+
 while [[ "$#" -gt 0 ]]; do
   case $1 in
     -a|--arch) ARCH="$2"; shift ;;
     -t|--target) TARGET="$2"; shift ;;
+    --cuda-shard) CUDA_SHARD="$2"; shift ;;
+    --cuda-objects) CUDA_OBJECTS="$2"; shift ;;
     *) echo "Unknown parameter passed: $1"; exit 1 ;;
   esac
   shift
 done
+
+CUDA_ARGS=()
+if [ -n "$CUDA_SHARD" ]; then
+  CUDA_ARGS=( --CDLLAMA_NODE_CUDA_SHARD="$CUDA_SHARD" --target cuda-objects )
+elif [ -n "$CUDA_OBJECTS" ]; then
+  CUDA_ARGS=( --CDLLAMA_NODE_CUDA_OBJECTS_DIR="$(realpath "$CUDA_OBJECTS")" )
+fi
 
 
 if [ $ARCH == "x86_64" ]; then
@@ -32,7 +47,7 @@ if [ $ARCH == "x86_64" ]; then
 
   # cuda
   if [ $TARGET == "all" ] || [ $TARGET == "cuda" ]; then
-    npx cmake-js rebuild -C --CDTO_PACKAGE=ON \
+    npx cmake-js rebuild -C --CDTO_PACKAGE=ON "${CUDA_ARGS[@]}" \
       --CDCLANG_USE_GOMP=ON \
       --CDGGML_CUDA=1 \
       --CDVARIANT=cuda \
@@ -60,7 +75,7 @@ else
 
   # cuda
   if [ $TARGET == "all" ] || [ $TARGET == "cuda" ]; then
-    npx cmake-js rebuild -C --CDTO_PACKAGE=ON \
+    npx cmake-js rebuild -C --CDTO_PACKAGE=ON "${CUDA_ARGS[@]}" \
       --CDCLANG_USE_GOMP=ON \
       --CDGGML_NATIVE=OFF \
       --CDGGML_OPENMP=0 \
