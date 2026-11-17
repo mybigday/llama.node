@@ -17,10 +17,11 @@
 # Both sides must be configured with the same options otherwise; the objects are
 # matched to the sources by name and a missing or unexpected one is an error.
 #
-# One kernel source, the "anchor", is left out of every slice and is always
-# compiled by the consuming build. That keeps CUDA among the languages of the
-# target, so whatever links it gets the same CUDA runtime libraries as in a
-# build that compiles everything itself.
+# The consuming build puts every object where its source was and adds an empty
+# CUDA source (cuda-shards-anchor.cu). The library then holds the same objects in
+# the same order as in a build that compiles everything itself, and CUDA stays
+# among the languages of the target, so whatever links it gets the same CUDA
+# runtime libraries.
 
 function(llama_node_cuda_shards target)
   if (LLAMA_NODE_CUDA_SHARD AND LLAMA_NODE_CUDA_OBJECTS_DIR)
@@ -38,11 +39,6 @@ function(llama_node_cuda_shards target)
 
   # Every machine has to agree on the order, whatever order the globs returned.
   list(SORT kernels)
-  list(LENGTH kernels kernel_count)
-  if (kernel_count LESS 2)
-    message(FATAL_ERROR "${target} has ${kernel_count} .cu sources, nothing to split")
-  endif()
-  list(POP_FRONT kernels anchor)
 
   # Object files are matched to sources by name, so names have to be unique.
   set(kernel_names "")
@@ -119,6 +115,7 @@ message(STATUS \"Collected \${object_count} CUDA objects in ${objects_dir}\")
       # Ninja and Makefiles keep the source extension (x.cu.o), Visual Studio does not (x.obj)
       string(REGEX REPLACE "\\.cu$" "" name "${name}")
       list(APPEND object_names "${name}")
+      set(object_of_${name} "${object}")
     endforeach()
 
     set(missing ${kernel_names})
@@ -141,7 +138,16 @@ message(STATUS \"Collected \${object_count} CUDA objects in ${objects_dir}\")
         "Were all slices built from this commit with the same options?")
     endif()
 
-    set_property(TARGET ${target} PROPERTY SOURCES ${others} ${anchor} ${objects})
+    set(replaced "")
+    foreach (source IN LISTS sources)
+      if (source MATCHES "\\.cu$")
+        get_filename_component(name "${source}" NAME_WLE)
+        list(APPEND replaced "${object_of_${name}}")
+      else()
+        list(APPEND replaced "${source}")
+      endif()
+    endforeach()
+    set_property(TARGET ${target} PROPERTY SOURCES ${replaced} "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/cuda-shards-anchor.cu")
     set_source_files_properties(${objects} TARGET_DIRECTORY ${target} PROPERTIES EXTERNAL_OBJECT TRUE)
 
     message(STATUS "CUDA objects: using ${object_count} prebuilt kernel objects from ${objects_dir}")
