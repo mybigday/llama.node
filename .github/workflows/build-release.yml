@@ -280,8 +280,8 @@ jobs:
         cuda-shard: ['1/8', '2/8', '3/8', '4/8', '5/8', '6/8', '7/8', '8/8']
         include: &cuda-variants-windows
           # Windows x64 CUDA
-          # CUDA 12.x does not support the MSVC of the Windows 2025 VS 2026
-          # image currently behind windows-latest.
+          # CUDA 12.x CMake/Visual Studio integration is not available on the
+          # Windows 2025 VS 2026 image currently behind windows-latest.
           - package: node-llama-win32-x64-cuda
             os: windows-2022
             arch: x64
