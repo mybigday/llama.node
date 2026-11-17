@@ -198,6 +198,14 @@ add_definitions(-DGGML_MAX_NAME=80)
 add_subdirectory(${LLAMA_CPP_DIR} ${CMAKE_BINARY_DIR}/llama.cpp)
 add_subdirectory(${LLAMA_CPP_DIR}/tools/mtmd ${CMAKE_BINARY_DIR}/mtmd)
 
+# CI compiles the CUDA kernels in slices on several machines, see cmake/cuda-shards.cmake
+set(LLAMA_NODE_CUDA_SHARD "" CACHE STRING "Only compile slice <index>/<count> of the ggml-cuda kernels (target: cuda-objects)")
+set(LLAMA_NODE_CUDA_OBJECTS_DIR "" CACHE PATH "Use the prebuilt ggml-cuda kernel objects in this directory")
+if (LLAMA_NODE_CUDA_SHARD OR LLAMA_NODE_CUDA_OBJECTS_DIR)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/cuda-shards.cmake)
+  llama_node_cuda_shards(ggml-cuda)
+endif()
+
 include_directories(
   ${CMAKE_JS_INC}
   ${LLAMA_RN_DIR}/cpp

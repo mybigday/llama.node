@@ -33,20 +33,12 @@ jobs:
         with:
           node-version: 24
           registry-url: 'https://registry.npmjs.org'
-      - name: gguf models cache
-        uses: actions/cache@v4
-        with:
-          path: test/*.gguf
-          key: ${{ runner.os }}-gguf-models-${{ hashFiles('test/*.gguf') }}
-      - name: Download bundled files
-        uses: actions/download-artifact@v4
-        with:
-          path: bin
-          pattern: bin-*
-          merge-multiple: true
       - run: npm install -g npm@latest
       - run: npm install --omit=optional
-      - run: npm run build
+      # The package ships the vendored llama.cpp sources with the llama.node
+      # patch applied, as a build from source leaves them
+      - name: Apply scripts/llama.cpp.patch
+        run: git apply scripts/llama.cpp.patch
       - name: Publish to NPM
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

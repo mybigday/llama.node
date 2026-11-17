@@ -77,6 +77,7 @@ The web package supports URL model loading by default, session save as `ArrayBuf
 - **src/llama.rn/**: llama.rn submodule (shared implementation + vendored llama.cpp/codec.cpp); the only submodule
 - **src/wasm/**: Emscripten-specific WASM build target
 - **scripts/build-wasm-package.js**: Builds WASM artifacts into `packages/node-llama-wasm/wasm/`
+- **cmake/cuda-shards.cmake**: Lets CI compile the ggml-cuda kernels in slices on several machines (see Release Builds)
 - Platform-specific prebuilt packages: `@fugood/node-llama-{platform}-{arch}[-variant]`
 - Browser package: `@fugood/node-llama-wasm` (listed as an optional dependency of `@fugood/llama.node`)
 
@@ -153,6 +154,15 @@ npm run build-wasm-docker  # Docker helper; arm64 hosts use emscripten/emsdk:4.0
 # Publish if version changed
 npm run publish-if-need
 ```
+
+### Release Builds
+
+`.github/workflows/build-release.yml` builds every package (`release.yml` calls it on a `v*` tag, then publishes the root package). Run it by hand with `gh workflow run build-release.yml --ref <branch> -f target=win32-x64-cuda` to build one package (`target` is a glob over the package name without `node-llama-`) without publishing.
+
+- `build`: one job per native package, running `scripts/prepare-*` and `scripts/build-*`
+- `cuda-objects-*` / `build-cuda-*`: the CUDA packages. ggml-cuda is ~150 nvcc translation units, each compiled once per GPU architecture (about one core-hour per architecture), so `cuda-objects-*` jobs compile one slice of them each (`build-linux.sh --cuda-shard 2/3`, `build-windows.ps1 -cudaShard 2/8`) and upload the objects, and `build-cuda-*` build the rest and link the package from the objects of every slice (`--cuda-objects <dir>` / `-cudaObjects <dir>`). The number of slices is the `cuda-shard` list of the job. Any slice count gives the same package; a variant moved back to the matrix of `build` is built on one runner
+- `build-wasm` / `package-wasm`: one job per WASM artifact, then one that assembles and publishes the package
+- `.github/actions/setup-cuda`: installs the CUDA toolkit components a Windows build needs from NVIDIA's redistributable archives, pinned with checksums in `redist-<version>.json` next to it. To change the CUDA version, add that file for the new release (from NVIDIA's `redistrib_<version>.json`) and set `cuda-version` in the workflow
 
 ## Key Implementation Details
 

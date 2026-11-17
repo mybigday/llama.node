@@ -1,0 +1,44 @@
+{
+  "release": "12.9.1",
+  "toolkit": "12.9",
+  "source": "https://developer.download.nvidia.com/compute/cuda/redist/",
+  "note": "cuda_nvtx is not optional: the CUB headers in cuda_cccl compile NVTX ranges into their algorithms when <nvtx3/nvToolsExt.h> exists, as it does after the full CUDA installer.",
+  "archives": [
+    {
+      "component": "cuda_nvcc",
+      "version": "12.9.86",
+      "path": "cuda_nvcc/windows-x86_64/cuda_nvcc-windows-x86_64-12.9.86-archive.zip",
+      "sha256": "227b109663b5e57d2718bcabb24a4ba0d9d4e52d958e327dc476f7c28691be85"
+    },
+    {
+      "component": "cuda_cudart",
+      "version": "12.9.79",
+      "path": "cuda_cudart/windows-x86_64/cuda_cudart-windows-x86_64-12.9.79-archive.zip",
+      "sha256": "179e9c43b0735ffe67207b3da556eb5a0c50f3047961882b7657d3b822d34ef8"
+    },
+    {
+      "component": "cuda_cccl",
+      "version": "12.9.27",
+      "path": "cuda_cccl/windows-x86_64/cuda_cccl-windows-x86_64-12.9.27-archive.zip",
+      "sha256": "17aaa7c6b8f94a417d8f3261780b7e34b9cbdfab7513bce86768623b06aa28b5"
+    },
+    {
+      "component": "cuda_nvtx",
+      "version": "12.9.79",
+      "path": "cuda_nvtx/windows-x86_64/cuda_nvtx-windows-x86_64-12.9.79-archive.zip",
+      "sha256": "b9d506ce9ba056bf171b60e9dada06fb3d8bed5453a6399d0541960bf9b81659"
+    },
+    {
+      "component": "libcublas",
+      "version": "12.9.1.4",
+      "path": "libcublas/windows-x86_64/libcublas-windows-x86_64-12.9.1.4-archive.zip",
+      "sha256": "d534d98b0b453a98914dbf3adf47d7e84b55037abf02f87466439e1dcef581ed"
+    },
+    {
+      "component": "visual_studio_integration",
+      "version": "12.9.79",
+      "path": "visual_studio_integration/windows-x86_64/visual_studio_integration-windows-x86_64-12.9.79-archive.zip",
+      "sha256": "d5b6514866395f52f04107da1aa523954f8dc76daf18a9f8699c3d564f294449"
+    }
+  ]
+}

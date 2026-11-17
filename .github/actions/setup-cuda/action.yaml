@@ -1,96 +1,99 @@
 name: Setup CUDA
+description: >
+  Installs the parts of the CUDA toolkit that a ggml-cuda build uses on Windows
+  (compiler, runtime, CCCL and NVTX headers, cuBLAS headers and import libraries,
+  MSBuild integration) from NVIDIA's redistributable archives. Takes half a
+  minute, where the full installer takes ten.
 
 inputs:
   version:
-    description: "CUDA version"
+    description: >
+      CUDA release, e.g. 12.9.1. The archives and their checksums are pinned in
+      redist-<version>.json next to this file, taken from
+      https://developer.download.nvidia.com/compute/cuda/redist/redistrib_<version>.json
     required: true
-    default: "12.9.1.576"
-    type: string
-  installer-url:
-    description: "Direct Windows installer URL"
-    required: false
-    default: ""
-    type: string
-  installer-checksum:
-    description: "SHA256 for the direct Windows installer"
-    required: false
-    default: ""
-    type: string
 
 outputs:
   cuda-path:
     description: "CUDA path"
+    value: ${{ steps.install.outputs.cuda-path }}
 
 runs:
   using: "composite"
   steps:
     - name: Install CUDA (Windows)
+      id: install
       if: runner.os == 'Windows'
       shell: pwsh
       env:
         VERSION: ${{ inputs.version }}
-        INSTALLER_URL: ${{ inputs.installer-url }}
-        INSTALLER_CHECKSUM: ${{ inputs.installer-checksum }}
+        ACTION_PATH: ${{ github.action_path }}
       run: |
-        $version = $env:VERSION.Split('.')[0..1] -join '.'
-        $version_slug = $version.Replace('.', '_')
-        $cuda_path = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${version}"
-        $installed = $false
+        $ErrorActionPreference = 'Stop'
 
-        if ($env:INSTALLER_URL) {
-          $installer_path = Join-Path $env:RUNNER_TEMP "cuda-$($env:VERSION)-windows.exe"
-          $expected_checksum = $env:INSTALLER_CHECKSUM.ToLowerInvariant()
+        $lock_file = Join-Path $env:ACTION_PATH "redist-$($env:VERSION).json"
+        if (-not (Test-Path $lock_file)) {
+          throw "No pinned archive list for CUDA $($env:VERSION), expected $lock_file"
+        }
+        $lock = Get-Content $lock_file -Raw | ConvertFrom-Json
 
-          Write-Host "Downloading CUDA $($env:VERSION) directly from NVIDIA"
-          $ProgressPreference = 'SilentlyContinue'
-          Invoke-WebRequest -Uri $env:INSTALLER_URL -OutFile $installer_path
+        $cuda_path = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v$($lock.toolkit)"
+        $downloads = Join-Path $env:RUNNER_TEMP "cuda-redist-$($lock.release)"
+        New-Item -ItemType Directory -Force -Path $downloads, $cuda_path | Out-Null
 
-          $actual_checksum = (Get-FileHash -Path $installer_path -Algorithm SHA256).Hash.ToLowerInvariant()
-          if (-not $expected_checksum) {
-            throw "Direct installer checksum is required when installer-url is provided."
-          }
-
-          if ($actual_checksum -ne $expected_checksum) {
-            throw "Direct installer checksum mismatch. Expected $expected_checksum but got $actual_checksum."
-          }
-
-          Write-Host "Installing CUDA $($env:VERSION) from direct download"
-          $process = Start-Process -FilePath $installer_path -ArgumentList '/s' -Wait -PassThru
-          if ($process.ExitCode -notin @(0, 3010, 1641)) {
-            throw "Direct CUDA installer exited with code $($process.ExitCode)."
-          }
-
-          $installed = $true
-        } else {
-          $max_attempts = 3
-
-          for ($attempt = 1; $attempt -le $max_attempts; $attempt++) {
-            Write-Host "Installing CUDA $($env:VERSION) via Chocolatey (attempt $attempt/$max_attempts)"
-            choco install cuda --version=$env:VERSION -y --no-progress
-
-            if ($LASTEXITCODE -eq 0) {
-              $installed = $true
-              break
-            }
-
-            if ($attempt -lt $max_attempts) {
-              $delay = 15 * $attempt
-              Write-Warning "CUDA install failed with exit code $LASTEXITCODE. Retrying in $delay seconds."
-              Start-Sleep -Seconds $delay
-            }
-          }
+        Write-Host "Downloading CUDA $($lock.release): $($lock.archives.component -join ', ')"
+        $curl_args = @('--fail', '--location', '--silent', '--show-error', '--retry', '5', '--retry-all-errors', '--parallel')
+        foreach ($archive in $lock.archives) {
+          $curl_args += @('--output', (Join-Path $downloads (Split-Path $archive.path -Leaf)), "$($lock.source)$($archive.path)")
+        }
+        & curl.exe @curl_args
+        if ($LASTEXITCODE -ne 0) {
+          throw "Downloading the CUDA $($lock.release) archives failed (curl exit code $LASTEXITCODE)."
         }
 
-        if (-not $installed) {
-          throw "Failed to install CUDA $($env:VERSION)."
+        # Windows' own tar (bsdtar) reads zip files; the one from Git for Windows, which may come first in PATH, does not
+        $tar = Join-Path $env:SystemRoot 'System32\tar.exe'
+        foreach ($archive in $lock.archives) {
+          $file = Join-Path $downloads (Split-Path $archive.path -Leaf)
+          $checksum = (Get-FileHash -Path $file -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($checksum -ne $archive.sha256) {
+            throw "Checksum mismatch for $($archive.path): expected $($archive.sha256) but got $checksum."
+          }
+
+          # Each archive holds one top level directory in the layout of the toolkit (bin, include, lib, ...)
+          $tar_args = @('-xf', $file, '-C', $cuda_path, '--strip-components=1')
+          if ($archive.component -eq 'libcublas') {
+            # 770 MB of runtime DLLs, a build only needs the headers and the import libraries
+            $tar_args += @('--exclude', '*/bin/*')
+          }
+          & $tar @tar_args
+          if ($LASTEXITCODE -ne 0) {
+            throw "Extracting $($archive.path) failed (tar exit code $LASTEXITCODE)."
+          }
+          Remove-Item $file
         }
 
-        if (-not (Test-Path $cuda_path)) {
-          throw "CUDA install completed, but expected path was not found: $cuda_path"
+        # The Visual Studio generator of CMake drives nvcc through NVIDIA's MSBuild extensions
+        $extensions = Join-Path $cuda_path 'visual_studio_integration\MSBuildExtensions'
+        $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+        $customizations = @(& $vswhere -products * -property installationPath | ForEach-Object {
+          Get-Item (Join-Path $_ 'MSBuild\Microsoft\VC\v*\BuildCustomizations') -ErrorAction SilentlyContinue
+        })
+        if ($customizations.Count -eq 0) {
+          throw "No Visual Studio BuildCustomizations directory found to install the CUDA MSBuild extensions in."
+        }
+        foreach ($directory in $customizations) {
+          Copy-Item (Join-Path $extensions '*') $directory.FullName -Force
+          Write-Host "Installed the CUDA MSBuild extensions in $($directory.FullName)"
         }
 
+        & (Join-Path $cuda_path 'bin\nvcc.exe') --version
+        if ($LASTEXITCODE -ne 0) {
+          throw "nvcc does not run after installing CUDA $($lock.release) in $cuda_path"
+        }
+
+        $version_slug = $lock.toolkit.Replace('.', '_')
         Add-Content -Path $env:GITHUB_ENV -Value "CUDA_PATH=${cuda_path}"
         Add-Content -Path $env:GITHUB_ENV -Value "CUDA_PATH_V${version_slug}=${cuda_path}"
         Add-Content -Path $env:GITHUB_PATH -Value "${cuda_path}\bin"
-        Add-Content -Path $env:GITHUB_PATH -Value "${cuda_path}\libnvvp"
         Add-Content -Path $env:GITHUB_OUTPUT -Value "cuda-path=${cuda_path}"
