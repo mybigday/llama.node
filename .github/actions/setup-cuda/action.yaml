@@ -1,9 +1,9 @@
 name: Setup CUDA
 description: >
-  Installs the parts of the CUDA toolkit that a ggml-cuda build needs on Windows
-  (compiler, runtime and cuBLAS headers / import libraries, MSBuild integration)
-  from NVIDIA's redistributable archives. Takes about a minute, where the full
-  installer takes ten.
+  Installs the parts of the CUDA toolkit that a ggml-cuda build uses on Windows
+  (compiler, runtime, CCCL and NVTX headers, cuBLAS headers and import libraries,
+  MSBuild integration) from NVIDIA's redistributable archives. Takes half a
+  minute, where the full installer takes ten.
 
 inputs:
   version:

@@ -2,6 +2,7 @@
   "release": "12.9.1",
   "toolkit": "12.9",
   "source": "https://developer.download.nvidia.com/compute/cuda/redist/",
+  "note": "cuda_nvtx is not optional: the CUB headers in cuda_cccl compile NVTX ranges into their algorithms when <nvtx3/nvToolsExt.h> exists, as it does after the full CUDA installer.",
   "archives": [
     {
       "component": "cuda_nvcc",
@@ -20,6 +21,12 @@
       "version": "12.9.27",
       "path": "cuda_cccl/windows-x86_64/cuda_cccl-windows-x86_64-12.9.27-archive.zip",
       "sha256": "17aaa7c6b8f94a417d8f3261780b7e34b9cbdfab7513bce86768623b06aa28b5"
+    },
+    {
+      "component": "cuda_nvtx",
+      "version": "12.9.79",
+      "path": "cuda_nvtx/windows-x86_64/cuda_nvtx-windows-x86_64-12.9.79-archive.zip",
+      "sha256": "b9d506ce9ba056bf171b60e9dada06fb3d8bed5453a6399d0541960bf9b81659"
     },
     {
       "component": "libcublas",
