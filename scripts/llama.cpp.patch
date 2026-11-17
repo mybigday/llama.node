@@ -43,7 +43,7 @@ index a7e37057..ac919abc 100644
  
  analyze_reasoning::analyze_reasoning(const common_chat_template & tmpl, bool supports_tools)
 diff --git a/src/llama.rn/vendor/llama.cpp/common/chat.cpp b/src/llama.rn/vendor/llama.cpp/common/chat.cpp
-index 229d9081..e7b14d24 100644
+index 69ac9cf8..47ff0dcb 100644
 --- a/src/llama.rn/vendor/llama.cpp/common/chat.cpp
 +++ b/src/llama.rn/vendor/llama.cpp/common/chat.cpp
 @@ -37,11 +37,22 @@ using json = common_json;
@@ -171,7 +171,7 @@ index fd332def..a077de6b 100644
              auto & entry = queue[tail];
              entry.is_end = true;
 diff --git a/src/llama.rn/vendor/llama.cpp/common/parsers/sources.cmake b/src/llama.rn/vendor/llama.cpp/common/parsers/sources.cmake
-index 2174f451..4d1d3025 100644
+index 97dd490e..9e8939cf 100644
 --- a/src/llama.rn/vendor/llama.cpp/common/parsers/sources.cmake
 +++ b/src/llama.rn/vendor/llama.cpp/common/parsers/sources.cmake
 @@ -5,6 +5,7 @@ set(LLAMA_CHAT_PARSERS_SOURCES
@@ -244,10 +244,10 @@ index 7f90c0df..8a37e0a9 100644
  #endif
  
 diff --git a/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt b/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
-index 682b90e1..464ea1f9 100644
+index 791753a8..49ea751f 100644
 --- a/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
 +++ b/src/llama.rn/vendor/llama.cpp/ggml/src/ggml-vulkan/CMakeLists.txt
-@@ -160,7 +160,7 @@ if (Vulkan_FOUND)
+@@ -165,7 +165,7 @@ if (Vulkan_FOUND)
      endif()
  
      # Set up toolchain for host compilation whether cross-compiling or not
@@ -256,7 +256,7 @@ index 682b90e1..464ea1f9 100644
          if (GGML_VULKAN_SHADERS_GEN_TOOLCHAIN)
              set(HOST_CMAKE_TOOLCHAIN_FILE ${GGML_VULKAN_SHADERS_GEN_TOOLCHAIN})
          else()
-@@ -180,7 +180,7 @@ if (Vulkan_FOUND)
+@@ -185,7 +185,7 @@ if (Vulkan_FOUND)
  
      include(ExternalProject)
  
