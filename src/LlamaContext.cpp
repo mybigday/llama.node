@@ -128,162 +128,124 @@ Napi::Value LlamaContext::GetBackendDevicesInfo(const Napi::CallbackInfo &info) 
   return Napi::String::New(env, devices_json);
 }
 
-void LlamaContext::Init(Napi::Env env, Napi::Object &exports) {
+// node-addon-api 8.2.1 translates Napi::Error at callback return.
+[[noreturn]] static void rethrowAsNapiError(Napi::Env env) {
+  try {
+    throw;
+  } catch (const Napi::Error &) {
+    throw;
+  } catch (const std::exception &error) {
+    throw Napi::Error::New(env, error.what());
+  } catch (...) {
+    throw Napi::Error::New(env, "Unknown native exception");
+  }
+}
+
+template <auto method>
+auto LlamaContext::CallInstance(const Napi::CallbackInfo &info) try {
+  return (this->*method)(info);
+} catch (...) {
+  rethrowAsNapiError(info.Env());
+}
+
+template <auto method>
+auto LlamaContext::CallStatic(const Napi::CallbackInfo &info) try {
+  return method(info);
+} catch (...) {
+  rethrowAsNapiError(info.Env());
+}
+
+template <auto method>
+Napi::Value LlamaContext::CallPromise(const Napi::CallbackInfo &info) {
+  auto env = info.Env();
+  try {
+    auto result = CallInstance<method>(info);
+    if (env.IsExceptionPending()) throw env.GetAndClearPendingException();
+    return result;
+  } catch (const Napi::Error &error) {
+    auto deferred = Napi::Promise::Deferred::New(env);
+    deferred.Reject(error.Value());
+    return deferred.Promise();
+  }
+}
+
+template <auto method>
+LlamaContext::PropertyDescriptor LlamaContext::PromiseMethod(const char *name) {
+  return InstanceMethod<&LlamaContext::CallPromise<method>>(name, napi_enumerable);
+}
+
+template <auto method>
+LlamaContext::PropertyDescriptor LlamaContext::Method(const char *name) {
+  if constexpr (std::is_member_function_pointer_v<decltype(method)>) {
+    return InstanceMethod<&LlamaContext::CallInstance<method>>(name, napi_enumerable);
+  } else {
+    return StaticMethod<&LlamaContext::CallStatic<method>>(name, napi_enumerable);
+  }
+}
+
+void LlamaContext::Init(Napi::Env env, Napi::Object &exports) try {
   Napi::Function func = DefineClass(
       env, "LlamaContext",
-      {InstanceMethod<&LlamaContext::GetSystemInfo>(
-           "getSystemInfo",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::GetModelInfo>(
-           "getModelInfo",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::GetUsedDevices>(
-           "getUsedDevices",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::GetFormattedChat>(
-           "getFormattedChat",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::Completion>(
-           "completion",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::StopCompletion>(
-           "stopCompletion",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::Tokenize>(
-           "tokenize", static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::Detokenize>(
-           "detokenize",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::Embedding>(
-           "embedding", static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::Rerank>(
-           "rerank", static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::Decide>(
-           "decide", static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::SaveSession>(
-           "saveSession",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::LoadSession>(
-           "loadSession",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::ApplyLoraAdapters>(
-           "applyLoraAdapters",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::RemoveLoraAdapters>(
-           "removeLoraAdapters",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::GetLoadedLoraAdapters>(
-           "getLoadedLoraAdapters",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::InitMultimodal>(
-           "initMultimodal",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::IsMultimodalEnabled>(
-           "isMultimodalEnabled",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::ReleaseMultimodal>(
-           "releaseMultimodal",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::Release>(
-           "release", static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::ReleaseSync>(
-           "releaseSync", static_cast<napi_property_attributes>(napi_enumerable)),
-       StaticMethod<&LlamaContext::ReleaseAllSync>(
-           "releaseAllSync", static_cast<napi_property_attributes>(napi_enumerable)),
-       StaticMethod<&LlamaContext::ModelInfo>(
-           "loadModelInfo",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       StaticMethod<&LlamaContext::ToggleNativeLog>(
-           "toggleNativeLog",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       StaticMethod<&LlamaContext::GetBackendDevicesInfo>(
-           "getBackendDevicesInfo",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::GetMultimodalSupport>(
-           "getMultimodalSupport",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::InitVocoder>(
-           "initVocoder",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::ReleaseVocoder>(
-           "releaseVocoder",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::IsVocoderEnabled>(
-           "isVocoderEnabled",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::GetFormattedAudioCompletion>(
-           "getFormattedAudioCompletion",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::GetTTSCapabilities>(
-           "getTTSCapabilities",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::GetAudioSampleRate>(
-           "getAudioSampleRate",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::CreateSpeaker>(
-           "createSpeaker",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::LoadSpeaker>(
-           "loadSpeaker",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::SaveSpeaker>(
-           "saveSpeaker",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::ListSpeakers>(
-           "listSpeakers",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::ReleaseSpeaker>(
-           "releaseSpeaker",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::DecodeAudioTokens>(
-           "decodeAudioTokens",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::DecodeAudioLatents>(
-           "decodeAudioLatents",
-           static_cast<napi_property_attributes>(napi_enumerable)),
+      {Method<&LlamaContext::GetSystemInfo>("getSystemInfo"),
+       Method<&LlamaContext::GetModelInfo>("getModelInfo"),
+       Method<&LlamaContext::GetUsedDevices>("getUsedDevices"),
+       Method<&LlamaContext::GetFormattedChat>("getFormattedChat"),
+       PromiseMethod<&LlamaContext::Completion>("completion"),
+       Method<&LlamaContext::StopCompletion>("stopCompletion"),
+       PromiseMethod<&LlamaContext::Tokenize>("tokenize"),
+       PromiseMethod<&LlamaContext::Detokenize>("detokenize"),
+       PromiseMethod<&LlamaContext::Embedding>("embedding"),
+       PromiseMethod<&LlamaContext::Rerank>("rerank"),
+       PromiseMethod<&LlamaContext::Decide>("decide"),
+       PromiseMethod<&LlamaContext::SaveSession>("saveSession"),
+       PromiseMethod<&LlamaContext::LoadSession>("loadSession"),
+       Method<&LlamaContext::ApplyLoraAdapters>("applyLoraAdapters"),
+       Method<&LlamaContext::RemoveLoraAdapters>("removeLoraAdapters"),
+       Method<&LlamaContext::GetLoadedLoraAdapters>("getLoadedLoraAdapters"),
+       Method<&LlamaContext::InitMultimodal>("initMultimodal"),
+       Method<&LlamaContext::IsMultimodalEnabled>("isMultimodalEnabled"),
+       Method<&LlamaContext::ReleaseMultimodal>("releaseMultimodal"),
+       PromiseMethod<&LlamaContext::Release>("release"),
+       Method<&LlamaContext::ReleaseSync>("releaseSync"),
+       Method<&LlamaContext::ReleaseAllSync>("releaseAllSync"),
+       Method<&LlamaContext::ModelInfo>("loadModelInfo"),
+       Method<&LlamaContext::ToggleNativeLog>("toggleNativeLog"),
+       Method<&LlamaContext::GetBackendDevicesInfo>("getBackendDevicesInfo"),
+       Method<&LlamaContext::GetMultimodalSupport>("getMultimodalSupport"),
+       Method<&LlamaContext::InitVocoder>("initVocoder"),
+       Method<&LlamaContext::ReleaseVocoder>("releaseVocoder"),
+       Method<&LlamaContext::IsVocoderEnabled>("isVocoderEnabled"),
+       Method<&LlamaContext::GetFormattedAudioCompletion>("getFormattedAudioCompletion"),
+       Method<&LlamaContext::GetTTSCapabilities>("getTTSCapabilities"),
+       Method<&LlamaContext::GetAudioSampleRate>("getAudioSampleRate"),
+       Method<&LlamaContext::CreateSpeaker>("createSpeaker"),
+       Method<&LlamaContext::LoadSpeaker>("loadSpeaker"),
+       Method<&LlamaContext::SaveSpeaker>("saveSpeaker"),
+       Method<&LlamaContext::ListSpeakers>("listSpeakers"),
+       Method<&LlamaContext::ReleaseSpeaker>("releaseSpeaker"),
+       PromiseMethod<&LlamaContext::DecodeAudioTokens>("decodeAudioTokens"),
+       PromiseMethod<&LlamaContext::DecodeAudioLatents>("decodeAudioLatents"),
        // Parallel decoding methods
-       InstanceMethod<&LlamaContext::EnableParallelMode>(
-           "enableParallelMode",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::DisableParallelMode>(
-           "disableParallelMode",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::QueueCompletion>(
-           "queueCompletion",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::QueueEmbedding>(
-           "queueEmbedding",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::QueueRerank>(
-           "queueRerank",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::QueueDecide>(
-           "queueDecide",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::CancelRequest>(
-           "cancelRequest",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::GetParallelStatus>(
-           "getParallelStatus",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::SubscribeParallelStatus>(
-           "subscribeParallelStatus",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::UnsubscribeParallelStatus>(
-           "unsubscribeParallelStatus",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::ClearCache>(
-           "clearCache",
-           static_cast<napi_property_attributes>(napi_enumerable)),
-       InstanceMethod<&LlamaContext::Bench>(
-           "bench",
-           static_cast<napi_property_attributes>(napi_enumerable))});
+       Method<&LlamaContext::EnableParallelMode>("enableParallelMode"),
+       Method<&LlamaContext::DisableParallelMode>("disableParallelMode"),
+       Method<&LlamaContext::QueueCompletion>("queueCompletion"),
+       Method<&LlamaContext::QueueEmbedding>("queueEmbedding"),
+       Method<&LlamaContext::QueueRerank>("queueRerank"),
+       Method<&LlamaContext::QueueDecide>("queueDecide"),
+       Method<&LlamaContext::CancelRequest>("cancelRequest"),
+       Method<&LlamaContext::GetParallelStatus>("getParallelStatus"),
+       Method<&LlamaContext::SubscribeParallelStatus>("subscribeParallelStatus"),
+       Method<&LlamaContext::UnsubscribeParallelStatus>("unsubscribeParallelStatus"),
+       Method<&LlamaContext::ClearCache>("clearCache"),
+       Method<&LlamaContext::Bench>("bench")});
   Napi::FunctionReference *constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
 #if NAPI_VERSION > 5
   env.SetInstanceData(constructor);
 #endif
   exports.Set("LlamaContext", func);
+} catch (...) {
+  rethrowAsNapiError(env);
 }
 
 static int32_t pooling_type_from_str(const std::string &s) {
@@ -302,23 +264,13 @@ static int32_t pooling_type_from_str(const std::string &s) {
 
 // construct({ model, embedding, n_ctx, n_batch, n_threads, n_gpu_layers,
 // use_mlock, use_mmap }, onProgress?: (progress: number) => void): LlamaContext throws error
-LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
+LlamaContext::LlamaContext(const Napi::CallbackInfo &info) try
     : Napi::ObjectWrap<LlamaContext>(info) {
   Napi::Env env = info.Env();
   if (info.Length() < 1 || !info[0].IsObject()) {
     Napi::TypeError::New(env, "Object expected").ThrowAsJavaScriptException();
   }
   auto options = info[0].As<Napi::Object>();
-
-  // Check if progress callback is provided
-  bool has_progress_callback = info.Length() >= 2 && info[1].IsFunction();
-  if (has_progress_callback) {
-    _progress_tsfn = Napi::ThreadSafeFunction::New(
-        env, info[1].As<Napi::Function>(), "Model Loading Progress", 0, 1,
-        [](Napi::Env) {
-          // Finalizer callback
-        });
-  }
 
   common_params params;
   params.fit_params = false;
@@ -509,7 +461,8 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   _context_valid = std::make_shared<std::atomic<bool>>(true);
 
   // Use rn-llama context instead of direct session
-  _rn_ctx = new llama_rn_context();
+  auto context = std::make_unique<llama_rn_context>();
+  _rn_ctx = context.get();
   const int32_t state_cache_budget_mb =
       get_option<int32_t>(options, "state_cache_budget_mb", 160);
   _rn_ctx->state_cache_budget_bytes =
@@ -522,7 +475,9 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
   _rn_ctx->loading_progress = 0;
 
   // Set up progress callback if provided
-  if (has_progress_callback) {
+  if (info.Length() >= 2 && info[1].IsFunction()) {
+    _progress_tsfn = Napi::ThreadSafeFunction::New(
+        env, info[1].As<Napi::Function>(), "Model Loading Progress", 0, 1);
     params.load_progress_callback = [](float progress, void *user_data) {
       LlamaContext *self = static_cast<LlamaContext *>(user_data);
       unsigned int percentage = static_cast<unsigned int>(100 * progress);
@@ -553,14 +508,15 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
     params.load_progress_callback_user_data = this;
   }
 
-  if (!_rn_ctx->loadModel(params)) {
-    if (has_progress_callback) {
-      _progress_tsfn.Release();
+  struct ReleaseProgress {
+    Napi::ThreadSafeFunction function;
+    ~ReleaseProgress() {
+      if (function) function.Release();
     }
-    delete _rn_ctx;
-    _rn_ctx = nullptr;
-    Napi::TypeError::New(env, "Failed to load model").ThrowAsJavaScriptException();
-    return;
+  } progress{_progress_tsfn};
+
+  if (!_rn_ctx->loadModel(params)) {
+    throw Napi::TypeError::New(env, "Failed to load model");
   }
 
   // Collect used devices from the loaded model
@@ -574,11 +530,6 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
     }
   }
 
-  // Release progress callback after model is loaded
-  if (has_progress_callback) {
-    _progress_tsfn.Release();
-  }
-
   // Handle LoRA adapters through rn-llama
   if (!lora.empty()) {
     _rn_ctx->applyLoraAdapters(lora);
@@ -590,6 +541,9 @@ LlamaContext::LlamaContext(const Napi::CallbackInfo &info)
     std::lock_guard<std::mutex> lock(g_contexts_mutex);
     g_contexts.insert(this);
   }
+  context.release();
+} catch (...) {
+  rethrowAsNapiError(info.Env());
 }
 
 LlamaContext::~LlamaContext() {

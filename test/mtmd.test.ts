@@ -90,6 +90,46 @@ test('multimodal with images', async () => {
   await model.release()
 })
 
+test('queued completion recovers after a media decoding error', async () => {
+  const model = await loadModel({
+    model: path.resolve(__dirname, './SmolVLM-256M-Instruct-Q8_0.gguf'),
+    n_ctx: 1024,
+    n_gpu_layers: 0,
+  })
+
+  try {
+    expect(await model.parallel.enable({ n_parallel: 1 })).toBe(true)
+    const projector = path.resolve(__dirname, './mmproj-SmolVLM-256M-Instruct-Q8_0.gguf')
+    expect(model.initMultimodal({ path: projector, use_gpu: false })).toBe(true)
+
+    const image = path.resolve(__dirname, './test-1.jpeg')
+    const formatted = model.getFormattedChat([
+      {
+        role: 'user',
+        content: [
+          { type: 'image_url', image_url: { url: image } },
+          { type: 'text', text: 'Describe the image.' },
+        ],
+      },
+    ])
+    const options = { ...formatted, temperature: 0, n_predict: 8 }
+
+    // The test source is a readable file that the media decoder must reject.
+    await expect(
+      model.parallel.completion({ ...options, media_paths: [__filename] }),
+    ).rejects.toThrow('Failed to load media')
+    expect(model.parallel.getStatus()).toMatchObject({
+      active_slots: 0,
+      queued_requests: 0,
+    })
+    const { promise } = await model.parallel.completion(options)
+    expect((await promise).text.length).toBeGreaterThan(0)
+  } finally {
+    if (model.parallel.isEnabled()) model.parallel.disable()
+    await model.release()
+  }
+})
+
 const modelPath = path.resolve(__dirname, './Llama-3.2-1B-Instruct-Q4_K_M.gguf')
 
 ;(fs.existsSync(modelPath) ? test : test.skip)(

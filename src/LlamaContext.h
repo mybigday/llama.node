@@ -28,6 +28,12 @@ public:
   static void Init(Napi::Env env, Napi::Object &exports);
 
 private:
+  template <auto method> auto CallInstance(const Napi::CallbackInfo &info);
+  template <auto method> static auto CallStatic(const Napi::CallbackInfo &info);
+  template <auto method> Napi::Value CallPromise(const Napi::CallbackInfo &info);
+  template <auto method> static PropertyDescriptor PromiseMethod(const char *name);
+  template <auto method> static PropertyDescriptor Method(const char *name);
+
   Napi::Value GetSystemInfo(const Napi::CallbackInfo &info);
   Napi::Value GetModelInfo(const Napi::CallbackInfo &info);
   Napi::Value GetUsedDevices(const Napi::CallbackInfo &info);

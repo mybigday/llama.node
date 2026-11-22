@@ -81,6 +81,29 @@ test('completion with t5-like model', async () => {
   await model.release()
 })
 
+test('unsupported legacy chat template reports an error to each caller', async () => {
+  const model = await loadModel({
+    model: path.resolve(__dirname, './tiny-random-llama.gguf'),
+    n_gpu_layers: 0,
+  })
+  const messages = [{ role: 'user', content: 'Hello' }]
+  const template = 'CUSTOM {{ messages[0].content }}'
+  const error = /this custom template is not supported/
+
+  try {
+    expect(() =>
+      model.getFormattedChat(messages, template, { jinja: false }),
+    ).toThrow(error)
+    await expect(
+      model.completion({ messages, chat_template: template, jinja: false }),
+    ).rejects.toThrow(error)
+    expect(model.getFormattedChat(messages, 'chatml', { jinja: false }).prompt)
+      .toContain('Hello')
+  } finally {
+    await model.release()
+  }
+})
+
 test('completion with response_format', async () => {
   const model = await loadModel({
     model: path.resolve(__dirname, './tiny-random-llama.gguf'),
